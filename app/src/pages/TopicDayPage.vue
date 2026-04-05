@@ -19,6 +19,13 @@
       Loading…
     </div>
 
+    <div
+      v-else-if="pageError"
+      class="topic-day-page__error"
+    >
+      Failed to load page — please refresh.
+    </div>
+
     <template v-else>
       <!-- Header: topic label + date navigator -->
       <TopicDayHeader
@@ -95,6 +102,7 @@ const dateKey = computed(() => route.params.dateKey)
 
 // --- State ---
 const pageLoading = ref(true)
+const pageError = ref(false)
 const displayName = ref('')
 
 const status = ref({
@@ -133,13 +141,29 @@ const bannerMessage = computed(() => {
 })
 
 // --- Data loading ---
+
+// Monotonic counter — incremented on every loadPage() call.
+// Each in-flight load captures its own id and bails out if a newer load started.
+let currentLoadId = 0
+
 async function loadPage() {
+  const myId = ++currentLoadId
+
+  // Reset content from any previous route immediately
+  videoMeta.value = null
+  articleMarkdown.value = null
+  pageError.value = false
   pageLoading.value = true
+
   try {
     const [dayStatus, dayNav] = await Promise.all([
       fetchDayStatus(topicSlug.value, dateKey.value),
       fetchNavigation(topicSlug.value, dateKey.value)
     ])
+
+    // A newer load has already started — discard these results
+    if (myId !== currentLoadId) return
+
     status.value = dayStatus
     nav.value = dayNav
     displayName.value = dayStatus.display_name ?? topicSlug.value
@@ -157,28 +181,37 @@ async function loadPage() {
       )
     }
     await Promise.all(contentLoads)
-  } finally {
+
+    if (myId !== currentLoadId) return
+  } catch {
+    if (myId !== currentLoadId) return
+    pageError.value = true
     pageLoading.value = false
+    return // skip timeline when page shell data failed to load
   }
 
+  pageLoading.value = false
+
   // Load timeline separately so the page shell renders first
-  await loadTimeline()
+  await loadTimeline(myId)
 }
 
-async function loadTimeline() {
+async function loadTimeline(myId) {
+  if (myId !== currentLoadId) return
   timelineLoading.value = true
   timelineError.value = false
   try {
     const result = await fetchTimeline(topicSlug.value, dateKey.value, { limit: 30 })
+    if (myId !== currentLoadId) return
     alerts.value = result.alerts ?? []
     timelineHasMore.value = result.has_more ?? false
     if (alerts.value.length) {
       timelineCursor.value = alerts.value[alerts.value.length - 1].event_at
     }
   } catch {
-    timelineError.value = true
+    if (myId === currentLoadId) timelineError.value = true
   } finally {
-    timelineLoading.value = false
+    if (myId === currentLoadId) timelineLoading.value = false
   }
 }
 
@@ -213,6 +246,13 @@ watch([topicSlug, dateKey], () => {
 </script>
 
 <style scoped>
+.topic-day-page__error {
+  padding: var(--space-12) 0;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+}
+
 .topic-day-page__banner {
   display: flex;
   justify-content: center;

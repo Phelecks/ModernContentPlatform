@@ -1,6 +1,6 @@
 <!--
-  TopicPage — redirect to the most recent published day for this topic.
-  If no published day is found, show a placeholder.
+  TopicPage — redirect to today's day page for this topic.
+  If the redirect fails, show a placeholder error.
 -->
 <template>
   <div class="page-container">
@@ -31,7 +31,7 @@ const router = useRouter()
 const loading = ref(true)
 const error = ref(false)
 
-async function redirectToLatest() {
+async function redirectToToday() {
   loading.value = true
   error.value = false
   try {
@@ -46,8 +46,8 @@ async function redirectToLatest() {
   }
 }
 
-onMounted(redirectToLatest)
-watch(() => route.params.topicSlug, redirectToLatest)
+onMounted(redirectToToday)
+watch(() => route.params.topicSlug, redirectToToday)
 </script>
 
 <style scoped>
