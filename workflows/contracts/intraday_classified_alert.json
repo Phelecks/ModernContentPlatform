@@ -1,0 +1,112 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "intraday_classified_alert",
+  "title": "Intraday Classified Alert",
+  "description": "Normalized item after AI classification and scoring. Produced by module 05, consumed by modules 06–09.",
+  "type": "object",
+  "required": [
+    "item_id",
+    "topic_slug",
+    "headline",
+    "summary_text",
+    "source_name",
+    "severity_score",
+    "importance_score",
+    "confidence_score",
+    "send_alert",
+    "event_at",
+    "cluster_label"
+  ],
+  "properties": {
+    "item_id": {
+      "type": "string",
+      "description": "Deterministic item identifier carried forward from the normalized item."
+    },
+    "topic_slug": {
+      "type": "string",
+      "enum": ["crypto", "finance", "economy", "health", "ai", "energy", "technology"],
+      "description": "Primary topic assigned by AI classification."
+    },
+    "secondary_topics": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["crypto", "finance", "economy", "health", "ai", "energy", "technology"]
+      },
+      "maxItems": 2,
+      "description": "Up to two secondary topics identified by the AI model."
+    },
+    "headline": {
+      "type": "string",
+      "maxLength": 250,
+      "description": "Refined headline. May be lightly edited by the AI for clarity."
+    },
+    "summary_text": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "AI-generated one- to two-sentence summary suitable for the timeline."
+    },
+    "source_url": {
+      "type": ["string", "null"],
+      "format": "uri"
+    },
+    "source_name": {
+      "type": "string"
+    },
+    "severity_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "How disruptive or urgent the event is (0–100). Set by the AI model."
+    },
+    "importance_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "How broadly relevant the event is to the topic audience (0–100). Set by the AI model."
+    },
+    "confidence_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "AI confidence in the classification and scores (0–100)."
+    },
+    "send_alert": {
+      "type": "boolean",
+      "description": "True when the AI recommends sending an alert. Overridden by threshold rules in the alert decision module."
+    },
+    "alert_reason": {
+      "type": ["string", "null"],
+      "description": "Short AI explanation of why this event warrants (or does not warrant) an alert."
+    },
+    "event_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Best-available event timestamp (ISO-8601 UTC), carried from the normalized item."
+    },
+    "cluster_label": {
+      "type": ["string", "null"],
+      "maxLength": 100,
+      "description": "Short label for the event cluster this alert belongs to. Null if no cluster match."
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "item_id": "a3f8c2d14e7b9f01234567890abcdef1234567890abcdef1234567890abcdef12",
+      "topic_slug": "crypto",
+      "secondary_topics": ["finance"],
+      "headline": "Bitcoin Hits New All-Time High Above $120K",
+      "summary_text": "Bitcoin surged past $120,000, setting a new all-time high driven by strong institutional inflows and ETF demand.",
+      "source_url": "https://www.coindesk.com/markets/2025/01/15/bitcoin-hits-new-ath/",
+      "source_name": "CoinDesk RSS",
+      "severity_score": 72,
+      "importance_score": 88,
+      "confidence_score": 95,
+      "send_alert": true,
+      "alert_reason": "New all-time high is a high-importance milestone for the crypto audience.",
+      "event_at": "2025-01-15T14:32:00Z",
+      "cluster_label": "Bitcoin price rally"
+    }
+  ]
+}

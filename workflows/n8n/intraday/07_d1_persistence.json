@@ -1,0 +1,283 @@
+{
+  "name": "Intraday — 07 D1 Persistence",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "b8c9d0e1-0008-0008-0008-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Expand approved alerts into individual items for per-item D1 writes.\nconst input = $input.first().json;\nconst items = Array.isArray(input.items) ? input.items : [];\nreturn items.map(item => ({ json: item }));"
+      },
+      "id": "b8c9d0e1-0008-0008-0008-000000000002",
+      "name": "Expand Alerts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.cloudflare.com/client/v4/accounts/{{ $vars.CF_ACCOUNT_ID }}/d1/database/{{ $vars.CF_D1_DATABASE_ID }}/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  sql: \"INSERT INTO event_clusters (topic_slug, date_key, cluster_label, alert_count, importance_score) VALUES (?, ?, ?, 1, ?) ON CONFLICT(topic_slug, date_key, cluster_label) DO UPDATE SET alert_count = alert_count + 1, importance_score = MAX(importance_score, excluded.importance_score), updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') RETURNING id\",\n  params: [\n    $json.topic_slug,\n    $json.date_key,\n    $json.cluster_label || $json.topic_slug,\n    $json.importance_score\n  ]\n} }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "b8c9d0e1-0008-0008-0008-000000000003",
+      "name": "Upsert Event Cluster",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        680,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cloudflare-d1-api",
+          "name": "CloudflareD1Api"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Extract the cluster_id returned by the upsert.\nconst d1Response = $input.item.json;\nconst clusterId = d1Response?.result?.[0]?.results?.[0]?.id || null;\n// Pass the cluster_id forward alongside the original alert data\nconst alert = $('Expand Alerts').item.json;\nreturn [{ json: { ...alert, cluster_id: clusterId } }];"
+      },
+      "id": "b8c9d0e1-0008-0008-0008-000000000004",
+      "name": "Extract Cluster ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.cloudflare.com/client/v4/accounts/{{ $vars.CF_ACCOUNT_ID }}/d1/database/{{ $vars.CF_D1_DATABASE_ID }}/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  sql: \"INSERT INTO alerts (topic_slug, date_key, cluster_id, headline, summary_text, source_url, source_name, severity_score, importance_score, confidence_score, status, delivered_telegram, delivered_discord, event_at, metadata_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 0, 0, ?, json_object('item_id', ?, 'secondary_topics', json(?), 'alert_reason', ?)) RETURNING id\",\n  params: [\n    $json.topic_slug,\n    $json.date_key,\n    $json.cluster_id,\n    $json.headline,\n    $json.summary_text,\n    $json.source_url,\n    $json.source_name,\n    $json.severity_score,\n    $json.importance_score,\n    $json.confidence_score,\n    $json.event_at,\n    $json.item_id,\n    JSON.stringify($json.secondary_topics || []),\n    $json.alert_reason\n  ]\n} }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "b8c9d0e1-0008-0008-0008-000000000005",
+      "name": "Insert Alert Row",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1120,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cloudflare-d1-api",
+          "name": "CloudflareD1Api"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Extract the D1-assigned alert ID and attach to payload.\nconst d1Response = $input.item.json;\nconst alertId = d1Response?.result?.[0]?.results?.[0]?.id || null;\nconst alert = $('Extract Cluster ID').item.json;\nreturn [{ json: { ...alert, alert_id: alertId } }];"
+      },
+      "id": "b8c9d0e1-0008-0008-0008-000000000006",
+      "name": "Extract Alert ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.cloudflare.com/client/v4/accounts/{{ $vars.CF_ACCOUNT_ID }}/d1/database/{{ $vars.CF_D1_DATABASE_ID }}/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  sql: \"INSERT INTO daily_status (topic_slug, date_key, page_state, alert_count, cluster_count) VALUES (?, ?, 'ready', 1, 1) ON CONFLICT (topic_slug, date_key) DO UPDATE SET alert_count = alert_count + 1, cluster_count = (SELECT COUNT(DISTINCT id) FROM event_clusters WHERE topic_slug = excluded.topic_slug AND date_key = excluded.date_key), updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')\",\n  params: [$json.topic_slug, $json.date_key]\n} }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "b8c9d0e1-0008-0008-0008-000000000007",
+      "name": "Upsert Daily Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1560,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cloudflare-d1-api",
+          "name": "CloudflareD1Api"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Collect all persisted alert payloads (with D1 IDs) for delivery.\nconst items = $('Extract Alert ID').all().map(i => i.json);\nreturn [{ json: { items } }];"
+      },
+      "id": "b8c9d0e1-0008-0008-0008-000000000008",
+      "name": "Collect Persisted Alerts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1780,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Expand Alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand Alerts": {
+      "main": [
+        [
+          {
+            "node": "Upsert Event Cluster",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Event Cluster": {
+      "main": [
+        [
+          {
+            "node": "Extract Cluster ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Cluster ID": {
+      "main": [
+        [
+          {
+            "node": "Insert Alert Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Alert Row": {
+      "main": [
+        [
+          {
+            "node": "Extract Alert ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Alert ID": {
+      "main": [
+        [
+          {
+            "node": "Upsert Daily Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Daily Status": {
+      "main": [
+        [
+          {
+            "node": "Collect Persisted Alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": true,
+    "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
+  },
+  "id": "intraday-07-d1-persistence-v1",
+  "tags": [
+    "intraday",
+    "persistence",
+    "d1",
+    "v1"
+  ]
+}

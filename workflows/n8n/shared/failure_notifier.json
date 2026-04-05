@@ -1,0 +1,95 @@
+{
+  "name": "Shared — Failure Notifier",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "e1f2a3b4-0011-0011-0011-000000000001",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Build a structured failure notification payload.\n// All dynamic values are HTML-escaped to prevent Telegram parse errors.\nconst error = $input.first().json;\n\nconst escHtml = (s) =>\n  String(s || '')\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;');\n\nconst workflowName = error.workflow?.name || 'Unknown workflow';\nconst executionId  = error.execution?.id  || 'unknown';\nconst errorMessage = error.execution?.error?.message || 'Unknown error';\nconst errorNode    = error.execution?.error?.node?.name || 'Unknown node';\nconst timestamp    = new Date().toISOString();\n\nconst text = [\n  `🚨 <b>Workflow Failure</b>`,\n  ``,\n  `<b>Workflow:</b> ${escHtml(workflowName)}`,\n  `<b>Node:</b> ${escHtml(errorNode)}`,\n  `<b>Error:</b> ${escHtml(errorMessage)}`,\n  `<b>Execution ID:</b> ${escHtml(executionId)}`,\n  `<b>Time:</b> ${timestamp}`\n].join('\\n');\n\nreturn [{ json: { text, workflowName, executionId, errorMessage, errorNode, timestamp } }];"
+      },
+      "id": "e1f2a3b4-0011-0011-0011-000000000002",
+      "name": "Format Failure Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $vars.FAILURE_ALERT_CHANNEL }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "e1f2a3b4-0011-0011-0011-000000000003",
+      "name": "Send Failure Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        680,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot-credentials",
+          "name": "TelegramBotApi"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Format Failure Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Failure Message": {
+      "main": [
+        [
+          {
+            "node": "Send Failure Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": true
+  },
+  "id": "shared-failure-notifier-v1",
+  "tags": [
+    "shared",
+    "failure",
+    "monitoring",
+    "v1"
+  ]
+}

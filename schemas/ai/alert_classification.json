@@ -1,0 +1,104 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "alert_classification",
+  "title": "Alert Classification AI Output",
+  "description": "Structured JSON output expected from the AI classification prompt. Validated by module 05 before use.",
+  "type": "object",
+  "required": [
+    "topic_slug",
+    "headline",
+    "summary_text",
+    "severity_score",
+    "importance_score",
+    "confidence_score",
+    "send_alert",
+    "cluster_label"
+  ],
+  "properties": {
+    "topic_slug": {
+      "type": "string",
+      "enum": ["crypto", "finance", "economy", "health", "ai", "energy", "technology"],
+      "description": "Single primary topic that best matches the event."
+    },
+    "secondary_topics": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["crypto", "finance", "economy", "health", "ai", "energy", "technology"]
+      },
+      "maxItems": 2,
+      "description": "Up to two secondary topics. Omit or leave empty when there are none."
+    },
+    "headline": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 250,
+      "description": "Concise, factual headline. No sensationalism. HTML-free."
+    },
+    "summary_text": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 500,
+      "description": "One to two sentence summary for the timeline. Factual, third-person. HTML-free."
+    },
+    "severity_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "How disruptive or urgent the event is. 0 = no impact, 100 = extreme disruption."
+    },
+    "importance_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "How broadly relevant the event is to the topic audience. 0 = noise, 100 = must-know."
+    },
+    "confidence_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Model confidence in the classification and scores. 0 = very uncertain, 100 = certain."
+    },
+    "send_alert": {
+      "type": "boolean",
+      "description": "True when the event is significant enough to warrant an immediate alert."
+    },
+    "alert_reason": {
+      "type": ["string", "null"],
+      "maxLength": 200,
+      "description": "One sentence explaining why the event does or does not warrant an alert."
+    },
+    "cluster_label": {
+      "type": ["string", "null"],
+      "maxLength": 100,
+      "description": "Short label for the event cluster (e.g. 'Bitcoin price rally', 'Fed rate decision'). Null if this event does not fit an obvious cluster."
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "topic_slug": "crypto",
+      "secondary_topics": ["finance"],
+      "headline": "Bitcoin Hits New All-Time High Above $120K",
+      "summary_text": "Bitcoin surged past $120,000, setting a new all-time high driven by strong institutional inflows and ETF demand.",
+      "severity_score": 72,
+      "importance_score": 88,
+      "confidence_score": 95,
+      "send_alert": true,
+      "alert_reason": "New all-time high is a high-importance milestone for the crypto audience.",
+      "cluster_label": "Bitcoin price rally"
+    },
+    {
+      "topic_slug": "finance",
+      "secondary_topics": [],
+      "headline": "US 10-Year Treasury Yield Edges Up 2 bps",
+      "summary_text": "The 10-year US Treasury yield rose marginally to 4.32%, reflecting steady demand ahead of tomorrow's CPI print.",
+      "severity_score": 15,
+      "importance_score": 28,
+      "confidence_score": 90,
+      "send_alert": false,
+      "alert_reason": "Minor yield movement; below the significance threshold for an intraday alert.",
+      "cluster_label": null
+    }
+  ]
+}

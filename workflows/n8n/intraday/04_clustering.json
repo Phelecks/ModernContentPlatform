@@ -1,0 +1,41 @@
+{
+  "name": "Intraday — 04 Clustering",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "e5f6a7b8-0005-0005-0005-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Assign each new item to a cluster based on keyword similarity.\n// This is a lightweight in-memory clustering pass that does not require\n// an AI call. The AI classification step may refine cluster_label later.\n//\n// Strategy: sliding window of cluster_label candidates.\n// Items sharing a strong keyword overlap with an existing cluster are merged.\n// New clusters are created when no match is found above the threshold.\n\nconst input = $input.first().json;\nconst items = Array.isArray(input.items) ? input.items : [];\n\nconst SIMILARITY_THRESHOLD = 2; // minimum shared keywords to merge into a cluster\n\nconst tokenize = (text) =>\n  (text || '')\n    .toLowerCase()\n    .replace(/[^a-z0-9\\s]/g, ' ')\n    .split(/\\s+/)\n    .filter(t => t.length > 3);\n\nconst clusters = []; // [{ label, keywords: Set, itemIndexes: [] }]\n\nconst clustered = items.map((item, idx) => {\n  const tokens = new Set(tokenize(`${item.headline} ${item.body || ''}`));\n\n  // Find best matching existing cluster\n  let bestMatch = null;\n  let bestScore = 0;\n  for (const cluster of clusters) {\n    const shared = [...tokens].filter(t => cluster.keywords.has(t)).length;\n    if (shared > bestScore) {\n      bestScore = shared;\n      bestMatch = cluster;\n    }\n  }\n\n  if (bestMatch && bestScore >= SIMILARITY_THRESHOLD) {\n    // Merge into existing cluster\n    for (const t of tokens) bestMatch.keywords.add(t);\n    bestMatch.itemIndexes.push(idx);\n    return { ...item, cluster_label: bestMatch.label };\n  }\n\n  // Create new cluster — use first 5 meaningful words as label\n  const labelWords = [...tokens].slice(0, 5).join(' ');\n  const label = labelWords || item.headline.slice(0, 60);\n  clusters.push({ label, keywords: tokens, itemIndexes: [idx] });\n  return { ...item, cluster_label: label };\n});\n\nreturn [{ json: { items: clustered, cluster_count: clusters.length } }];"
+      },
+      "id": "e5f6a7b8-0005-0005-0005-000000000002",
+      "name": "Assign Clusters",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [{ "node": "Assign Clusters", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": true,
+    "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
+  },
+  "id": "intraday-04-clustering-v1",
+  "tags": ["intraday", "clustering", "v1"]
+}

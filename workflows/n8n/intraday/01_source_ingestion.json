@@ -1,0 +1,271 @@
+{
+  "name": "Intraday — 01 Source Ingestion",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "b2c3d4e5-0002-0002-0002-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Emit one item per configured source.\n// Sources are read from the workflow variable INTRADAY_SOURCES_JSON,\n// which is a JSON array of source configuration objects.\n// Default sources are provided as a fallback.\nconst sourcesRaw = $vars.INTRADAY_SOURCES_JSON || '[]';\nlet sources;\ntry {\n  sources = JSON.parse(sourcesRaw);\n} catch (e) {\n  sources = [];\n}\nif (!Array.isArray(sources) || sources.length === 0) {\n  // Default sources when none are configured\n  sources = [\n    { name: 'CoinDesk RSS',    type: 'rss', url: 'https://www.coindesk.com/arc/outboundfeeds/rss/' },\n    { name: 'Reuters Finance', type: 'rss', url: 'https://feeds.reuters.com/reuters/businessNews' },\n    { name: 'Ars Technica',    type: 'rss', url: 'https://feeds.arstechnica.com/arstechnica/index' },\n    { name: 'Hacker News',     type: 'api', url: 'https://hacker-news.firebaseio.com/v0/topstories.json' }\n  ];\n}\nreturn sources.map(source => ({ json: source }));"
+      },
+      "id": "b2c3d4e5-0002-0002-0002-000000000002",
+      "name": "Build Source List",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.type }}",
+              "rightValue": "rss",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "b2c3d4e5-0002-0002-0002-000000000003",
+      "name": "Route by Type",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "b2c3d4e5-0002-0002-0002-000000000004",
+      "name": "Fetch RSS Feed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        900,
+        200
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Parse RSS/Atom XML into source_item objects.\n// Uses a simple regex-based approach — replace with a proper XML parser node if available.\n// Source metadata (name, url) is read from the 'Route by Type' node output,\n// because the HTTP Request node replaces the item with the response body.\nconst xml = $input.item.json.data || '';\nconst sourceName = $('Route by Type').item.json.name || 'Unknown RSS';\nconst sourceUrl = $('Route by Type').item.json.url || null;\nconst fetchedAt = new Date().toISOString();\nconst items = [];\nconst itemMatches = xml.matchAll(/<item[^>]*>([\\s\\S]*?)<\\/item>/gi);\nfor (const match of itemMatches) {\n  const block = match[1];\n  const getTag = (tag) => {\n    const m = block.match(new RegExp(`<${tag}[^>]*><!\\\\[CDATA\\\\[([\\\\s\\\\S]*?)\\\\]\\\\]><\\\\/${tag}>|<${tag}[^>]*>([^<]*)<\\\\/${tag}>`, 'i'));\n    return m ? (m[1] || m[2] || '').trim() : null;\n  };\n  const guid = getTag('guid') || getTag('link');\n  const title = getTag('title');\n  const link = getTag('link');\n  const description = getTag('description');\n  const pubDate = getTag('pubDate');\n  if (!guid || !title) continue;\n  let published_at = null;\n  if (pubDate) {\n    const ts = Date.parse(pubDate);\n    published_at = !isNaN(ts) ? new Date(ts).toISOString() : null;\n  }\n  items.push({\n    source_id: guid,\n    source_name: sourceName,\n    source_type: 'rss',\n    source_url: link || sourceUrl,\n    title: title,\n    body: description,\n    published_at,\n    fetched_at: fetchedAt,\n    raw_json: { guid, link, pubDate, description }\n  });\n}\nreturn items.map(i => ({ json: i }));"
+      },
+      "id": "b2c3d4e5-0002-0002-0002-000000000005",
+      "name": "Parse RSS Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "b2c3d4e5-0002-0002-0002-000000000006",
+      "name": "Fetch API Source",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        900,
+        400
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Normalize generic API responses into source_item objects.\n// Each source type may need a custom mapping here.\n// Source metadata is read from the 'Route by Type' node output,\n// because the HTTP Request node replaces the item with the response body.\nconst payload = $input.item.json.data;\nconst sourceName = $('Route by Type').item.json.name || 'Unknown API';\nconst fetchedAt = new Date().toISOString();\nif (!payload) return [];\n// Hacker News returns an array of IDs — emit the first 20 as placeholder items.\nif (Array.isArray(payload)) {\n  return payload.slice(0, 20).map(id => ({\n    json: {\n      source_id: String(id),\n      source_name: sourceName,\n      source_type: 'api',\n      source_url: `https://news.ycombinator.com/item?id=${id}`,\n      title: `HN item ${id}`,\n      body: null,\n      published_at: null,\n      fetched_at: fetchedAt,\n      raw_json: { id }\n    }\n  }));\n}\n// Generic object with title/description fields\nif (typeof payload === 'object' && payload.title) {\n  return [{\n    json: {\n      source_id: String(payload.id || payload.url || Date.now()),\n      source_name: sourceName,\n      source_type: 'api',\n      source_url: payload.url || null,\n      title: payload.title,\n      body: payload.description || payload.body || null,\n      published_at: payload.publishedAt || payload.published_at || null,\n      fetched_at: fetchedAt,\n      raw_json: payload\n    }\n  }];\n}\nreturn [];"
+      },
+      "id": "b2c3d4e5-0002-0002-0002-000000000007",
+      "name": "Parse API Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "clashHandling": {
+          "values": {
+            "resolveClash": "addSuffix"
+          }
+        }
+      },
+      "id": "b2c3d4e5-0002-0002-0002-000000000008",
+      "name": "Merge Items",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Collect all ingested items and return them as the workflow output.\nconst items = $input.all().map(i => i.json);\nreturn [{ json: { items } }];"
+      },
+      "id": "b2c3d4e5-0002-0002-0002-000000000009",
+      "name": "Collect Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build Source List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Source List": {
+      "main": [
+        [
+          {
+            "node": "Route by Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Type": {
+      "main": [
+        [
+          {
+            "node": "Fetch RSS Feed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch API Source",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch RSS Feed": {
+      "main": [
+        [
+          {
+            "node": "Parse RSS Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse RSS Items": {
+      "main": [
+        [
+          {
+            "node": "Merge Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch API Source": {
+      "main": [
+        [
+          {
+            "node": "Parse API Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse API Items": {
+      "main": [
+        [
+          {
+            "node": "Merge Items",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Items": {
+      "main": [
+        [
+          {
+            "node": "Collect Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": true,
+    "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
+  },
+  "id": "intraday-01-source-ingestion-v1",
+  "tags": [
+    "intraday",
+    "ingestion",
+    "v1"
+  ]
+}
