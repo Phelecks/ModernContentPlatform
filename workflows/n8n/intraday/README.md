@@ -4,7 +4,7 @@ This directory contains the v1 n8n workflow files for the live alert pipeline.
 
 ## How it works
 
-The orchestrator runs every 15 minutes and chains ten modules in sequence.
+The orchestrator runs every 15 minutes and chains nine modules in sequence.
 Each module is a standalone sub-workflow that receives a JSON payload and
 returns a JSON payload. Persistence always completes before delivery.
 

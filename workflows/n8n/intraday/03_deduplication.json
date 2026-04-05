@@ -7,18 +7,24 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Extract item_ids from the incoming normalized items array.\nconst input = $input.first().json;\nconst items = Array.isArray(input.items) ? input.items : [];\nconst ids = items.map(i => i.item_id).filter(Boolean);\nreturn [{ json: { items, ids } }];"
+        "jsCode": "// Extract item_ids from the incoming normalized items array.\n// Also build the SQL IN clause for the targeted D1 lookup.\nconst input = $input.first().json;\nconst items = Array.isArray(input.items) ? input.items : [];\nconst ids = items.map(i => i.item_id).filter(Boolean);\n// Build parameterized placeholders for the IN clause\nconst placeholders = ids.map(() => '?').join(', ');\nconst sql = ids.length > 0\n  ? `SELECT json_extract(metadata_json, '$.item_id') AS item_id FROM alerts WHERE date_key >= date('now', '-1 day') AND json_extract(metadata_json, '$.item_id') IN (${placeholders})`\n  : \"SELECT NULL AS item_id WHERE 0\";\nreturn [{ json: { items, ids, d1_sql: sql, d1_params: ids } }];"
       },
       "id": "d4e5f6a7-0004-0004-0004-000000000002",
       "name": "Extract Item IDs",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
@@ -28,21 +34,32 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"sql\": \"SELECT json_extract(metadata_json, '$.item_id') AS item_id FROM alerts WHERE date_key >= date('now', '-1 day') AND json_extract(metadata_json, '$.item_id') IS NOT NULL\",\n  \"params\": []\n}",
-        "options": { "timeout": 10000 }
+        "jsonBody": "={{ { sql: $('Extract Item IDs').first().json.d1_sql, params: $('Extract Item IDs').first().json.d1_params } }}",
+        "options": {
+          "timeout": 10000
+        }
       },
       "id": "d4e5f6a7-0004-0004-0004-000000000003",
       "name": "Query D1 for Known IDs",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [680, 300],
+      "position": [
+        680,
+        300
+      ],
       "credentials": {
-        "httpHeaderAuth": { "id": "cloudflare-d1-api", "name": "CloudflareD1Api" }
+        "httpHeaderAuth": {
+          "id": "cloudflare-d1-api",
+          "name": "CloudflareD1Api"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
@@ -51,29 +68,50 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Build a set of known item_ids from D1 response.\n// Compare against incoming items and mark duplicates.\nconst d1Response = $input.first().json;\nconst results = d1Response?.result?.[0]?.results || [];\nconst knownIds = new Set(results.map(r => r.item_id).filter(Boolean));\n\n// Retrieve the original items from the trigger input.\n// The orchestrator passes items via the Execute Workflow node payload.\nconst allItems = $('Extract Item IDs').first().json.items || [];\n\nconst deduped = allItems.map(item => ({\n  ...item,\n  is_duplicate: knownIds.has(item.item_id)\n}));\n\nconst newItems = deduped.filter(i => !i.is_duplicate);\n\nreturn [{ json: { items: newItems, total_input: allItems.length, duplicates_dropped: allItems.length - newItems.length } }];"
+        "jsCode": "// Build a set of known item_ids from D1 response.\n// Compare against incoming items and mark duplicates.\n// Also deduplicate within the current batch by item_id.\nconst d1Response = $input.first().json;\nconst results = d1Response?.result?.[0]?.results || [];\nconst knownIds = new Set(results.map(r => r.item_id).filter(Boolean));\n\nconst allItems = $('Extract Item IDs').first().json.items || [];\n\n// Deduplicate within the current batch first (keep first occurrence)\nconst seenInBatch = new Set();\nconst uniqueItems = allItems.filter(item => {\n  if (!item.item_id || seenInBatch.has(item.item_id)) return false;\n  seenInBatch.add(item.item_id);\n  return true;\n});\n\n// Then filter out IDs already in D1\nconst newItems = uniqueItems.filter(item => !knownIds.has(item.item_id));\n\nreturn [{\n  json: {\n    items: newItems,\n    total_input: allItems.length,\n    batch_duplicates_dropped: allItems.length - uniqueItems.length,\n    d1_duplicates_dropped: uniqueItems.length - newItems.length\n  }\n}];"
       },
       "id": "d4e5f6a7-0004-0004-0004-000000000004",
       "name": "Filter Duplicates",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 300]
+      "position": [
+        900,
+        300
+      ]
     }
   ],
   "connections": {
     "Execute Workflow Trigger": {
       "main": [
-        [{ "node": "Extract Item IDs", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Extract Item IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Extract Item IDs": {
       "main": [
-        [{ "node": "Query D1 for Known IDs", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Query D1 for Known IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Query D1 for Known IDs": {
       "main": [
-        [{ "node": "Filter Duplicates", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Filter Duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -86,5 +124,9 @@
     "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
   },
   "id": "intraday-03-deduplication-v1",
-  "tags": ["intraday", "deduplication", "v1"]
+  "tags": [
+    "intraday",
+    "deduplication",
+    "v1"
+  ]
 }

@@ -135,8 +135,10 @@ The deduplication step queries D1 for existing `metadata_json->>'item_id'`
 values within the last 24 hours. Items that already exist are dropped before
 any AI call is made, preventing duplicate alerts and unnecessary API spend.
 
-Cluster upserts use `(topic_slug, date_key, cluster_label)` as a natural
-key (`INSERT OR REPLACE`). Alert inserts use the same `item_id` guard.
+Cluster upserts use `(topic_slug, date_key, cluster_label)` as the conflict key
+(`INSERT ... ON CONFLICT(topic_slug, date_key, cluster_label) DO UPDATE`).
+This requires the UNIQUE constraint added in migration `0002_event_clusters_unique.sql`.
+Alert inserts use the `item_id` guard for idempotency.
 
 ---
 
@@ -176,8 +178,7 @@ Set the required credentials and environment variables before activating the orc
 |----------------|--------|
 | `CloudflareD1Api` | Modules 03, 07, 08, 09 |
 | `OpenAiApi` | Module 05 |
-| `TelegramBotApi` | Module 08 |
-| `DiscordWebhook` | Module 09 |
+| `TelegramBotApi` | Modules 08, shared failure notifier |
 
 ### Required n8n environment variables
 
@@ -188,5 +189,5 @@ Set the required credentials and environment variables before activating the orc
 | `ALERT_IMPORTANCE_THRESHOLD` | Minimum importance score to send an alert (default: 60) |
 | `ALERT_SEVERITY_THRESHOLD` | Minimum severity score to send an alert (default: 50) |
 | `TELEGRAM_CHAT_ID` | Target Telegram chat/channel ID |
-| `DISCORD_WEBHOOK_URL` | Discord incoming webhook URL |
+| `DISCORD_WEBHOOK_URL` | Discord incoming webhook URL (module 09 sends via HTTP Request; no named credential needed) |
 | `FAILURE_ALERT_CHANNEL` | Telegram chat ID for failure notifications |

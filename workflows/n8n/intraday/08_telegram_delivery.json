@@ -7,7 +7,10 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
@@ -18,18 +21,24 @@
       "name": "Expand Alerts",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Format the alert as a Telegram message using HTML parse mode.\n// Emoji and score indicators improve scannability in the channel feed.\nconst item = $input.item.json;\n\nconst topicEmoji = {\n  crypto:     '🪙',\n  finance:    '📈',\n  economy:    '🏦',\n  health:     '🏥',\n  ai:         '🤖',\n  energy:     '⚡',\n  technology: '💻'\n};\nconst emoji = topicEmoji[item.topic_slug] || '📰';\nconst importanceBar = '🟩'.repeat(Math.round(item.importance_score / 20)) + '⬜'.repeat(5 - Math.round(item.importance_score / 20));\nconst sourceLink = item.source_url ? `\\n<a href=\"${item.source_url}\">Source: ${item.source_name}</a>` : `\\nSource: ${item.source_name}`;\n\nconst text = [\n  `${emoji} <b>${item.topic_slug.toUpperCase()}</b>  |  Importance: ${importanceBar} ${item.importance_score}/100`,\n  ``,\n  `<b>${item.headline}</b>`,\n  ``,\n  item.summary_text,\n  sourceLink\n].join('\\n');\n\nreturn [{ json: { ...item, telegram_text: text } }];"
+        "jsCode": "// Format the alert as a Telegram message using HTML parse mode.\n// All dynamic fields are HTML-escaped to prevent parse errors or injection.\nconst item = $input.item.json;\n\nconst escHtml = (s) =>\n  (s || '')\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;');\n\nconst topicEmoji = {\n  crypto:     '🪙',\n  finance:    '📈',\n  economy:    '🏦',\n  health:     '🏥',\n  ai:         '🤖',\n  energy:     '⚡',\n  technology: '💻'\n};\nconst emoji = topicEmoji[item.topic_slug] || '📰';\nconst importanceBar = '🟩'.repeat(Math.round(item.importance_score / 20)) + '⬜'.repeat(5 - Math.round(item.importance_score / 20));\nconst sourceLink = item.source_url\n  ? `\\n<a href=\"${escHtml(item.source_url)}\">Source: ${escHtml(item.source_name)}</a>`\n  : `\\nSource: ${escHtml(item.source_name)}`;\n\nconst text = [\n  `${emoji} <b>${item.topic_slug.toUpperCase()}</b>  |  Importance: ${importanceBar} ${item.importance_score}/100`,\n  ``,\n  `<b>${escHtml(item.headline)}</b>`,\n  ``,\n  escHtml(item.summary_text),\n  sourceLink\n].join('\\n');\n\nreturn [{ json: { ...item, telegram_text: text } }];"
       },
       "id": "c9d0e1f2-0009-0009-0009-000000000003",
       "name": "Format Telegram Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [680, 300]
+      "position": [
+        680,
+        300
+      ]
     },
     {
       "parameters": {
@@ -44,9 +53,15 @@
       "name": "Send Telegram Message",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1,
-      "position": [900, 300],
+      "position": [
+        900,
+        300
+      ],
       "credentials": {
-        "telegramApi": { "id": "telegram-bot-credentials", "name": "TelegramBotApi" }
+        "telegramApi": {
+          "id": "telegram-bot-credentials",
+          "name": "TelegramBotApi"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
@@ -60,21 +75,32 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"sql\": \"UPDATE alerts SET delivered_telegram = 1, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ?\",\n  \"params\": [ {{ $('Format Telegram Message').item.json.alert_id }} ]\n}",
-        "options": { "timeout": 10000 }
+        "options": {
+          "timeout": 10000
+        }
       },
       "id": "c9d0e1f2-0009-0009-0009-000000000005",
       "name": "Mark Telegram Delivered",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1120, 300],
+      "position": [
+        1120,
+        300
+      ],
       "credentials": {
-        "httpHeaderAuth": { "id": "cloudflare-d1-api", "name": "CloudflareD1Api" }
+        "httpHeaderAuth": {
+          "id": "cloudflare-d1-api",
+          "name": "CloudflareD1Api"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
@@ -84,22 +110,46 @@
   "connections": {
     "Execute Workflow Trigger": {
       "main": [
-        [{ "node": "Expand Alerts", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Expand Alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Expand Alerts": {
       "main": [
-        [{ "node": "Format Telegram Message", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Format Telegram Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Format Telegram Message": {
       "main": [
-        [{ "node": "Send Telegram Message", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Send Telegram Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Send Telegram Message": {
       "main": [
-        [{ "node": "Mark Telegram Delivered", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Mark Telegram Delivered",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -112,5 +162,10 @@
     "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
   },
   "id": "intraday-08-telegram-delivery-v1",
-  "tags": ["intraday", "telegram", "delivery", "v1"]
+  "tags": [
+    "intraday",
+    "telegram",
+    "delivery",
+    "v1"
+  ]
 }

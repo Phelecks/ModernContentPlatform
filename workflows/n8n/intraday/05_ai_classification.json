@@ -7,7 +7,10 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
@@ -18,7 +21,10 @@
       "name": "Expand Items",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
@@ -46,9 +52,15 @@
       "name": "Classify with AI",
       "type": "n8n-nodes-base.openAi",
       "typeVersion": 1,
-      "position": [680, 300],
+      "position": [
+        680,
+        300
+      ],
       "credentials": {
-        "openAiApi": { "id": "openai-api-credentials", "name": "OpenAiApi" }
+        "openAiApi": {
+          "id": "openai-api-credentials",
+          "name": "OpenAiApi"
+        }
       },
       "retryOnFail": true,
       "maxTries": 3,
@@ -57,13 +69,16 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Parse and validate the AI JSON output against the alert_classification schema.\n// Falls back gracefully when the AI returns malformed output.\nconst item = $input.item.json;\nconst rawContent = item?.message?.content || item?.choices?.[0]?.message?.content || '';\n\nconst VALID_TOPICS = ['crypto', 'finance', 'economy', 'health', 'ai', 'energy', 'technology'];\n\nlet ai;\ntry {\n  // Strip potential markdown code fences\n  const cleaned = rawContent.replace(/^```[a-z]*\\n?|\\n?```$/g, '').trim();\n  ai = JSON.parse(cleaned);\n} catch (e) {\n  // Parsing failed — return a low-confidence fallback\n  ai = {\n    topic_slug: $('Expand Items').item.json.topic_candidates?.[0] || 'technology',\n    secondary_topics: [],\n    headline: $('Expand Items').item.json.headline,\n    summary_text: $('Expand Items').item.json.body?.slice(0, 500) || $('Expand Items').item.json.headline,\n    severity_score: 0,\n    importance_score: 0,\n    confidence_score: 0,\n    send_alert: false,\n    alert_reason: 'AI output parse failure — skipping alert.',\n    cluster_label: null\n  };\n}\n\n// Validate required fields\nif (!VALID_TOPICS.includes(ai.topic_slug)) {\n  ai.topic_slug = $('Expand Items').item.json.topic_candidates?.[0] || 'technology';\n}\nif (typeof ai.severity_score  !== 'number') ai.severity_score  = 0;\nif (typeof ai.importance_score !== 'number') ai.importance_score = 0;\nif (typeof ai.confidence_score !== 'number') ai.confidence_score = 0;\nif (typeof ai.send_alert !== 'boolean') ai.send_alert = false;\n\nconst source = $('Expand Items').item.json;\n\nreturn [{\n  json: {\n    item_id:          source.item_id,\n    topic_slug:       ai.topic_slug,\n    secondary_topics: Array.isArray(ai.secondary_topics) ? ai.secondary_topics.filter(t => VALID_TOPICS.includes(t)).slice(0, 2) : [],\n    headline:         (ai.headline || source.headline || '').slice(0, 250),\n    summary_text:     (ai.summary_text || '').slice(0, 500),\n    source_url:       source.source_url || null,\n    source_name:      source.source_name,\n    severity_score:   Math.min(100, Math.max(0, Math.round(ai.severity_score))),\n    importance_score: Math.min(100, Math.max(0, Math.round(ai.importance_score))),\n    confidence_score: Math.min(100, Math.max(0, Math.round(ai.confidence_score))),\n    send_alert:       ai.send_alert === true,\n    alert_reason:     ai.alert_reason || null,\n    event_at:         source.published_at,\n    cluster_label:    ai.cluster_label || source.cluster_label || null\n  }\n}];"
+        "jsCode": "// Parse and validate the AI JSON output against the alert_classification schema.\n// Falls back gracefully when the AI returns malformed output.\nconst item = $input.item.json;\nconst rawContent = item?.message?.content || item?.choices?.[0]?.message?.content || '';\n\nconst VALID_TOPICS = ['crypto', 'finance', 'economy', 'health', 'ai', 'energy', 'technology'];\n\nlet ai;\ntry {\n  // Strip potential markdown code fences\n  const cleaned = rawContent.replace(/^```[a-z]*\\n?|\\n?```$/g, '').trim();\n  ai = JSON.parse(cleaned);\n} catch (e) {\n  // Parsing failed — return a low-confidence fallback\n  ai = {\n    topic_slug: $('Expand Items').item.json.topic_candidates?.[0] || 'technology',\n    secondary_topics: [],\n    headline: $('Expand Items').item.json.headline,\n    summary_text: $('Expand Items').item.json.body?.slice(0, 500) || $('Expand Items').item.json.headline,\n    severity_score: 0,\n    importance_score: 0,\n    confidence_score: 0,\n    send_alert: false,\n    alert_reason: 'AI output parse failure — skipping alert.',\n    cluster_label: null\n  };\n}\n\n// Validate required fields\nif (!VALID_TOPICS.includes(ai.topic_slug)) {\n  ai.topic_slug = $('Expand Items').item.json.topic_candidates?.[0] || 'technology';\n}\nif (typeof ai.severity_score  !== 'number') ai.severity_score  = 0;\nif (typeof ai.importance_score !== 'number') ai.importance_score = 0;\nif (typeof ai.confidence_score !== 'number') ai.confidence_score = 0;\nif (typeof ai.send_alert !== 'boolean') ai.send_alert = false;\n\nconst source = $('Expand Items').item.json;\n\nreturn [{\n  json: {\n    item_id:          source.item_id,\n    topic_slug:       ai.topic_slug,\n    secondary_topics: Array.isArray(ai.secondary_topics) ? ai.secondary_topics.filter(t => VALID_TOPICS.includes(t)).slice(0, 2) : [],\n    headline:         (ai.headline || source.headline || '').slice(0, 250),\n    summary_text:     (ai.summary_text || source.body || source.headline || '').slice(0, 500),\n    source_url:       source.source_url || null,\n    source_name:      source.source_name,\n    severity_score:   Math.min(100, Math.max(0, Math.round(ai.severity_score))),\n    importance_score: Math.min(100, Math.max(0, Math.round(ai.importance_score))),\n    confidence_score: Math.min(100, Math.max(0, Math.round(ai.confidence_score))),\n    send_alert:       ai.send_alert === true,\n    alert_reason:     ai.alert_reason || null,\n    event_at:         source.published_at,\n    cluster_label:    ai.cluster_label || source.cluster_label || null\n  }\n}];"
       },
       "id": "f6a7b8c9-0006-0006-0006-000000000004",
       "name": "Parse and Validate AI Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 300]
+      "position": [
+        900,
+        300
+      ]
     },
     {
       "parameters": {
@@ -74,28 +89,55 @@
       "name": "Collect Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1120, 300]
+      "position": [
+        1120,
+        300
+      ]
     }
   ],
   "connections": {
     "Execute Workflow Trigger": {
       "main": [
-        [{ "node": "Expand Items", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Expand Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Expand Items": {
       "main": [
-        [{ "node": "Classify with AI", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Classify with AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Classify with AI": {
       "main": [
-        [{ "node": "Parse and Validate AI Output", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Parse and Validate AI Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Parse and Validate AI Output": {
       "main": [
-        [{ "node": "Collect Output", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Collect Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -108,5 +150,10 @@
     "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
   },
   "id": "intraday-05-ai-classification-v1",
-  "tags": ["intraday", "ai", "classification", "v1"]
+  "tags": [
+    "intraday",
+    "ai",
+    "classification",
+    "v1"
+  ]
 }

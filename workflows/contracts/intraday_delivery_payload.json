@@ -86,6 +86,20 @@
       },
       "minItems": 1,
       "description": "Delivery channels approved for this alert."
+    },
+    "secondary_topics": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["crypto", "finance", "economy", "health", "ai", "energy", "technology"]
+      },
+      "maxItems": 2,
+      "description": "Up to two secondary topics assigned by AI classification. Stored in metadata_json."
+    },
+    "alert_reason": {
+      "type": ["string", "null"],
+      "maxLength": 200,
+      "description": "One-sentence AI explanation for the alert decision. Stored in metadata_json. Null when not provided."
     }
   },
   "additionalProperties": false,
@@ -105,7 +119,9 @@
       "event_at": "2025-01-15T14:32:00Z",
       "date_key": "2025-01-15",
       "cluster_label": "Bitcoin price rally",
-      "channels": ["telegram", "discord"]
+      "channels": ["telegram", "discord"],
+      "secondary_topics": ["finance"],
+      "alert_reason": "New all-time high is a high-importance milestone for the crypto audience."
     }
   ]
 }
