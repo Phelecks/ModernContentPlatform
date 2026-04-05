@@ -183,8 +183,9 @@ async function loadPage() {
     await Promise.all(contentLoads)
 
     if (myId !== currentLoadId) return
-  } catch {
+  } catch (err) {
     if (myId !== currentLoadId) return
+    console.error('[TopicDayPage] Failed to load page:', err)
     pageError.value = true
     pageLoading.value = false
     return // skip timeline when page shell data failed to load
@@ -208,8 +209,11 @@ async function loadTimeline(myId) {
     if (alerts.value.length) {
       timelineCursor.value = alerts.value[alerts.value.length - 1].event_at
     }
-  } catch {
-    if (myId === currentLoadId) timelineError.value = true
+  } catch (err) {
+    if (myId === currentLoadId) {
+      console.error('[TopicDayPage] Failed to load timeline:', err)
+      timelineError.value = true
+    }
   } finally {
     if (myId === currentLoadId) timelineLoading.value = false
   }
