@@ -1,0 +1,106 @@
+{
+  "name": "Intraday — 02 Normalization",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "c3d4e5f6-0003-0003-0003-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Receive the items array from the ingestion workflow.\n// Each item conforms to the intraday_source_item contract.\nconst input = $input.first().json;\nconst raw = Array.isArray(input.items) ? input.items : [];\nreturn raw.map(item => ({ json: item }));"
+      },
+      "id": "c3d4e5f6-0003-0003-0003-000000000002",
+      "name": "Expand Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Normalize a single source_item into the intraday_normalized_item contract.\nconst crypto = require('crypto');\nconst item = $input.item.json;\n\n// Compute deterministic item_id\nconst hashInput = `${item.source_name}:${item.source_id}`;\nconst item_id = crypto.createHash('sha256').update(hashInput).digest('hex');\n\n// Strip HTML from text fields\nconst stripHtml = (str) => (str || '').replace(/<[^>]+>/g, '').replace(/\\s+/g, ' ').trim();\n\nconst headline = stripHtml(item.title || '').slice(0, 250);\nconst body = item.body ? stripHtml(item.body).slice(0, 2000) : null;\n\n// Determine best available timestamp; fall back to fetched_at\nlet published_at;\ntry {\n  published_at = item.published_at ? new Date(item.published_at).toISOString() : item.fetched_at;\n} catch {\n  published_at = item.fetched_at;\n}\n\n// Lightweight keyword-based topic candidate detection\nconst topicKeywords = {\n  crypto:     ['bitcoin', 'ethereum', 'crypto', 'blockchain', 'defi', 'nft', 'altcoin', 'btc', 'eth', 'solana', 'token', 'wallet', 'exchange'],\n  finance:    ['stock', 'equity', 'bond', 'yield', 'interest rate', 'market', 'nasdaq', 'nyse', 's&p', 'dow', 'etf', 'dividend', 'earnings'],\n  economy:    ['gdp', 'inflation', 'recession', 'trade', 'tariff', 'unemployment', 'central bank', 'federal reserve', 'ecb', 'imf', 'world bank'],\n  health:     ['vaccine', 'clinical trial', 'fda', 'drug', 'cancer', 'pandemic', 'disease', 'hospital', 'biotech', 'pharma', 'health'],\n  ai:         ['artificial intelligence', 'machine learning', 'llm', 'openai', 'gpt', 'neural network', 'deep learning', 'foundation model', 'chatbot', 'automation'],\n  energy:     ['oil', 'gas', 'renewable', 'solar', 'wind', 'opec', 'battery', 'ev', 'electric vehicle', 'carbon', 'energy', 'power grid'],\n  technology: ['apple', 'google', 'microsoft', 'meta', 'amazon', 'semiconductor', 'chip', 'software', 'cloud', 'cybersecurity', 'regulation', 'antitrust']\n};\nconst searchText = `${headline} ${body || ''}`.toLowerCase();\nconst topic_candidates = Object.entries(topicKeywords)\n  .filter(([, kw]) => kw.some(k => searchText.includes(k)))\n  .map(([topic]) => topic)\n  .slice(0, 3);\n\nreturn [{\n  json: {\n    item_id,\n    source_id:         item.source_id,\n    source_name:       item.source_name,\n    source_type:       item.source_type,\n    source_url:        item.source_url || null,\n    headline,\n    body,\n    topic_candidates,\n    published_at,\n    fetched_at:        item.fetched_at,\n    is_duplicate:      false\n  }\n}];"
+      },
+      "id": "c3d4e5f6-0003-0003-0003-000000000003",
+      "name": "Normalize Item",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.headline.length }}",
+              "rightValue": 5,
+              "operator": { "type": "number", "operation": "gte" }
+            }
+          ]
+        }
+      },
+      "id": "c3d4e5f6-0003-0003-0003-000000000004",
+      "name": "Has Valid Headline?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {},
+      "id": "c3d4e5f6-0003-0003-0003-000000000005",
+      "name": "Discard Invalid Item",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1120, 440]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Collect all valid normalized items and return them as the workflow output.\nconst items = $input.all().map(i => i.json);\nreturn [{ json: { items } }];"
+      },
+      "id": "c3d4e5f6-0003-0003-0003-000000000006",
+      "name": "Collect Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [{ "node": "Expand Items", "type": "main", "index": 0 }]
+      ]
+    },
+    "Expand Items": {
+      "main": [
+        [{ "node": "Normalize Item", "type": "main", "index": 0 }]
+      ]
+    },
+    "Normalize Item": {
+      "main": [
+        [{ "node": "Has Valid Headline?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Has Valid Headline?": {
+      "main": [
+        [{ "node": "Collect Output", "type": "main", "index": 0 }],
+        [{ "node": "Discard Invalid Item", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": true,
+    "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
+  },
+  "id": "intraday-02-normalization-v1",
+  "tags": ["intraday", "normalization", "v1"]
+}

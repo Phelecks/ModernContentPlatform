@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "intraday_source_item",
+  "title": "Intraday Source Item",
+  "description": "Raw item fetched from any configured source before normalization.",
+  "type": "object",
+  "required": [
+    "source_id",
+    "source_name",
+    "source_type",
+    "title",
+    "fetched_at"
+  ],
+  "properties": {
+    "source_id": {
+      "type": "string",
+      "description": "Unique identifier assigned by the originating source (e.g. RSS guid, API record id)."
+    },
+    "source_name": {
+      "type": "string",
+      "description": "Human-readable label for the source (e.g. 'CoinDesk RSS', 'Reuters API')."
+    },
+    "source_type": {
+      "type": "string",
+      "enum": ["rss", "api", "social", "webhook"],
+      "description": "Category of the source."
+    },
+    "source_url": {
+      "type": ["string", "null"],
+      "format": "uri",
+      "description": "Canonical URL of the original item. Null when not available."
+    },
+    "title": {
+      "type": "string",
+      "description": "Raw title or headline from the source."
+    },
+    "body": {
+      "type": ["string", "null"],
+      "description": "Raw body text or description from the source. Null when not available."
+    },
+    "published_at": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Publication timestamp from the source (ISO-8601). Null if the source does not provide one."
+    },
+    "fetched_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC timestamp when the item was fetched by the ingestion step (ISO-8601)."
+    },
+    "raw_json": {
+      "type": ["object", "null"],
+      "description": "Original source payload preserved for debugging and re-processing."
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "source_id": "https://www.coindesk.com/markets/2025/01/15/bitcoin-hits-new-ath/",
+      "source_name": "CoinDesk RSS",
+      "source_type": "rss",
+      "source_url": "https://www.coindesk.com/markets/2025/01/15/bitcoin-hits-new-ath/",
+      "title": "Bitcoin Hits New All-Time High Above $120K",
+      "body": "Bitcoin surged past $120,000 on Wednesday, setting a new all-time high...",
+      "published_at": "2025-01-15T14:32:00Z",
+      "fetched_at": "2025-01-15T14:45:00Z",
+      "raw_json": {
+        "guid": "https://www.coindesk.com/markets/2025/01/15/bitcoin-hits-new-ath/",
+        "link": "https://www.coindesk.com/markets/2025/01/15/bitcoin-hits-new-ath/",
+        "pubDate": "Wed, 15 Jan 2025 14:32:00 +0000",
+        "category": ["Markets", "Bitcoin"]
+      }
+    }
+  ]
+}

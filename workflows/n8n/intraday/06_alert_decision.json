@@ -1,0 +1,41 @@
+{
+  "name": "Intraday — 06 Alert Decision",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a7b8c9d0-0007-0007-0007-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Apply threshold rules to the AI-classified alerts.\n// An alert is approved for delivery when ALL of the following are true:\n//   1. AI recommended send_alert = true\n//   2. importance_score >= ALERT_IMPORTANCE_THRESHOLD (default: 60)\n//   3. severity_score   >= ALERT_SEVERITY_THRESHOLD   (default: 50)\n//   4. confidence_score >= ALERT_CONFIDENCE_THRESHOLD (default: 40)\n//\n// Approved alerts are enriched with the delivery channel list and\n// the date_key computed from event_at.\n\nconst importanceThreshold = parseInt($vars.ALERT_IMPORTANCE_THRESHOLD || '60', 10);\nconst severityThreshold   = parseInt($vars.ALERT_SEVERITY_THRESHOLD   || '50', 10);\nconst confidenceThreshold = parseInt($vars.ALERT_CONFIDENCE_THRESHOLD || '40', 10);\n\nconst input = $input.first().json;\nconst items = Array.isArray(input.items) ? input.items : [];\n\nconst approved = [];\nconst rejected = [];\n\nfor (const item of items) {\n  const passes =\n    item.send_alert === true &&\n    item.importance_score >= importanceThreshold &&\n    item.severity_score   >= severityThreshold   &&\n    item.confidence_score >= confidenceThreshold;\n\n  if (passes) {\n    const eventDate = item.event_at ? item.event_at.slice(0, 10) : new Date().toISOString().slice(0, 10);\n    approved.push({\n      ...item,\n      alert_id:   null, // populated by D1 persistence\n      cluster_id: null, // populated by D1 persistence\n      date_key:   eventDate,\n      channels:   ['telegram', 'discord']\n    });\n  } else {\n    rejected.push(item.item_id);\n  }\n}\n\nreturn [{\n  json: {\n    items:           approved,\n    rejected_count:  rejected.length,\n    approved_count:  approved.length\n  }\n}];"
+      },
+      "id": "a7b8c9d0-0007-0007-0007-000000000002",
+      "name": "Apply Thresholds",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [{ "node": "Apply Thresholds", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": true,
+    "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
+  },
+  "id": "intraday-06-alert-decision-v1",
+  "tags": ["intraday", "decision", "v1"]
+}

@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "intraday_normalized_item",
+  "title": "Intraday Normalized Item",
+  "description": "Source item after normalization. Canonical internal format used by all downstream stages.",
+  "type": "object",
+  "required": [
+    "item_id",
+    "source_id",
+    "source_name",
+    "source_type",
+    "headline",
+    "published_at",
+    "fetched_at",
+    "is_duplicate"
+  ],
+  "properties": {
+    "item_id": {
+      "type": "string",
+      "description": "Deterministic identifier: SHA-256( source_name + ':' + source_id ), hex-encoded. Used for deduplication."
+    },
+    "source_id": {
+      "type": "string",
+      "description": "Original source identifier, preserved from the source item."
+    },
+    "source_name": {
+      "type": "string",
+      "description": "Human-readable source label."
+    },
+    "source_type": {
+      "type": "string",
+      "enum": ["rss", "api", "social", "webhook"]
+    },
+    "source_url": {
+      "type": ["string", "null"],
+      "format": "uri",
+      "description": "Canonical URL of the original item."
+    },
+    "headline": {
+      "type": "string",
+      "maxLength": 250,
+      "description": "Cleaned, truncated headline. HTML stripped. Max 250 characters."
+    },
+    "body": {
+      "type": ["string", "null"],
+      "maxLength": 2000,
+      "description": "Cleaned body text. HTML stripped. Max 2000 characters. Null when not available."
+    },
+    "topic_candidates": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["crypto", "finance", "economy", "health", "ai", "energy", "technology"]
+      },
+      "minItems": 0,
+      "maxItems": 3,
+      "description": "Topic slugs identified by lightweight keyword matching before the AI step."
+    },
+    "published_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Best-available event timestamp (ISO-8601 UTC). Falls back to fetched_at when source omits it."
+    },
+    "fetched_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC timestamp when the item was fetched."
+    },
+    "is_duplicate": {
+      "type": "boolean",
+      "description": "Set to true by the deduplication stage. Items where is_duplicate=true are dropped before AI classification."
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "item_id": "a3f8c2d14e7b9f01234567890abcdef1234567890abcdef1234567890abcdef12",
+      "source_id": "https://www.coindesk.com/markets/2025/01/15/bitcoin-hits-new-ath/",
+      "source_name": "CoinDesk RSS",
+      "source_type": "rss",
+      "source_url": "https://www.coindesk.com/markets/2025/01/15/bitcoin-hits-new-ath/",
+      "headline": "Bitcoin Hits New All-Time High Above $120K",
+      "body": "Bitcoin surged past $120,000 on Wednesday, setting a new all-time high as institutional demand continued to rise.",
+      "topic_candidates": ["crypto", "finance"],
+      "published_at": "2025-01-15T14:32:00Z",
+      "fetched_at": "2025-01-15T14:45:00Z",
+      "is_duplicate": false
+    }
+  ]
+}

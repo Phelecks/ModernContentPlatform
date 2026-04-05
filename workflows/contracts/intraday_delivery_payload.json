@@ -1,0 +1,111 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "intraday_delivery_payload",
+  "title": "Intraday Delivery Payload",
+  "description": "Alert approved by the alert decision module and ready for Telegram/Discord delivery. Also used by the D1 persistence module as the write payload.",
+  "type": "object",
+  "required": [
+    "item_id",
+    "alert_id",
+    "topic_slug",
+    "headline",
+    "summary_text",
+    "source_name",
+    "severity_score",
+    "importance_score",
+    "event_at",
+    "date_key",
+    "channels"
+  ],
+  "properties": {
+    "item_id": {
+      "type": "string",
+      "description": "Deterministic item identifier used for idempotency checks."
+    },
+    "alert_id": {
+      "type": ["integer", "null"],
+      "description": "D1 row ID assigned after the persistence write. Null before persistence. Required for delivery modules."
+    },
+    "cluster_id": {
+      "type": ["integer", "null"],
+      "description": "D1 row ID of the event_cluster record. Null when no cluster is assigned."
+    },
+    "topic_slug": {
+      "type": "string",
+      "enum": ["crypto", "finance", "economy", "health", "ai", "energy", "technology"]
+    },
+    "headline": {
+      "type": "string",
+      "maxLength": 250
+    },
+    "summary_text": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "source_url": {
+      "type": ["string", "null"],
+      "format": "uri"
+    },
+    "source_name": {
+      "type": "string"
+    },
+    "severity_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "importance_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "confidence_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "event_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 UTC event timestamp."
+    },
+    "date_key": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+      "description": "YYYY-MM-DD date derived from event_at. Used as the D1 partition key."
+    },
+    "cluster_label": {
+      "type": ["string", "null"],
+      "maxLength": 100
+    },
+    "channels": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["telegram", "discord"]
+      },
+      "minItems": 1,
+      "description": "Delivery channels approved for this alert."
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "item_id": "a3f8c2d14e7b9f01234567890abcdef1234567890abcdef1234567890abcdef12",
+      "alert_id": 4821,
+      "cluster_id": 312,
+      "topic_slug": "crypto",
+      "headline": "Bitcoin Hits New All-Time High Above $120K",
+      "summary_text": "Bitcoin surged past $120,000, setting a new all-time high driven by strong institutional inflows and ETF demand.",
+      "source_url": "https://www.coindesk.com/markets/2025/01/15/bitcoin-hits-new-ath/",
+      "source_name": "CoinDesk RSS",
+      "severity_score": 72,
+      "importance_score": 88,
+      "confidence_score": 95,
+      "event_at": "2025-01-15T14:32:00Z",
+      "date_key": "2025-01-15",
+      "cluster_label": "Bitcoin price rally",
+      "channels": ["telegram", "discord"]
+    }
+  ]
+}
