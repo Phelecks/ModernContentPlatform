@@ -47,6 +47,7 @@
 
     <button
       v-if="hasMore && !loading"
+      type="button"
       class="alert-timeline__load-more"
       @click="$emit('load-more')"
     >

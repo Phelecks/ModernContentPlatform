@@ -22,6 +22,7 @@ export async function onRequestGet({ env }) {
     )
     return jsonResponse(topics)
   } catch (err) {
-    return errorResponse(`Failed to fetch topics: ${err.message}`)
+    console.error('[/api/topics] Failed to fetch topics:', err)
+    return errorResponse('Failed to fetch topics')
   }
 }

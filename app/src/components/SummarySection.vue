@@ -3,13 +3,13 @@
     <h2 class="summary-section__heading">
       Daily Summary
     </h2>
-    <!-- Render raw markdown as HTML if a rendered slot isn't provided -->
+    <!-- Render sanitized HTML. Content originates from GitHub-owned files;
+         DOMPurify provides a defence-in-depth layer against any unexpected markup. -->
     <!-- eslint-disable vue/no-v-html -->
-    <!-- html is sourced from GitHub-owned content files, not user input -->
     <div
-      v-if="html"
+      v-if="sanitizedHtml"
       class="summary-section__body prose"
-      v-html="html"
+      v-html="sanitizedHtml"
     />
     <!-- eslint-enable vue/no-v-html -->
     <div
@@ -24,7 +24,10 @@
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue'
+import DOMPurify from 'dompurify'
+
+const props = defineProps({
   /** Pre-rendered HTML string (preferred) */
   html: {
     type: String,
@@ -36,6 +39,11 @@ defineProps({
     default: null
   }
 })
+
+/** Sanitized version of the html prop; null when no html is provided. */
+const sanitizedHtml = computed(() =>
+  props.html ? DOMPurify.sanitize(props.html) : null
+)
 </script>
 
 <style scoped>
