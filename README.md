@@ -173,10 +173,13 @@ Key characteristics:
 │
 ├── scripts/          # Utility scripts for local and CI tasks
 │
-└── .github/          # Copilot prompts, skills, and GitHub automation
-    ├── copilot-instructions.md
-    ├── prompts/          # Reusable Copilot prompt files
-    └── skills/           # Custom Copilot agent skills
+├── .github/          # Copilot prompts, agents, skills, and GitHub automation
+│   ├── copilot-instructions.md
+│   ├── agents/           # Agent definitions and supporting configuration
+│   ├── prompts/          # Reusable Copilot prompt files
+│   └── skills/           # Custom Copilot agent skills
+│
+└── custom-instructions/ # Additional reusable AI instruction sets and tooling notes
 ```
 
 ### Responsibility boundaries
