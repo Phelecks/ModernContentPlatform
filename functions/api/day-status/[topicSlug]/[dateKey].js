@@ -28,42 +28,28 @@ export async function onRequestGet({ params, env }) {
     const row = await queryOne(
       db,
       `SELECT
-         ds.topic_slug,
-         ds.date_key,
-         ds.page_state,
+         t.topic_slug AS topic_slug,
+         ? AS date_key,
+         COALESCE(ds.page_state, 'pending') AS page_state,
          t.display_name,
-         ds.alert_count,
-         ds.cluster_count,
-         ds.summary_available,
-         ds.video_available,
-         ds.article_available,
+         COALESCE(ds.alert_count, 0) AS alert_count,
+         COALESCE(ds.cluster_count, 0) AS cluster_count,
+         COALESCE(ds.summary_available, 0) AS summary_available,
+         COALESCE(ds.video_available, 0) AS video_available,
+         COALESCE(ds.article_available, 0) AS article_available,
          ds.prev_date_key,
          ds.next_date_key,
          ds.published_at
-       FROM daily_status ds
-       JOIN topics t ON t.topic_slug = ds.topic_slug
-       WHERE ds.topic_slug = ? AND ds.date_key = ?`,
-      [topicSlug, dateKey]
+       FROM topics t
+       LEFT JOIN daily_status ds
+         ON ds.topic_slug = t.topic_slug
+        AND ds.date_key = ?
+       WHERE t.topic_slug = ?`,
+      [dateKey, dateKey, topicSlug]
     )
 
     if (!row) {
-      return jsonResponse(
-        {
-          topic_slug: topicSlug,
-          date_key: dateKey,
-          page_state: 'pending',
-          display_name: topicSlug,
-          alert_count: 0,
-          cluster_count: 0,
-          summary_available: 0,
-          video_available: 0,
-          article_available: 0,
-          prev_date_key: null,
-          next_date_key: null,
-          published_at: null
-        },
-        200
-      )
+      return errorResponse(`Unknown topic: ${topicSlug}`, 404)
     }
 
     return jsonResponse(row)
