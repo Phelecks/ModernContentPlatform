@@ -21,7 +21,8 @@
   "properties": {
     "topic_slug": {
       "type": "string",
-      "enum": ["crypto", "finance", "economy", "health", "ai", "energy", "technology"]
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "Topic slug from the D1 topics table. Not restricted to a fixed enum so new topics can be added without updating this contract."
     },
     "date_key": {
       "type": "string",
@@ -42,7 +43,7 @@
     "summary": {
       "type": "object",
       "description": "Structured daily summary output. Matches the daily_summary AI schema.",
-      "$ref": "daily_summary"
+      "$ref": "../../../schemas/ai/daily_summary.json"
     },
     "article_md": {
       "type": "string",
@@ -52,22 +53,22 @@
     "expectation_check": {
       "type": "object",
       "description": "Expectation check output. Matches the expectation_check AI schema.",
-      "$ref": "expectation_check"
+      "$ref": "../../../schemas/ai/expectation_check.json"
     },
     "tomorrow_outlook": {
       "type": "object",
       "description": "Tomorrow's outlook output. Matches the tomorrow_outlook AI schema.",
-      "$ref": "tomorrow_outlook"
+      "$ref": "../../../schemas/ai/tomorrow_outlook.json"
     },
     "video_script": {
       "type": "object",
       "description": "Video script output. Matches the video_script AI schema.",
-      "$ref": "video_script"
+      "$ref": "../../../schemas/ai/video_script.json"
     },
     "youtube_metadata": {
       "type": "object",
       "description": "YouTube metadata output. Matches the youtube_metadata AI schema.",
-      "$ref": "youtube_metadata"
+      "$ref": "../../../schemas/ai/youtube_metadata.json"
     },
     "validated": {
       "type": "boolean",

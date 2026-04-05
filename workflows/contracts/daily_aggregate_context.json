@@ -16,8 +16,8 @@
   "properties": {
     "topic_slug": {
       "type": "string",
-      "enum": ["crypto", "finance", "economy", "health", "ai", "energy", "technology"],
-      "description": "The topic being processed."
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "The topic being processed. Must be a valid topic_slug from the D1 topics table."
     },
     "date_key": {
       "type": "string",

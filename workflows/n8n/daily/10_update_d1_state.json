@@ -33,7 +33,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ {\n  sql: \"INSERT INTO daily_status (topic_slug, date_key, page_state, summary_available, article_available, video_available, published_at, updated_at) VALUES (?, ?, 'published', 1, 1, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')) ON CONFLICT(topic_slug, date_key) DO UPDATE SET page_state = 'published', summary_available = 1, article_available = 1, published_at = COALESCE(published_at, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')), updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')\",\n  params: [$json.topic_slug, $json.date_key]\n} }}",
+        "jsonBody": "={{ {\n  sql: \"INSERT INTO daily_status (topic_slug, date_key, page_state, alert_count, cluster_count, summary_available, article_available, video_available, published_at, updated_at) VALUES (?, ?, 'published', ?, ?, 1, 1, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')) ON CONFLICT(topic_slug, date_key) DO UPDATE SET page_state = 'published', alert_count = MAX(alert_count, excluded.alert_count), cluster_count = MAX(cluster_count, excluded.cluster_count), summary_available = 1, article_available = 1, published_at = COALESCE(published_at, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')), updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')\",\n  params: [$json.topic_slug, $json.date_key, $json.alert_count || 0, $json.cluster_count || 0]\n} }}",
         "options": { "timeout": 15000 }
       },
       "id": "d1e2f3a4-0010-0010-0010-000000000003",
@@ -64,7 +64,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ {\n  sql: \"UPDATE publish_jobs SET status = 'success', completed_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), metadata_json = json_set(COALESCE(metadata_json, '{}'), '$.github_commit_sha', ?), updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ?\",\n  params: [$('Validate Input').first().json.github_commit_sha || '', $('Validate Input').first().json.publish_job_id]\n} }}",
+        "jsonBody": "={{ {\n  sql: \"UPDATE publish_jobs SET status = 'success', completed_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), metadata_json = json_set(COALESCE(metadata_json, '{}'), '$.github_commit_sha', ?), updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ?\",\n  params: [$('Validate Input').first().json.github_commit_sha ?? null, $('Validate Input').first().json.publish_job_id]\n} }}",
         "options": { "timeout": 15000 }
       },
       "id": "d1e2f3a4-0010-0010-0010-000000000004",

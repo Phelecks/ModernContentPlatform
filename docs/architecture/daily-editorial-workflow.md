@@ -207,8 +207,23 @@ state and must be cleaned up by the retry workflow (see below).
 ### Idempotency guard
 
 At the start of each topic's pipeline, the orchestrator queries `publish_jobs` for
-the current `(topic_slug, date_key)`. If the most recent job has `status='success'`,
-the topic is skipped. This makes the orchestrator **safe to rerun** at any time.
+the current `(topic_slug, date_key)`. The `should_skip` flag is set to `true` when:
+
+- The most recent job has `status='success'` (already completed — no need to re-run), or
+- The most recent job has `status='running'` and was started within the last 2 hours
+  (a concurrent execution is likely still in progress).
+
+Jobs with `status='running'` older than 2 hours are treated as stale and are
+allowed to be superseded by a fresh attempt. This prevents phantom concurrent
+runs while still allowing recovery from stuck executions without manual
+intervention.
+
+### date_key override
+
+The orchestrator defaults `date_key` to today's UTC date. For backfills or
+reruns of a specific past date, pass a `date_key` field (`YYYY-MM-DD`) as input
+when triggering the orchestrator manually in n8n. The `Build Topic Context` node
+validates the format and falls back to UTC today if absent or invalid.
 
 ### Manual rerun
 

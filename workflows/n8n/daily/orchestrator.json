@@ -74,7 +74,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Build the topic context: topic_slug and today's date_key.\n// date_key is UTC date, matching the convention used by all D1 tables.\nconst topic_slug = $input.first().json.topic_slug;\nconst date_key = new Date().toISOString().slice(0, 10); // YYYY-MM-DD UTC\n\nreturn [{ json: { topic_slug, date_key } }];"
+        "jsCode": "// Build the topic context: topic_slug and date_key.\n// date_key can be overridden via the trigger input for backfills or manual reruns.\n// When not provided, it defaults to today's UTC date (YYYY-MM-DD).\nconst item = $input.first().json;\nconst topic_slug = item.topic_slug;\n\n// Support a date_key override passed directly to the orchestrator (e.g. from a\n// manual execution or a webhook trigger). Fall back to today's UTC date.\nconst rawDateOverride = $('Schedule Trigger').first()?.json?.date_key\n  || $execution?.resumeData?.date_key\n  || null;\nconst date_key = (rawDateOverride && /^\\d{4}-\\d{2}-\\d{2}$/.test(rawDateOverride))\n  ? rawDateOverride\n  : new Date().toISOString().slice(0, 10);\n\nreturn [{ json: { topic_slug, date_key } }];"
       },
       "id": "d0e0f1a2-0000-0000-0000-000000000005",
       "name": "Build Topic Context",
@@ -95,7 +95,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ {\n  sql: \"SELECT id, status, attempt FROM publish_jobs WHERE topic_slug = ? AND date_key = ? ORDER BY created_at DESC LIMIT 1\",\n  params: [$json.topic_slug, $json.date_key]\n} }}",
+        "jsonBody": "={{ {\n  sql: \"SELECT id, status, attempt, started_at FROM publish_jobs WHERE topic_slug = ? AND date_key = ? ORDER BY created_at DESC LIMIT 1\",\n  params: [$json.topic_slug, $json.date_key]\n} }}",
         "options": { "timeout": 10000 }
       },
       "id": "d0e0f1a2-0000-0000-0000-000000000006",
@@ -113,7 +113,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Merge the job check result with the topic context.\nconst ctx = $('Build Topic Context').first().json;\nconst jobResp = $input.first().json;\nconst existingJob = jobResp?.result?.[0]?.results?.[0] || null;\n\nreturn [{\n  json: {\n    topic_slug: ctx.topic_slug,\n    date_key: ctx.date_key,\n    existing_job_id: existingJob?.id || null,\n    existing_job_status: existingJob?.status || null,\n    existing_job_attempt: existingJob?.attempt || 0\n  }\n}];"
+        "jsCode": "// Merge the job check result with the topic context.\n// Computes should_skip to prevent concurrent or duplicate runs:\n//   - skip if the latest job succeeded (no need to re-run)\n//   - skip if the latest job is still running and was started within the last 2 hours\n//     (assume an active execution is in progress; stale jobs past 2 h are allowed to retry)\nconst ctx = $('Build Topic Context').first().json;\nconst jobResp = $input.first().json;\nconst existingJob = jobResp?.result?.[0]?.results?.[0] || null;\n\nlet should_skip = false;\nlet skip_reason = null;\n\nif (existingJob) {\n  if (existingJob.status === 'success') {\n    should_skip = true;\n    skip_reason = 'already_succeeded';\n  } else if (existingJob.status === 'running' && existingJob.started_at) {\n    const startedMs = new Date(existingJob.started_at).getTime();\n    const ageMinutes = (Date.now() - startedMs) / 60000;\n    if (ageMinutes < 120) {\n      should_skip = true;\n      skip_reason = `running_active (started ${Math.round(ageMinutes)}m ago)`;\n    }\n    // If >= 120 minutes old, treat as stale and allow a fresh attempt\n  }\n}\n\nreturn [{\n  json: {\n    topic_slug: ctx.topic_slug,\n    date_key: ctx.date_key,\n    existing_job_id: existingJob?.id || null,\n    existing_job_status: existingJob?.status || null,\n    existing_job_attempt: existingJob?.attempt || 0,\n    should_skip,\n    skip_reason\n  }\n}];"
       },
       "id": "d0e0f1a2-0000-0000-0000-000000000007",
       "name": "Merge Job Context",
@@ -127,9 +127,9 @@
           "options": { "caseSensitive": false },
           "conditions": [
             {
-              "leftValue": "={{ $json.existing_job_status }}",
-              "rightValue": "success",
-              "operator": { "type": "string", "operation": "equals" }
+              "leftValue": "={{ $json.should_skip }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
             }
           ]
         }
