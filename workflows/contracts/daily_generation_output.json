@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "daily_generation_output",
+  "title": "Daily Generation Output",
+  "description": "Full generated content package produced by modules 02–07 and validated by module 08. Passed to module 09 (Publish to GitHub) and module 10 (Update D1 State).",
+  "type": "object",
+  "required": [
+    "topic_slug",
+    "date_key",
+    "publish_job_id",
+    "alert_count",
+    "cluster_count",
+    "summary",
+    "article_md",
+    "expectation_check",
+    "tomorrow_outlook",
+    "video_script",
+    "youtube_metadata",
+    "validated"
+  ],
+  "properties": {
+    "topic_slug": {
+      "type": "string",
+      "enum": ["crypto", "finance", "economy", "health", "ai", "energy", "technology"]
+    },
+    "date_key": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "publish_job_id": {
+      "type": "integer",
+      "description": "D1 ID of the publish_jobs row tracking this run."
+    },
+    "alert_count": {
+      "type": "integer",
+      "description": "Total alert count for this topic/date, carried from the aggregate context."
+    },
+    "cluster_count": {
+      "type": "integer",
+      "description": "Total cluster count for this topic/date, carried from the aggregate context."
+    },
+    "summary": {
+      "type": "object",
+      "description": "Structured daily summary output. Matches the daily_summary AI schema.",
+      "$ref": "daily_summary"
+    },
+    "article_md": {
+      "type": "string",
+      "minLength": 200,
+      "description": "Full written article in Markdown format. Minimum 200 characters."
+    },
+    "expectation_check": {
+      "type": "object",
+      "description": "Expectation check output. Matches the expectation_check AI schema.",
+      "$ref": "expectation_check"
+    },
+    "tomorrow_outlook": {
+      "type": "object",
+      "description": "Tomorrow's outlook output. Matches the tomorrow_outlook AI schema.",
+      "$ref": "tomorrow_outlook"
+    },
+    "video_script": {
+      "type": "object",
+      "description": "Video script output. Matches the video_script AI schema.",
+      "$ref": "video_script"
+    },
+    "youtube_metadata": {
+      "type": "object",
+      "description": "YouTube metadata output. Matches the youtube_metadata AI schema.",
+      "$ref": "youtube_metadata"
+    },
+    "validated": {
+      "type": "boolean",
+      "description": "Set to true by module 08 after all outputs pass validation. Must be true before module 09 runs."
+    },
+    "github_commit_sha": {
+      "type": ["string", "null"],
+      "description": "SHA of the GitHub commit written by module 09. Populated after successful GitHub publish. Null before publishing."
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,83 @@
+{
+  "name": "Daily — 03 Generate Article",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "d1e2f3a4-0003-0003-0003-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "message",
+        "model": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a professional financial and technology news writer. Write a daily briefing article in Markdown format for the given topic, date, and structured summary. The article should be readable, factual, and suitable for publication on a news platform.\n\nFormat requirements:\n- Start with an H1 title (# Title)\n- Include a brief lead paragraph\n- Use H2 subheadings (## Heading) for each major section\n- Cover key events with context and significance\n- Include a market context section if relevant\n- End with a Forward Look section referencing tomorrow's watchpoints\n- Length: 400-800 words\n- Style: factual, third-person, no sensationalism, no HTML tags\n- Do NOT include a date byline or author name\n- Do NOT use placeholder text like [INSERT X]"
+            },
+            {
+              "role": "user",
+              "content": "=Write a daily briefing article for topic '{{ $json.topic_slug }}' on {{ $json.date_key }}.\n\nStructured summary:\nHeadline: {{ $json.summary.headline }}\nOverview: {{ $json.summary.overview }}\nSentiment: {{ $json.summary.sentiment }}\nTopic score: {{ $json.summary.topic_score }}/100\n\nKey events:\n{{ $json.summary.key_events.map((e, i) => `${i+1}. ${e.title} (importance: ${e.importance_score}) — ${e.significance}`).join('\\n') }}\n\n{{ $json.summary.market_context ? 'Market context: ' + $json.summary.market_context : '' }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 1500
+        }
+      },
+      "id": "d1e2f3a4-0003-0003-0003-000000000002",
+      "name": "Generate Article with AI",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [460, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-api-credentials",
+          "name": "OpenAiApi"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Extract and validate the article Markdown from the AI response.\nconst rawContent = $input.first().json?.message?.content\n  || $input.first().json?.choices?.[0]?.message?.content\n  || '';\nconst ctx = $('Execute Workflow Trigger').first().json;\n\nconst article_md = rawContent.trim();\n\nif (article_md.length < 200) {\n  throw new Error(`AI article too short for ${ctx.topic_slug}/${ctx.date_key}: ${article_md.length} chars. Minimum 200.`);\n}\n\nif (!article_md.startsWith('#')) {\n  throw new Error(`AI article does not start with a Markdown heading for ${ctx.topic_slug}/${ctx.date_key}.`);\n}\n\nreturn [{ json: { ...ctx, article_md } }];"
+      },
+      "id": "d1e2f3a4-0003-0003-0003-000000000003",
+      "name": "Validate Article",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [{ "node": "Generate Article with AI", "type": "main", "index": 0 }]
+      ]
+    },
+    "Generate Article with AI": {
+      "main": [
+        [{ "node": "Validate Article", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": true,
+    "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
+  },
+  "id": "daily-03-generate-article-v1",
+  "tags": ["daily", "editorial", "ai", "article", "v1"]
+}

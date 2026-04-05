@@ -1,0 +1,97 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "daily_summary",
+  "title": "Daily Summary AI Output",
+  "description": "Structured JSON output expected from the AI daily summary prompt. Validated by module 08 before publishing.",
+  "type": "object",
+  "required": [
+    "headline",
+    "overview",
+    "key_events",
+    "sentiment",
+    "topic_score"
+  ],
+  "properties": {
+    "headline": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 200,
+      "description": "Concise, factual headline summarising the day for this topic. No sensationalism. HTML-free."
+    },
+    "overview": {
+      "type": "string",
+      "minLength": 100,
+      "maxLength": 1000,
+      "description": "3–5 sentence narrative overview of the day's key developments. Factual, third-person. HTML-free."
+    },
+    "key_events": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 7,
+      "description": "Top 3–7 events of the day, ranked by importance.",
+      "items": {
+        "type": "object",
+        "required": ["title", "significance", "importance_score"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150,
+            "description": "Short event title."
+          },
+          "significance": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 300,
+            "description": "One to two sentences explaining why this event matters."
+          },
+          "importance_score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Estimated importance to the topic audience (0–100)."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "market_context": {
+      "type": ["string", "null"],
+      "maxLength": 500,
+      "description": "Optional macro or market context relevant to the day's events. Omit when not applicable."
+    },
+    "sentiment": {
+      "type": "string",
+      "enum": ["bullish", "bearish", "neutral", "mixed"],
+      "description": "Overall sentiment for this topic on this day."
+    },
+    "topic_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Overall activity and significance score for this topic on this day (0=quiet, 100=extremely active)."
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "headline": "Bitcoin Breaks $120K as Institutional Inflows Hit Record High",
+      "overview": "Bitcoin surged past $120,000 on Thursday, driven by record institutional inflows and strong ETF demand. The move extended a week-long rally and pushed total crypto market cap above $3 trillion for the first time. Major altcoins followed with gains of 5–15%. Sentiment remained broadly bullish as on-chain metrics showed continued accumulation by long-term holders.",
+      "key_events": [
+        {
+          "title": "Bitcoin New All-Time High Above $120K",
+          "significance": "A new all-time high reinforces the ongoing bull market and is likely to attract additional retail and institutional flows.",
+          "importance_score": 95
+        },
+        {
+          "title": "Spot Bitcoin ETF Daily Inflow Exceeds $1.5B",
+          "significance": "Record daily ETF inflows indicate sustained institutional demand and further legitimisation of Bitcoin as an asset class.",
+          "importance_score": 88
+        }
+      ],
+      "market_context": "US equities closed higher on the day, supporting broad risk appetite. The DXY softened slightly, providing additional tailwind for crypto assets.",
+      "sentiment": "bullish",
+      "topic_score": 92
+    }
+  ]
+}

@@ -1,0 +1,471 @@
+{
+  "name": "Daily — Orchestrator",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 23 * * *"
+            }
+          ]
+        }
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000001",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.cloudflare.com/client/v4/accounts/{{ $vars.CF_ACCOUNT_ID }}/d1/database/{{ $vars.CF_D1_DATABASE_ID }}/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"sql\": \"SELECT topic_slug FROM topics WHERE is_active = 1 ORDER BY sort_order ASC\", \"params\": [] }",
+        "options": { "timeout": 10000 }
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000002",
+      "name": "Fetch Active Topics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [460, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cloudflare-d1-credentials",
+          "name": "CloudflareD1Api"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Expand the topics array into individual items for the per-topic loop.\nconst resp = $input.first().json;\nconst topics = resp?.result?.[0]?.results || [];\n\nif (topics.length === 0) {\n  throw new Error('No active topics found in D1. Aborting daily editorial run.');\n}\n\nreturn topics.map(t => ({ json: { topic_slug: t.topic_slug } }));"
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000003",
+      "name": "Expand Topics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000004",
+      "name": "Process Topics",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Build the topic context: topic_slug and today's date_key.\n// date_key is UTC date, matching the convention used by all D1 tables.\nconst topic_slug = $input.first().json.topic_slug;\nconst date_key = new Date().toISOString().slice(0, 10); // YYYY-MM-DD UTC\n\nreturn [{ json: { topic_slug, date_key } }];"
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000005",
+      "name": "Build Topic Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.cloudflare.com/client/v4/accounts/{{ $vars.CF_ACCOUNT_ID }}/d1/database/{{ $vars.CF_D1_DATABASE_ID }}/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  sql: \"SELECT id, status, attempt FROM publish_jobs WHERE topic_slug = ? AND date_key = ? ORDER BY created_at DESC LIMIT 1\",\n  params: [$json.topic_slug, $json.date_key]\n} }}",
+        "options": { "timeout": 10000 }
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000006",
+      "name": "Check Existing Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1340, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cloudflare-d1-credentials",
+          "name": "CloudflareD1Api"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Merge the job check result with the topic context.\nconst ctx = $('Build Topic Context').first().json;\nconst jobResp = $input.first().json;\nconst existingJob = jobResp?.result?.[0]?.results?.[0] || null;\n\nreturn [{\n  json: {\n    topic_slug: ctx.topic_slug,\n    date_key: ctx.date_key,\n    existing_job_id: existingJob?.id || null,\n    existing_job_status: existingJob?.status || null,\n    existing_job_attempt: existingJob?.attempt || 0\n  }\n}];"
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000007",
+      "name": "Merge Job Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.existing_job_status }}",
+              "rightValue": "success",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ]
+        }
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000008",
+      "name": "Already Succeeded Today?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {},
+      "id": "d0e0f1a2-0000-0000-0000-000000000009",
+      "name": "Skip Topic",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2000, 200]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.cloudflare.com/client/v4/accounts/{{ $vars.CF_ACCOUNT_ID }}/d1/database/{{ $vars.CF_D1_DATABASE_ID }}/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  sql: \"INSERT INTO publish_jobs (topic_slug, date_key, status, attempt, triggered_by, started_at, workflow_run_id) VALUES (?, ?, 'running', ?, 'schedule', strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), ?) RETURNING id\",\n  params: [\n    $json.topic_slug,\n    $json.date_key,\n    ($json.existing_job_attempt || 0) + 1,\n    $execution.id\n  ]\n} }}",
+        "options": { "timeout": 10000 }
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000010",
+      "name": "Create Publish Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2000, 400],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cloudflare-d1-credentials",
+          "name": "CloudflareD1Api"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Extract the publish_job_id from the INSERT RETURNING response.\nconst ctx = $('Merge Job Context').first().json;\nconst resp = $input.first().json;\nconst publish_job_id = resp?.result?.[0]?.results?.[0]?.id;\n\nif (!publish_job_id) {\n  throw new Error(`Failed to create publish_job for ${ctx.topic_slug}/${ctx.date_key}`);\n}\n\nreturn [{ json: { topic_slug: ctx.topic_slug, date_key: ctx.date_key, publish_job_id } }];"
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000011",
+      "name": "Extract Publish Job ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2220, 400]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $vars.DAILY_AGGREGATE_WORKFLOW_ID }}"
+        },
+        "options": {}
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000012",
+      "name": "01 Aggregate Alerts",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [2440, 400]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $vars.DAILY_SUMMARY_WORKFLOW_ID }}"
+        },
+        "options": {}
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000013",
+      "name": "02 Generate Summary",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [2660, 400]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $vars.DAILY_ARTICLE_WORKFLOW_ID }}"
+        },
+        "options": {}
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000014",
+      "name": "03 Generate Article",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [2880, 400]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $vars.DAILY_EXPECTATION_CHECK_WORKFLOW_ID }}"
+        },
+        "options": {}
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000015",
+      "name": "04 Expectation Check",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [3100, 400]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $vars.DAILY_TOMORROW_OUTLOOK_WORKFLOW_ID }}"
+        },
+        "options": {}
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000016",
+      "name": "05 Tomorrow Outlook",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [3320, 400]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $vars.DAILY_VIDEO_SCRIPT_WORKFLOW_ID }}"
+        },
+        "options": {}
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000017",
+      "name": "06 Video Script",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [3540, 400]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $vars.DAILY_YOUTUBE_METADATA_WORKFLOW_ID }}"
+        },
+        "options": {}
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000018",
+      "name": "07 YouTube Metadata",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [3760, 400]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $vars.DAILY_VALIDATE_OUTPUTS_WORKFLOW_ID }}"
+        },
+        "options": {}
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000019",
+      "name": "08 Validate Outputs",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [3980, 400]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $vars.DAILY_PUBLISH_GITHUB_WORKFLOW_ID }}"
+        },
+        "options": {}
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000020",
+      "name": "09 Publish to GitHub",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [4200, 400]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $vars.DAILY_UPDATE_D1_WORKFLOW_ID }}"
+        },
+        "options": {}
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000021",
+      "name": "10 Update D1 State",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [4420, 400]
+    },
+    {
+      "parameters": {},
+      "id": "d0e0f1a2-0000-0000-0000-000000000022",
+      "name": "All Topics Done",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [900, 500]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [{ "node": "Fetch Active Topics", "type": "main", "index": 0 }]
+      ]
+    },
+    "Fetch Active Topics": {
+      "main": [
+        [{ "node": "Expand Topics", "type": "main", "index": 0 }]
+      ]
+    },
+    "Expand Topics": {
+      "main": [
+        [{ "node": "Process Topics", "type": "main", "index": 0 }]
+      ]
+    },
+    "Process Topics": {
+      "main": [
+        [{ "node": "Build Topic Context", "type": "main", "index": 0 }],
+        [{ "node": "All Topics Done", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Topic Context": {
+      "main": [
+        [{ "node": "Check Existing Job", "type": "main", "index": 0 }]
+      ]
+    },
+    "Check Existing Job": {
+      "main": [
+        [{ "node": "Merge Job Context", "type": "main", "index": 0 }]
+      ]
+    },
+    "Merge Job Context": {
+      "main": [
+        [{ "node": "Already Succeeded Today?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Already Succeeded Today?": {
+      "main": [
+        [{ "node": "Skip Topic", "type": "main", "index": 0 }],
+        [{ "node": "Create Publish Job", "type": "main", "index": 0 }]
+      ]
+    },
+    "Skip Topic": {
+      "main": [
+        [{ "node": "Process Topics", "type": "main", "index": 0 }]
+      ]
+    },
+    "Create Publish Job": {
+      "main": [
+        [{ "node": "Extract Publish Job ID", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract Publish Job ID": {
+      "main": [
+        [{ "node": "01 Aggregate Alerts", "type": "main", "index": 0 }]
+      ]
+    },
+    "01 Aggregate Alerts": {
+      "main": [
+        [{ "node": "02 Generate Summary", "type": "main", "index": 0 }]
+      ]
+    },
+    "02 Generate Summary": {
+      "main": [
+        [{ "node": "03 Generate Article", "type": "main", "index": 0 }]
+      ]
+    },
+    "03 Generate Article": {
+      "main": [
+        [{ "node": "04 Expectation Check", "type": "main", "index": 0 }]
+      ]
+    },
+    "04 Expectation Check": {
+      "main": [
+        [{ "node": "05 Tomorrow Outlook", "type": "main", "index": 0 }]
+      ]
+    },
+    "05 Tomorrow Outlook": {
+      "main": [
+        [{ "node": "06 Video Script", "type": "main", "index": 0 }]
+      ]
+    },
+    "06 Video Script": {
+      "main": [
+        [{ "node": "07 YouTube Metadata", "type": "main", "index": 0 }]
+      ]
+    },
+    "07 YouTube Metadata": {
+      "main": [
+        [{ "node": "08 Validate Outputs", "type": "main", "index": 0 }]
+      ]
+    },
+    "08 Validate Outputs": {
+      "main": [
+        [{ "node": "09 Publish to GitHub", "type": "main", "index": 0 }]
+      ]
+    },
+    "09 Publish to GitHub": {
+      "main": [
+        [{ "node": "10 Update D1 State", "type": "main", "index": 0 }]
+      ]
+    },
+    "10 Update D1 State": {
+      "main": [
+        [{ "node": "Process Topics", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": true,
+    "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
+  },
+  "id": "daily-orchestrator-v1",
+  "tags": ["daily", "editorial", "orchestrator", "v1"]
+}
