@@ -200,7 +200,7 @@ Key characteristics:
 ### v1 — Foundation
 
 - [x] Repository structure and boundary definitions
-- [ ] D1 schema: alerts, daily status, publish state, navigation metadata
+- [x] D1 schema: alerts, daily status, publish state, navigation metadata
 - [ ] Cloudflare Pages Functions: timeline, day-status, navigation, topics APIs
 - [ ] Vue frontend: homepage, topic page, topic/day page, timeline component
 - [ ] n8n intraday workflow: ingest → deduplicate → classify → score → D1 → deliver
