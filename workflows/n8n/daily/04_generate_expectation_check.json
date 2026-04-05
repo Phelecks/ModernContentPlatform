@@ -1,0 +1,83 @@
+{
+  "name": "Daily — 04 Generate Expectation Check",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "d1e2f3a4-0004-0004-0004-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "message",
+        "model": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a financial analyst reviewing whether today's events met prior market expectations. Analyse the provided daily summary and return ONLY a valid JSON object that exactly matches the schema below. Do not include markdown, code fences, or any text outside the JSON object.\n\nSchema:\n{\n  \"expectations_checked\": [\n    {\n      \"expectation\": \"<what was anticipated, 10-200 chars>\",\n      \"outcome\": \"<met|missed|partial>\",\n      \"note\": \"<brief explanation, max 300 chars, or null>\"\n    }\n  ],\n  \"surprise_events\": [\"<unexpected event description, 10-200 chars>\"],\n  \"alignment_score\": <integer 0-100>,\n  \"analyst_note\": \"<optional summary paragraph, max 400 chars, or null>\"\n}\n\nGuidelines:\n- expectations_checked: infer 2-4 reasonable prior expectations based on common knowledge of the topic, then check them against the actual day's events\n- surprise_events: list 0-3 genuinely unexpected developments that would not have been forecast\n- alignment_score: 0=completely unexpected day, 100=day went exactly as most would have predicted\n- analyst_note: one paragraph synthesising how the day compared to expectations; null if nothing notable to add"
+            },
+            {
+              "role": "user",
+              "content": "=Perform an expectation check for topic '{{ $json.topic_slug }}' on {{ $json.date_key }}.\n\nDaily summary:\nHeadline: {{ $json.summary.headline }}\nOverview: {{ $json.summary.overview }}\nSentiment: {{ $json.summary.sentiment }}\nTopic score: {{ $json.summary.topic_score }}/100\n\nKey events:\n{{ $json.summary.key_events.map((e, i) => `${i+1}. ${e.title} — ${e.significance}`).join('\\n') }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.2,
+          "maxTokens": 700
+        }
+      },
+      "id": "d1e2f3a4-0004-0004-0004-000000000002",
+      "name": "Generate Expectation Check with AI",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [460, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-api-credentials",
+          "name": "OpenAiApi"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Parse and validate the AI expectation check output.\nconst rawContent = $input.first().json?.message?.content\n  || $input.first().json?.choices?.[0]?.message?.content\n  || '';\nconst ctx = $('Execute Workflow Trigger').first().json;\n\nlet expectation_check;\ntry {\n  const cleaned = rawContent.replace(/^```[a-z]*\\n?|\\n?```$/g, '').trim();\n  expectation_check = JSON.parse(cleaned);\n} catch (e) {\n  throw new Error(`Failed to parse expectation check JSON for ${ctx.topic_slug}/${ctx.date_key}: ${e.message}`);\n}\n\n// Validate required fields\nif (!Array.isArray(expectation_check.expectations_checked)) {\n  expectation_check.expectations_checked = [];\n}\nif (!Array.isArray(expectation_check.surprise_events)) {\n  expectation_check.surprise_events = [];\n}\nif (typeof expectation_check.alignment_score !== 'number') {\n  expectation_check.alignment_score = 50;\n}\n\n// Clamp and trim\nexpectation_check.alignment_score = Math.min(100, Math.max(0, Math.round(expectation_check.alignment_score)));\nexpectation_check.expectations_checked = expectation_check.expectations_checked.slice(0, 5).map(e => ({\n  expectation: String(e.expectation || '').slice(0, 200),\n  outcome: ['met', 'missed', 'partial'].includes(e.outcome) ? e.outcome : 'partial',\n  note: e.note ? String(e.note).slice(0, 300) : null\n}));\nexpectation_check.surprise_events = expectation_check.surprise_events.slice(0, 5).map(s => String(s).slice(0, 200));\n\nreturn [{ json: { ...ctx, expectation_check } }];"
+      },
+      "id": "d1e2f3a4-0004-0004-0004-000000000003",
+      "name": "Parse and Validate Expectation Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [{ "node": "Generate Expectation Check with AI", "type": "main", "index": 0 }]
+      ]
+    },
+    "Generate Expectation Check with AI": {
+      "main": [
+        [{ "node": "Parse and Validate Expectation Check", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": true,
+    "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
+  },
+  "id": "daily-04-generate-expectation-check-v1",
+  "tags": ["daily", "editorial", "ai", "expectation-check", "v1"]
+}

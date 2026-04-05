@@ -1,0 +1,83 @@
+{
+  "name": "Daily — 06 Generate Video Script",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "d1e2f3a4-0006-0006-0006-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "operation": "message",
+        "model": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a professional video scriptwriter for a financial and technology news channel. Write an engaging spoken-word video script for the daily briefing. Return ONLY a valid JSON object that exactly matches the schema below. Do not include markdown, code fences, or any text outside the JSON object.\n\nSchema:\n{\n  \"intro\": \"<opening hook, 30-500 chars spoken text>\",\n  \"segments\": [\n    {\n      \"title\": \"<segment title for internal use, 3-100 chars>\",\n      \"script\": \"<spoken script for this segment, 50-1500 chars>\",\n      \"duration_seconds\": <integer 15-120>\n    }\n  ],\n  \"outro\": \"<closing segment, 30-400 chars spoken text>\",\n  \"total_duration_seconds\": <integer 60-600>,\n  \"call_to_action\": \"<optional CTA text, max 200 chars, or null>\"\n}\n\nGuidelines:\n- intro: start with the most compelling development of the day; 15-30 seconds\n- segments: 2-5 segments covering the most important events; conversational and clear\n- outro: summarise the day and tease tomorrow's key watchpoints\n- total_duration_seconds: sum of intro + segments + outro (estimate 130 words per minute for spoken pace)\n- call_to_action: subscribe/engagement prompt; null to omit\n- Style: conversational, direct, no jargon without explanation, no HTML"
+            },
+            {
+              "role": "user",
+              "content": "=Write a video script for the {{ $json.topic_slug }} daily briefing on {{ $json.date_key }}.\n\nHeadline: {{ $json.summary.headline }}\nOverview: {{ $json.summary.overview }}\n\nKey events:\n{{ $json.summary.key_events.map((e, i) => `${i+1}. ${e.title} — ${e.significance}`).join('\\n') }}\n\nTomorrow's top watchpoint: {{ $json.tomorrow_outlook.key_watchpoints[0]?.title }} — {{ $json.tomorrow_outlook.key_watchpoints[0]?.description }}\nTomorrow's risk level: {{ $json.tomorrow_outlook.risk_level }}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.4,
+          "maxTokens": 1500
+        }
+      },
+      "id": "d1e2f3a4-0006-0006-0006-000000000002",
+      "name": "Generate Video Script with AI",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [460, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-api-credentials",
+          "name": "OpenAiApi"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Parse and validate the AI video script output.\nconst rawContent = $input.first().json?.message?.content\n  || $input.first().json?.choices?.[0]?.message?.content\n  || '';\nconst ctx = $('Execute Workflow Trigger').first().json;\n\nlet video_script;\ntry {\n  const cleaned = rawContent.replace(/^```[a-z]*\\n?|\\n?```$/g, '').trim();\n  video_script = JSON.parse(cleaned);\n} catch (e) {\n  throw new Error(`Failed to parse video script JSON for ${ctx.topic_slug}/${ctx.date_key}: ${e.message}`);\n}\n\n// Validate required fields\nif (!video_script.intro || video_script.intro.length < 30) {\n  throw new Error('Video script missing or too short intro');\n}\nif (!Array.isArray(video_script.segments) || video_script.segments.length < 2) {\n  throw new Error('Video script missing segments (minimum 2 required)');\n}\nif (!video_script.outro || video_script.outro.length < 30) {\n  throw new Error('Video script missing or too short outro');\n}\nif (typeof video_script.total_duration_seconds !== 'number') {\n  // Estimate from segment durations\n  const segDuration = video_script.segments.reduce((s, seg) => s + (seg.duration_seconds || 30), 0);\n  video_script.total_duration_seconds = segDuration + 30 + 20; // + intro + outro estimates\n}\n\n// Clamp and trim\nvideo_script.intro = String(video_script.intro).slice(0, 500);\nvideo_script.outro = String(video_script.outro).slice(0, 400);\nvideo_script.total_duration_seconds = Math.min(600, Math.max(60, Math.round(video_script.total_duration_seconds)));\nvideo_script.segments = video_script.segments.slice(0, 5).map(s => ({\n  title: String(s.title || '').slice(0, 100),\n  script: String(s.script || '').slice(0, 1500),\n  duration_seconds: Math.min(120, Math.max(15, Math.round(s.duration_seconds || 30)))\n}));\nvideo_script.call_to_action = video_script.call_to_action\n  ? String(video_script.call_to_action).slice(0, 200)\n  : null;\n\nreturn [{ json: { ...ctx, video_script } }];"
+      },
+      "id": "d1e2f3a4-0006-0006-0006-000000000003",
+      "name": "Parse and Validate Video Script",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [{ "node": "Generate Video Script with AI", "type": "main", "index": 0 }]
+      ]
+    },
+    "Generate Video Script with AI": {
+      "main": [
+        [{ "node": "Parse and Validate Video Script", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": true,
+    "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
+  },
+  "id": "daily-06-generate-video-script-v1",
+  "tags": ["daily", "editorial", "ai", "video-script", "v1"]
+}

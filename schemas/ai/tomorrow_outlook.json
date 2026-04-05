@@ -1,0 +1,108 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "tomorrow_outlook",
+  "title": "Tomorrow Outlook AI Output",
+  "description": "Structured JSON output from the AI tomorrow outlook prompt. Provides forward-looking watchpoints and scheduled events for the next session. Validated by module 08 before publishing.",
+  "type": "object",
+  "required": [
+    "key_watchpoints",
+    "scheduled_events",
+    "outlook_summary",
+    "risk_level"
+  ],
+  "properties": {
+    "key_watchpoints": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5,
+      "description": "Key price levels, narratives, or conditions to watch tomorrow.",
+      "items": {
+        "type": "object",
+        "required": ["title", "description"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 100,
+            "description": "Short watchpoint title."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 300,
+            "description": "Why this watchpoint matters and what to look for."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "scheduled_events": {
+      "type": "array",
+      "maxItems": 5,
+      "description": "Known scheduled events tomorrow that could move the market or affect the topic.",
+      "items": {
+        "type": "object",
+        "required": ["title", "impact"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 150,
+            "description": "Event name (e.g. 'US CPI Release', 'Fed Chair Powell Speech')."
+          },
+          "time_hint": {
+            "type": ["string", "null"],
+            "maxLength": 50,
+            "description": "Optional time hint (e.g. '08:30 ET', 'Pre-market'). Null if time is not known."
+          },
+          "impact": {
+            "type": "string",
+            "enum": ["high", "medium", "low"],
+            "description": "Expected market impact level."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "outlook_summary": {
+      "type": "string",
+      "minLength": 50,
+      "maxLength": 600,
+      "description": "2–4 sentence forward-looking summary for the next session. Factual and grounded in the day's events."
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": ["low", "medium", "high"],
+      "description": "Overall perceived risk or uncertainty level for tomorrow."
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "key_watchpoints": [
+        {
+          "title": "Bitcoin $120K Support Hold",
+          "description": "After breaking above $120K, holding this level as support is critical for continued momentum. A failure to hold could trigger a pullback to $115K."
+        },
+        {
+          "title": "Spot ETF Flow Continuation",
+          "description": "Sustained inflows above $1B would confirm institutional conviction. A reversal below $500M could dampen sentiment."
+        }
+      ],
+      "scheduled_events": [
+        {
+          "title": "US Initial Jobless Claims",
+          "time_hint": "08:30 ET",
+          "impact": "medium"
+        },
+        {
+          "title": "FOMC Meeting Minutes Release",
+          "time_hint": "14:00 ET",
+          "impact": "high"
+        }
+      ],
+      "outlook_summary": "Bitcoin enters Friday's session at all-time highs with strong momentum. The key risk tomorrow is macro: the FOMC minutes could introduce volatility if language around rate cuts shifts. ETF flows will be closely watched for any sign of profit-taking by institutional players.",
+      "risk_level": "medium"
+    }
+  ]
+}

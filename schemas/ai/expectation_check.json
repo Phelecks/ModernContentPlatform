@@ -1,0 +1,87 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "expectation_check",
+  "title": "Expectation Check AI Output",
+  "description": "Structured JSON output from the AI expectation check prompt. Compares the day's events against prior expectations and highlights surprises. Validated by module 08 before publishing.",
+  "type": "object",
+  "required": [
+    "expectations_checked",
+    "surprise_events",
+    "alignment_score"
+  ],
+  "properties": {
+    "expectations_checked": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 5,
+      "description": "Prior expectations that were checked against the day's actual events.",
+      "items": {
+        "type": "object",
+        "required": ["expectation", "outcome"],
+        "properties": {
+          "expectation": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 200,
+            "description": "The expectation that was being evaluated."
+          },
+          "outcome": {
+            "type": "string",
+            "enum": ["met", "missed", "partial"],
+            "description": "Whether the expectation was met, missed, or partially met."
+          },
+          "note": {
+            "type": ["string", "null"],
+            "maxLength": 300,
+            "description": "Brief explanation of the outcome. Null when no note is needed."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "surprise_events": {
+      "type": "array",
+      "maxItems": 5,
+      "description": "Unexpected notable events that were not anticipated in the prior day's outlook.",
+      "items": {
+        "type": "string",
+        "minLength": 10,
+        "maxLength": 200
+      }
+    },
+    "alignment_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "How well the day's events aligned with prior expectations (0=completely unexpected, 100=exactly as anticipated)."
+    },
+    "analyst_note": {
+      "type": ["string", "null"],
+      "maxLength": 400,
+      "description": "Optional one-paragraph note from the AI summarising the expectation check findings."
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "expectations_checked": [
+        {
+          "expectation": "Bitcoin would test resistance near $115K before moving higher",
+          "outcome": "missed",
+          "note": "Bitcoin broke through $115K with minimal resistance, suggesting stronger buying pressure than anticipated."
+        },
+        {
+          "expectation": "Spot ETF inflows to remain steady above $800M",
+          "outcome": "met",
+          "note": "Inflows reached $1.5B, exceeding the expectation by a wide margin."
+        }
+      ],
+      "surprise_events": [
+        "A major sovereign wealth fund disclosed a $2B Bitcoin allocation, which was not rumoured beforehand.",
+        "Ethereum underperformed despite the bullish crypto environment, diverging from usual correlation."
+      ],
+      "alignment_score": 65,
+      "analyst_note": "Today's session was broadly in line with the bullish bias anticipated, though the magnitude of the move and the sovereign disclosure exceeded expectations."
+    }
+  ]
+}

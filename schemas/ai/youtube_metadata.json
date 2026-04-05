@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "youtube_metadata",
+  "title": "YouTube Metadata AI Output",
+  "description": "Structured JSON output from the AI YouTube metadata prompt. Produces title, description, and tags for the daily topic video. Validated by module 08 before publishing.",
+  "type": "object",
+  "required": [
+    "title",
+    "description",
+    "tags"
+  ],
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 100,
+      "description": "YouTube video title. Engaging, factual, SEO-friendly. Must include the topic and date context. No clickbait."
+    },
+    "description": {
+      "type": "string",
+      "minLength": 100,
+      "maxLength": 5000,
+      "description": "YouTube video description. Should include a brief overview, timestamps if applicable, and links. Plain text, no HTML."
+    },
+    "tags": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 15,
+      "description": "YouTube tags for discoverability. Mix of broad and specific topic keywords.",
+      "items": {
+        "type": "string",
+        "minLength": 2,
+        "maxLength": 100
+      }
+    },
+    "category": {
+      "type": "string",
+      "default": "News & Politics",
+      "description": "YouTube category name. Defaults to 'News & Politics'."
+    },
+    "visibility": {
+      "type": "string",
+      "enum": ["public", "unlisted", "private"],
+      "default": "public",
+      "description": "Default publish visibility. Always 'public' for daily videos unless overridden."
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "title": "Bitcoin Hits $120K All-Time High | Crypto Daily Briefing Jan 15 2025",
+      "description": "Bitcoin broke above $120,000 today, setting a new all-time high driven by record institutional ETF inflows and a major sovereign wealth fund disclosure.\n\nIn today's briefing:\n- Bitcoin new ATH: what drove the move\n- Spot ETF inflows hit $1.5B in one day\n- Sovereign wealth fund discloses $2B Bitcoin position\n- Tomorrow's watchpoints: FOMC minutes and $120K support\n\nStay informed — subscribe for daily crypto briefings.",
+      "tags": [
+        "bitcoin",
+        "crypto",
+        "bitcoin all time high",
+        "crypto news",
+        "bitcoin etf",
+        "institutional crypto",
+        "daily crypto briefing",
+        "btc price",
+        "crypto market",
+        "bitcoin $120k",
+        "spot bitcoin etf",
+        "crypto 2025"
+      ],
+      "category": "News & Politics",
+      "visibility": "public"
+    }
+  ]
+}

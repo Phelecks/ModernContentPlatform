@@ -1,0 +1,108 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "daily_aggregate_context",
+  "title": "Daily Aggregate Context",
+  "description": "Output of module 01 (Aggregate Alerts). Contains all alerts and clusters fetched from D1 for a topic/date. Used as the base input for all AI generation modules (02–07).",
+  "type": "object",
+  "required": [
+    "topic_slug",
+    "date_key",
+    "publish_job_id",
+    "alerts",
+    "clusters",
+    "alert_count",
+    "cluster_count"
+  ],
+  "properties": {
+    "topic_slug": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "The topic being processed. Must be a valid topic_slug from the D1 topics table."
+    },
+    "date_key": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "The date being processed in YYYY-MM-DD format."
+    },
+    "publish_job_id": {
+      "type": "integer",
+      "description": "D1 ID of the publish_jobs row tracking this run. Used by module 10 to update job status."
+    },
+    "alerts": {
+      "type": "array",
+      "description": "All active alerts for this topic/date, ordered by importance_score DESC.",
+      "items": {
+        "type": "object",
+        "required": ["id", "headline", "summary_text", "importance_score", "severity_score", "event_at"],
+        "properties": {
+          "id": { "type": "integer" },
+          "headline": { "type": "string" },
+          "summary_text": { "type": ["string", "null"] },
+          "source_url": { "type": ["string", "null"] },
+          "source_name": { "type": ["string", "null"] },
+          "importance_score": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "severity_score": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "cluster_id": { "type": ["integer", "null"] },
+          "event_at": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "clusters": {
+      "type": "array",
+      "description": "All event clusters for this topic/date, ordered by importance_score DESC.",
+      "items": {
+        "type": "object",
+        "required": ["id", "cluster_label", "alert_count", "importance_score"],
+        "properties": {
+          "id": { "type": "integer" },
+          "cluster_label": { "type": "string" },
+          "summary_text": { "type": ["string", "null"] },
+          "alert_count": { "type": "integer" },
+          "importance_score": { "type": "integer", "minimum": 0, "maximum": 100 }
+        },
+        "additionalProperties": true
+      }
+    },
+    "alert_count": {
+      "type": "integer",
+      "description": "Total number of active alerts for this topic/date."
+    },
+    "cluster_count": {
+      "type": "integer",
+      "description": "Total number of event clusters for this topic/date."
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "topic_slug": "crypto",
+      "date_key": "2025-01-15",
+      "publish_job_id": 42,
+      "alerts": [
+        {
+          "id": 1001,
+          "headline": "Bitcoin Hits New All-Time High Above $120K",
+          "summary_text": "Bitcoin surged past $120,000, setting a new all-time high driven by strong institutional inflows.",
+          "source_url": "https://www.coindesk.com/markets/2025/01/15/bitcoin-hits-new-ath/",
+          "source_name": "CoinDesk RSS",
+          "importance_score": 88,
+          "severity_score": 72,
+          "cluster_id": 5,
+          "event_at": "2025-01-15T14:32:00Z"
+        }
+      ],
+      "clusters": [
+        {
+          "id": 5,
+          "cluster_label": "Bitcoin price rally",
+          "summary_text": "Bitcoin rally driven by ETF inflows and sovereign wealth fund allocation.",
+          "alert_count": 7,
+          "importance_score": 90
+        }
+      ],
+      "alert_count": 23,
+      "cluster_count": 5
+    }
+  ]
+}

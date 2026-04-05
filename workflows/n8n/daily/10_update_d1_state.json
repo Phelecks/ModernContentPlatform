@@ -1,0 +1,132 @@
+{
+  "name": "Daily — 10 Update D1 State",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "d1e2f3a4-0010-0010-0010-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Validate that we have the required fields before writing to D1.\nconst ctx = $input.first().json;\n\nif (!ctx.topic_slug || !ctx.date_key || !ctx.publish_job_id) {\n  throw new Error(`Missing required fields for D1 update: topic_slug=${ctx.topic_slug}, date_key=${ctx.date_key}, publish_job_id=${ctx.publish_job_id}`);\n}\n\nreturn [{ json: ctx }];"
+      },
+      "id": "d1e2f3a4-0010-0010-0010-000000000002",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.cloudflare.com/client/v4/accounts/{{ $vars.CF_ACCOUNT_ID }}/d1/database/{{ $vars.CF_D1_DATABASE_ID }}/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  sql: \"INSERT INTO daily_status (topic_slug, date_key, page_state, alert_count, cluster_count, summary_available, article_available, video_available, published_at, updated_at) VALUES (?, ?, 'published', ?, ?, 1, 1, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')) ON CONFLICT(topic_slug, date_key) DO UPDATE SET page_state = 'published', alert_count = MAX(alert_count, excluded.alert_count), cluster_count = MAX(cluster_count, excluded.cluster_count), summary_available = 1, article_available = 1, published_at = COALESCE(published_at, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')), updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')\",\n  params: [$json.topic_slug, $json.date_key, $json.alert_count || 0, $json.cluster_count || 0]\n} }}",
+        "options": { "timeout": 15000 }
+      },
+      "id": "d1e2f3a4-0010-0010-0010-000000000003",
+      "name": "Update daily_status in D1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [680, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cloudflare-d1-credentials",
+          "name": "CloudflareD1Api"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "url": "=https://api.cloudflare.com/client/v4/accounts/{{ $vars.CF_ACCOUNT_ID }}/d1/database/{{ $vars.CF_D1_DATABASE_ID }}/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  sql: \"UPDATE publish_jobs SET status = 'success', completed_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), metadata_json = json_set(COALESCE(metadata_json, '{}'), '$.github_commit_sha', ?), updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ?\",\n  params: [$('Validate Input').first().json.github_commit_sha ?? null, $('Validate Input').first().json.publish_job_id]\n} }}",
+        "options": { "timeout": 15000 }
+      },
+      "id": "d1e2f3a4-0010-0010-0010-000000000004",
+      "name": "Update publish_jobs in D1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [680, 400],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cloudflare-d1-credentials",
+          "name": "CloudflareD1Api"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Confirm both D1 writes succeeded and return the final result.\nconst ctx = $('Validate Input').first().json;\nconst statusResp = $('Update daily_status in D1').first().json;\nconst jobResp = $('Update publish_jobs in D1').first().json;\n\nif (!statusResp?.success) {\n  throw new Error(`D1 daily_status update failed for ${ctx.topic_slug}/${ctx.date_key}: ${JSON.stringify(statusResp?.errors)}`);\n}\nif (!jobResp?.success) {\n  throw new Error(`D1 publish_jobs update failed for publish_job_id=${ctx.publish_job_id}: ${JSON.stringify(jobResp?.errors)}`);\n}\n\nreturn [{\n  json: {\n    topic_slug: ctx.topic_slug,\n    date_key: ctx.date_key,\n    publish_job_id: ctx.publish_job_id,\n    github_commit_sha: ctx.github_commit_sha || null,\n    page_state: 'published',\n    status: 'success'\n  }\n}];"
+      },
+      "id": "d1e2f3a4-0010-0010-0010-000000000005",
+      "name": "Confirm D1 Writes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [{ "node": "Validate Input", "type": "main", "index": 0 }]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          { "node": "Update daily_status in D1", "type": "main", "index": 0 },
+          { "node": "Update publish_jobs in D1", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Update daily_status in D1": {
+      "main": [
+        [{ "node": "Confirm D1 Writes", "type": "main", "index": 0 }]
+      ]
+    },
+    "Update publish_jobs in D1": {
+      "main": [
+        [{ "node": "Confirm D1 Writes", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": true,
+    "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
+  },
+  "id": "daily-10-update-d1-state-v1",
+  "tags": ["daily", "editorial", "d1", "state", "v1"]
+}

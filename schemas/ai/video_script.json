@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "video_script",
+  "title": "Video Script AI Output",
+  "description": "Structured JSON output from the AI video script prompt. Produces a spoken-word script for the daily topic video. Validated by module 08 before publishing.",
+  "type": "object",
+  "required": [
+    "intro",
+    "segments",
+    "outro",
+    "total_duration_seconds"
+  ],
+  "properties": {
+    "intro": {
+      "type": "string",
+      "minLength": 30,
+      "maxLength": 500,
+      "description": "Opening hook (15–30 seconds spoken). Grabs attention and states the day's top story."
+    },
+    "segments": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 5,
+      "description": "Main content segments. Each covers one key event or theme from the day.",
+      "items": {
+        "type": "object",
+        "required": ["title", "script", "duration_seconds"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 100,
+            "description": "Segment title used internally for structure. Not necessarily spoken."
+          },
+          "script": {
+            "type": "string",
+            "minLength": 50,
+            "maxLength": 1500,
+            "description": "Spoken script for this segment. Conversational, clear, no jargon without explanation."
+          },
+          "duration_seconds": {
+            "type": "integer",
+            "minimum": 15,
+            "maximum": 120,
+            "description": "Estimated spoken duration of this segment in seconds."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "outro": {
+      "type": "string",
+      "minLength": 30,
+      "maxLength": 400,
+      "description": "Closing segment (15–30 seconds spoken). Summarises the day and previews tomorrow's watchpoints."
+    },
+    "total_duration_seconds": {
+      "type": "integer",
+      "minimum": 60,
+      "maximum": 600,
+      "description": "Total estimated spoken duration of the full video script in seconds."
+    },
+    "call_to_action": {
+      "type": ["string", "null"],
+      "maxLength": 200,
+      "description": "Optional subscribe/engagement call-to-action text at the end. Null to omit."
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "intro": "Bitcoin just hit a new all-time high — breaking above $120,000 for the first time in history. And that's just the start of today's story. I'm going to walk you through exactly what happened, why it matters, and what to watch tomorrow.",
+      "segments": [
+        {
+          "title": "Bitcoin All-Time High",
+          "script": "So let's start with the headline event. Bitcoin crossed $120,000 today, setting a new all-time high. The move was driven by two things: record ETF inflows — over $1.5 billion in a single day — and a surprise announcement from a major sovereign wealth fund that disclosed a $2 billion Bitcoin position. That institutional validation is exactly the kind of catalyst that can sustain a rally beyond just short-term speculation.",
+          "duration_seconds": 45
+        },
+        {
+          "title": "ETF Flows and Institutional Demand",
+          "script": "Let's talk about those ETF flows because they're becoming the dominant force in this market. $1.5 billion in a single day is more than double the previous record. It tells us that traditional finance is not just observing Bitcoin — they're actively allocating. And as more institutions move off the sidelines, the supply-demand dynamic continues to tighten.",
+          "duration_seconds": 40
+        }
+      ],
+      "outro": "So where does this leave us? Bitcoin is at all-time highs, institutional demand is accelerating, and tomorrow we have FOMC minutes that could add or remove volatility. Stay close to your risk management, watch the $120K support level, and I'll see you tomorrow with the full breakdown.",
+      "total_duration_seconds": 180,
+      "call_to_action": "If you found this useful, subscribe for daily breakdowns — and hit the bell so you don't miss tomorrow's update."
+    }
+  ]
+}

@@ -1,0 +1,192 @@
+{
+  "name": "Daily — 09 Publish to GitHub",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "d1e2f3a4-0009-0009-0009-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Build the four content file payloads to write to GitHub.\n// Files:\n//   content/topics/{topic_slug}/{date_key}/summary.json\n//   content/topics/{topic_slug}/{date_key}/article.md\n//   content/topics/{topic_slug}/{date_key}/metadata.json\n//   content/topics/{topic_slug}/{date_key}/video.json\n\nconst ctx = $input.first().json;\n\nif (!ctx.validated) {\n  throw new Error(`Attempted GitHub publish for unvalidated content: ${ctx.topic_slug}/${ctx.date_key}`);\n}\n\nconst base = `content/topics/${ctx.topic_slug}/${ctx.date_key}`;\nconst ts = new Date().toISOString();\nconst youtubeMetadata = ctx.youtube_metadata || {};\nconst youtubeVideoId = ctx.youtube_video_id ?? null;\n\nconst summaryJson = JSON.stringify({\n  topic_slug: ctx.topic_slug,\n  date_key: ctx.date_key,\n  generated_at: ts,\n  ...ctx.summary,\n  expectation_check: ctx.expectation_check,\n  tomorrow_outlook: ctx.tomorrow_outlook\n}, null, 2);\n\nconst metadataJson = JSON.stringify({\n  topic_slug: ctx.topic_slug,\n  date_key: ctx.date_key,\n  alert_count: ctx.alert_count,\n  cluster_count: ctx.cluster_count,\n  sentiment: ctx.summary.sentiment,\n  topic_score: ctx.summary.topic_score,\n  generated_at: ts,\n  publish_job_id: ctx.publish_job_id\n}, null, 2);\n\n// video.json exposes top-level title and video_id for the frontend VideoEmbed\n// component, plus the full script and metadata for future video pipeline use.\nconst videoJson = JSON.stringify({\n  topic_slug: ctx.topic_slug,\n  date_key: ctx.date_key,\n  title: youtubeMetadata.title ?? null,\n  video_id: youtubeVideoId,\n  script: ctx.video_script,\n  youtube_metadata: youtubeMetadata,\n  youtube_video_id: youtubeVideoId,\n  generated_at: ts\n}, null, 2);\n\nconst files = [\n  {\n    path: `${base}/summary.json`,\n    content: summaryJson,\n    message: `daily(${ctx.topic_slug}): summary for ${ctx.date_key}`\n  },\n  {\n    path: `${base}/article.md`,\n    content: ctx.article_md,\n    message: `daily(${ctx.topic_slug}): article for ${ctx.date_key}`\n  },\n  {\n    path: `${base}/metadata.json`,\n    content: metadataJson,\n    message: `daily(${ctx.topic_slug}): metadata for ${ctx.date_key}`\n  },\n  {\n    path: `${base}/video.json`,\n    content: videoJson,\n    message: `daily(${ctx.topic_slug}): video script for ${ctx.date_key}`\n  }\n];\n\n// Pass context along with the files list\nreturn [{ json: { ...ctx, _github_files: files } }];"
+      },
+      "id": "d1e2f3a4-0009-0009-0009-000000000002",
+      "name": "Build Content Files",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Expand the files list into individual items for sequential GitHub writes.\nconst ctx = $input.first().json;\nconst files = ctx._github_files || [];\nreturn files.map(f => ({\n  json: {\n    _ctx_topic_slug: ctx.topic_slug,\n    _ctx_date_key: ctx.date_key,\n    _ctx_publish_job_id: ctx.publish_job_id,\n    path: f.path,\n    content: f.content,\n    message: f.message\n  }\n}));"
+      },
+      "id": "d1e2f3a4-0009-0009-0009-000000000003",
+      "name": "Expand Files",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "d1e2f3a4-0009-0009-0009-000000000004",
+      "name": "Write Files One by One",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.github.com/repos/{{ $vars.GITHUB_REPO_OWNER }}/{{ $vars.GITHUB_REPO_NAME }}/contents/{{ $json.path }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Accept", "value": "application/vnd.github+json" },
+            { "name": "X-GitHub-Api-Version", "value": "2022-11-28" }
+          ]
+        },
+        "options": { "timeout": 10000, "ignoreResponseCode": true }
+      },
+      "id": "d1e2f3a4-0009-0009-0009-000000000005",
+      "name": "Get Existing File SHA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1120, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "github-api-credentials",
+          "name": "GitHubApi"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Extract the SHA of the existing file if it exists (needed for updates).\n// GitHub returns 404 when the file doesn't exist — that is the only safe case\n// for proceeding without a SHA (i.e. creating a new file).\n// Any other non-2xx status (403, 429, 500, etc.) is treated as a hard error\n// so retries / errorWorkflow kick in with a clear failure rather than attempting\n// a PUT that GitHub will reject with a confusing 422 conflict.\nconst shaResponse = $input.item.json;\nconst fileItem = $('Write Files One by One').item.json;\n\n// n8n's httpRequest with ignoreResponseCode=true exposes the HTTP status code\n// via the response headers or the _statusCode field.\nconst statusCode = shaResponse?._statusCode\n  || shaResponse?.statusCode\n  || (shaResponse?.message === 'Not Found' ? 404 : null)\n  || (shaResponse?.sha ? 200 : null);\n\nif (statusCode !== null && statusCode !== 200 && statusCode !== 404) {\n  throw new Error(\n    `Unexpected GitHub GET response (HTTP ${statusCode}) for path '${fileItem.path}'. ` +\n    `Expected 200 (file exists) or 404 (file missing). ` +\n    `Response: ${JSON.stringify(shaResponse).slice(0, 300)}`\n  );\n}\n\n// 200 → file exists, use its SHA for the PUT\n// 404 (or unknown status with no sha) → file is new, no SHA needed\nconst existingSha = shaResponse?.sha || null;\n\nreturn [{\n  json: {\n    path: fileItem.path,\n    content: fileItem.content,\n    message: fileItem.message,\n    existing_sha: existingSha,\n    _ctx_topic_slug: fileItem._ctx_topic_slug,\n    _ctx_date_key: fileItem._ctx_date_key,\n    _ctx_publish_job_id: fileItem._ctx_publish_job_id\n  }\n}];"
+      },
+      "id": "d1e2f3a4-0009-0009-0009-000000000006",
+      "name": "Extract Existing SHA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.github.com/repos/{{ $vars.GITHUB_REPO_OWNER }}/{{ $vars.GITHUB_REPO_NAME }}/contents/{{ $json.path }}",
+        "method": "PUT",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Accept", "value": "application/vnd.github+json" },
+            { "name": "X-GitHub-Api-Version", "value": "2022-11-28" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (() => {\n  const body = {\n    message: $json.message,\n    content: Buffer.from($json.content, 'utf8').toString('base64'),\n    branch: $vars.GITHUB_CONTENT_BRANCH || 'main'\n  };\n  if ($json.existing_sha) body.sha = $json.existing_sha;\n  return body;\n})() }}",
+        "options": { "timeout": 15000 }
+      },
+      "id": "d1e2f3a4-0009-0009-0009-000000000007",
+      "name": "Write File to GitHub",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1560, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "github-api-credentials",
+          "name": "GitHubApi"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Extract the commit SHA from the GitHub API response and pass it through.\nconst writeResp = $input.item.json;\nconst fileItem = $('Extract Existing SHA').item.json;\n\nconst commitSha = writeResp?.commit?.sha || null;\n\nif (!commitSha) {\n  throw new Error(`GitHub write did not return a commit SHA for path: ${fileItem.path}`);\n}\n\nreturn [{\n  json: {\n    path: fileItem.path,\n    commit_sha: commitSha,\n    _ctx_topic_slug: fileItem._ctx_topic_slug,\n    _ctx_date_key: fileItem._ctx_date_key,\n    _ctx_publish_job_id: fileItem._ctx_publish_job_id\n  }\n}];"
+      },
+      "id": "d1e2f3a4-0009-0009-0009-000000000008",
+      "name": "Extract Commit SHA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Collect all write results from every loop iteration.\n// Use $('Extract Commit SHA').all() to reference ALL outputs accumulated across\n// every SplitInBatches iteration, not just the items carried on the done path.\nconst results = $('Extract Commit SHA').all().map(i => i.json);\nconst lastCommitSha = results[results.length - 1]?.commit_sha || null;\nconst firstItem = results[0];\n\nreturn [{\n  json: {\n    topic_slug: firstItem._ctx_topic_slug,\n    date_key: firstItem._ctx_date_key,\n    publish_job_id: firstItem._ctx_publish_job_id,\n    github_commit_sha: lastCommitSha,\n    files_written: results.map(r => r.path)\n  }\n}];"
+      },
+      "id": "d1e2f3a4-0009-0009-0009-000000000009",
+      "name": "Collect Write Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 500]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [{ "node": "Build Content Files", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Content Files": {
+      "main": [
+        [{ "node": "Expand Files", "type": "main", "index": 0 }]
+      ]
+    },
+    "Expand Files": {
+      "main": [
+        [{ "node": "Write Files One by One", "type": "main", "index": 0 }]
+      ]
+    },
+    "Write Files One by One": {
+      "main": [
+        [{ "node": "Get Existing File SHA", "type": "main", "index": 0 }],
+        [{ "node": "Collect Write Results", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get Existing File SHA": {
+      "main": [
+        [{ "node": "Extract Existing SHA", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract Existing SHA": {
+      "main": [
+        [{ "node": "Write File to GitHub", "type": "main", "index": 0 }]
+      ]
+    },
+    "Write File to GitHub": {
+      "main": [
+        [{ "node": "Extract Commit SHA", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract Commit SHA": {
+      "main": [
+        [{ "node": "Write Files One by One", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": true,
+    "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
+  },
+  "id": "daily-09-publish-to-github-v1",
+  "tags": ["daily", "editorial", "github", "publishing", "v1"]
+}
