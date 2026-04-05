@@ -30,7 +30,10 @@ export async function onRequestGet({ params, request, env }) {
   if (!db) return errorResponse('Database not configured', 503)
 
   const url = new URL(request.url)
-  const limit = Math.min(Number(url.searchParams.get('limit')) || DEFAULT_LIMIT, MAX_LIMIT)
+  const rawLimit = Number(url.searchParams.get('limit'))
+  const limit = Number.isFinite(rawLimit) && rawLimit >= 1
+    ? Math.min(Math.floor(rawLimit), MAX_LIMIT)
+    : DEFAULT_LIMIT
   const before = url.searchParams.get('before') || null
 
   try {
