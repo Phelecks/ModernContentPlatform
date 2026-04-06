@@ -84,15 +84,38 @@ wrangler d1 migrations apply modern-content-platform-db --local
 
 Migrations are stored in `db/migrations/` and run in filename order.
 
-### 6. Seed initial topic data (optional)
+### 6. Seed initial topic data
 
 ```bash
 # Remote
-wrangler d1 execute modern-content-platform-db --file=db/seeds/seed_topics.sql
+wrangler d1 execute modern-content-platform-db --file=db/seeds/topics.sql
 
 # Local
-wrangler d1 execute modern-content-platform-db --file=db/seeds/seed_topics.sql --local
+wrangler d1 execute modern-content-platform-db --file=db/seeds/topics.sql --local
 ```
+
+### 7. Seed sample alerts (optional — local development only)
+
+Sample event clusters and alerts for three topics (`crypto`, `finance`, `ai`) on date `2025-01-15` are provided for local testing. Run after seeding topics:
+
+```bash
+wrangler d1 execute modern-content-platform-db --file=db/seeds/sample_alerts.sql --local
+```
+
+### 8. Reset and reseed local D1 (optional)
+
+Use the reset script to wipe local state and start fresh with a clean database:
+
+```bash
+bash scripts/local-reset.sh
+```
+
+This script:
+1. Deletes the local D1 SQLite file under `.wrangler/state/v3/d1/`
+2. Applies all migrations in `db/migrations/` in filename order
+3. Seeds topics from `db/seeds/topics.sql`
+4. Seeds sample alerts from `db/seeds/sample_alerts.sql`
+5. Prints a verification summary of the resulting data
 
 ---
 
@@ -184,8 +207,10 @@ Recommended extensions are defined in `.vscode/extensions.json`:
 | Start full Pages dev stack | `wrangler pages dev app/dist --d1=DB` |
 | Apply migrations (remote) | `wrangler d1 migrations apply modern-content-platform-db` |
 | Apply migrations (local) | `wrangler d1 migrations apply modern-content-platform-db --local` |
-| Seed topics (remote) | `wrangler d1 execute modern-content-platform-db --file=db/seeds/seed_topics.sql` |
-| Seed topics (local) | `wrangler d1 execute modern-content-platform-db --file=db/seeds/seed_topics.sql --local` |
+| Seed topics (remote) | `wrangler d1 execute modern-content-platform-db --file=db/seeds/topics.sql` |
+| Seed topics (local) | `wrangler d1 execute modern-content-platform-db --file=db/seeds/topics.sql --local` |
+| Seed sample alerts (local) | `wrangler d1 execute modern-content-platform-db --file=db/seeds/sample_alerts.sql --local` |
+| Reset local D1 (wipe + reseed) | `bash scripts/local-reset.sh` |
 | Query D1 locally | `wrangler d1 execute modern-content-platform-db --local --command "SELECT ..."` |
 | Authenticate Wrangler | `wrangler login` |
 
@@ -199,7 +224,7 @@ functions/   Pages Functions — served by wrangler pages dev
 db/          D1 schema, migrations, seeds, and query examples
 content/     GitHub-backed editorial content (static at build time)
 docs/        Architecture and operations documentation
-scripts/     Utility scripts for local and CI tasks
+scripts/     Utility scripts for local and CI tasks (e.g. local-reset.sh)
 wrangler.toml  Cloudflare deployment and D1 binding configuration
 .env.example   Environment variable template — copy to .env
 ```

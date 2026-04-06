@@ -1,4 +1,4 @@
--- Seed: seed_topics.sql
+-- Seed: topics.sql
 -- Inserts the initial set of supported platform topics.
 -- Run after applying 0001_init.sql to bootstrap a fresh D1 database.
 -- Safe to re-run: INSERT OR IGNORE will not duplicate rows.
