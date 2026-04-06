@@ -197,18 +197,25 @@ Key characteristics:
 
 ## Roadmap
 
+See [`docs/roadmap.md`](docs/roadmap.md) for the full phase-by-phase implementation plan,
+deliverables per phase, dependencies, risks, and the recommended best next step.
+
 ### v1 — Foundation
 
 - [x] Repository structure and boundary definitions
 - [x] D1 schema: alerts, daily status, publish state, navigation metadata
-- [ ] Cloudflare Pages Functions: timeline, day-status, navigation, topics APIs
-- [ ] Vue frontend: homepage, topic page, topic/day page, timeline component
-- [ ] n8n intraday workflow: ingest → deduplicate → classify → score → D1 → deliver
-- [ ] n8n daily workflow: aggregate → summarize → publish to GitHub → trigger redeploy
-- [ ] AI prompt schemas: classification, summarization, video script, tomorrow outlook
-- [ ] Content model: article.md, summary.json, metadata.json, video.json per topic/date
-- [ ] Telegram and Discord alert delivery
+- [x] Cloudflare Pages Functions: timeline, day-status, navigation, topics APIs
+- [x] Vue frontend: homepage, topic page, topic/day page, timeline component
+- [x] n8n intraday workflow: ingest → deduplicate → classify → score → D1 → deliver
+- [x] n8n daily workflow: aggregate → summarize → publish to GitHub → trigger redeploy
+- [x] AI prompt schemas: classification, summarization, video script, tomorrow outlook
+- [x] Content model: article.md, summary.json, metadata.json, video.json per topic/date
+- [ ] Cloudflare D1 provisioned and migrations applied
+- [ ] Cloudflare Pages connected to this repository
+- [ ] n8n instance deployed and workflows configured
+- [ ] Telegram and Discord alert delivery wired and tested
 - [ ] YouTube video metadata integration
+- [ ] End-to-end cycle verified for all active topics
 
 ### v2 — Reliability and Scale
 
