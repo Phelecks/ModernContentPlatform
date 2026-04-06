@@ -1,8 +1,9 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
-import { cpSync, existsSync, createReadStream, statSync } from 'node:fs'
-import { join, extname } from 'node:path'
+import { cpSync, existsSync, createReadStream } from 'node:fs'
+import { stat as fsStat } from 'node:fs/promises'
+import { extname, resolve } from 'node:path'
 
 const CONTENT_MIME = {
   '.json': 'application/json',
@@ -19,24 +20,36 @@ export default defineConfig({
       name: 'serve-content-dir',
       configureServer(server) {
         const contentDir = fileURLToPath(new URL('../content', import.meta.url))
-        server.middlewares.use('/content', (req, res, next) => {
+        server.middlewares.use('/content', async (req, res, next) => {
           try {
-            const filePath = join(contentDir, decodeURIComponent(req.url ?? ''))
+            // Strip query string; req.url is relative to the /content mount point
+            const { pathname } = new URL(req.url ?? '/', 'http://localhost')
+            // resolve with a leading '.' anchors the path to contentDir
+            // and normalises any '..' segments before the traversal guard runs
+            const filePath = resolve(contentDir, '.' + pathname)
             // Guard against path traversal (dev server safety)
             if (!filePath.startsWith(contentDir + '/') && filePath !== contentDir) {
               next()
               return
             }
-            const stat = statSync(filePath)
-            if (stat.isFile()) {
+            const fileStat = await fsStat(filePath)
+            if (fileStat.isFile()) {
               const mime = CONTENT_MIME[extname(filePath)] ?? 'application/octet-stream'
               res.setHeader('Content-Type', mime)
               res.setHeader('Cache-Control', 'no-store')
-              createReadStream(filePath).pipe(res)
+              const stream = createReadStream(filePath)
+              stream.on('error', (err) => {
+                console.error('[serve-content-dir] Stream error:', err)
+                if (!res.headersSent) {
+                  res.statusCode = 500
+                  res.end('Internal Server Error')
+                }
+              })
+              stream.pipe(res)
               return
             }
           } catch {
-            // file not found — fall through to Vite's 404 handler
+            // file not found or stat error — fall through to Vite's 404 handler
           }
           next()
         })
