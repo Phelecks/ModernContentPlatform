@@ -19,7 +19,7 @@ They do **not** need to be re-implemented; they need to be wired and deployed.
 | Asset | Location | Status |
 |---|---|---|
 | D1 schema — tables, indexes, constraints | `db/migrations/` | ✅ Ready |
-| Topic seed data | `db/seeds/seed_topics.sql` | ✅ Ready |
+| Topic seed data | `db/seeds/topics.sql` | ✅ Ready |
 | Pages Functions — topics, timeline, day-status, navigation | `functions/` | ✅ Ready |
 | Vue frontend — pages, components, router, services | `app/src/` | ✅ Ready |
 | n8n intraday workflow modules (01–09 + orchestrator) | `workflows/n8n/intraday/` | ✅ Ready |
@@ -60,7 +60,7 @@ Phase 9 (end-to-end) depends on all prior phases.
 - [ ] D1 migrations applied in order:
   - `0001_init.sql`
   - `0002_event_clusters_unique.sql`
-- [ ] Topic seed data loaded (`db/seeds/seed_topics.sql`)
+- [ ] Topic seed data loaded (`db/seeds/topics.sql`)
 - [ ] Cloudflare Pages project created and connected to this GitHub repository
 - [ ] Pages build settings confirmed:
   - Build command: `npm run build` (from `app/`)
@@ -76,7 +76,7 @@ npx wrangler d1 execute modern-content-platform-db --remote --file db/migrations
 npx wrangler d1 execute modern-content-platform-db --remote --file db/migrations/0002_event_clusters_unique.sql
 
 # Seed topics
-npx wrangler d1 execute modern-content-platform-db --remote --file db/seeds/seed_topics.sql
+npx wrangler d1 execute modern-content-platform-db --remote --file db/seeds/topics.sql
 ```
 
 ### Risks

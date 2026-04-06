@@ -6,7 +6,7 @@
 --   wrangler d1 execute modern-content-platform-db --file=db/seeds/topics.sql --local
 --   wrangler d1 execute modern-content-platform-db --file=db/seeds/sample_alerts.sql --local
 --
--- Safe to re-run: existing clusters use INSERT OR IGNORE; alerts are inserted fresh.
+-- Safe to re-run: existing clusters use INSERT OR IGNORE; alerts are inserted only when matching rows do not already exist.
 -- To reset sample data, run scripts/local-reset.sh instead.
 
 -- ============================================================
