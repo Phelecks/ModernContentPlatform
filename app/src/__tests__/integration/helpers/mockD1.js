@@ -2,10 +2,16 @@
  * Lightweight in-memory D1 mock for integration testing.
  *
  * Supports the SQL subset used in the platform's Pages Functions:
- *   - SELECT from a single table with WHERE, ORDER BY, LIMIT
+ *   - SELECT <column list> from a single table with WHERE, ORDER BY, LIMIT
  *   - SELECT COUNT(*) AS alias
  *   - Two-table LEFT JOIN (topics + daily_status pattern in day-status handler)
  *   - Positional ? parameter binding
+ *
+ * Column projection: returned rows contain only the columns listed in SELECT,
+ * mirroring real D1 behavior so missing field bugs are caught in tests.
+ *
+ * Unsupported SQL patterns throw immediately so tests fail with a clear message
+ * rather than silently passing with wrong data.
  *
  * Seed data mirrors db/seeds/topics.sql and db/seeds/sample_alerts.sql.
  */
@@ -51,7 +57,9 @@ function parseConditions(whereClause, params) {
   const conditions = parts.map((part) => {
     part = part.trim()
     const m = part.match(/^([\w.]+)\s*(=|!=|<|>)\s*(\?|'[^']*'|-?\d+(?:\.\d+)?)$/)
-    if (!m) return null
+    if (!m) {
+      throw new Error(`MockD1: unsupported WHERE condition: "${part}"`)
+    }
     const col = m[1].includes('.') ? m[1].split('.').pop() : m[1]
     const op = m[2]
     let val
@@ -63,7 +71,7 @@ function parseConditions(whereClause, params) {
       val = Number(m[3])
     }
     return { col, op, val }
-  }).filter(Boolean)
+  })
   return { conditions, paramCount: pi }
 }
 
@@ -80,6 +88,77 @@ function applyConditions(rows, conditions) {
       }
     })
   )
+}
+
+// ---- SELECT column projection ----
+
+/**
+ * Parse the SELECT column list (the text between SELECT and FROM) into an array
+ * of descriptors, each with:
+ *   { sourceCol: string|null, alias: string, literal?: number }
+ *
+ * Returns null to signal "return full rows" when SELECT * or an unrecognised
+ * expression is encountered.
+ *
+ * Skips:
+ *   - COUNT(*) — handled upstream by extractCountAlias
+ *   - `? AS alias` — used in the JOIN handler, projection is done by _runJoin
+ *   - `COALESCE(…) AS alias` — same as above
+ */
+function extractSelectColumns(sql) {
+  const m = sql.match(/^SELECT\s+(.+?)\s+FROM\b/i)
+  if (!m) return null
+  const selectList = m[1]
+
+  if (/COUNT\s*\(\s*\*\s*\)/i.test(selectList)) return null
+  if (selectList.trim() === '*') return null
+
+  const cols = []
+  for (const raw of selectList.split(',')) {
+    const t = raw.trim()
+    if (t.startsWith('?')) continue
+    if (/^COALESCE\s*\(/i.test(t)) continue
+
+    // col AS alias  or  table.col AS alias
+    const aliasM = t.match(/^([\w.]+)\s+AS\s+(\w+)$/i)
+    if (aliasM) {
+      const sourceCol = aliasM[1].includes('.') ? aliasM[1].split('.').pop() : aliasM[1]
+      cols.push({ sourceCol, alias: aliasM[2] })
+      continue
+    }
+
+    // bare col, table.col, or integer literal (e.g. SELECT 1)
+    const bareM = t.match(/^([\w.]+)$/)
+    if (bareM) {
+      if (/^\d+$/.test(bareM[1])) {
+        cols.push({ sourceCol: null, alias: bareM[1], literal: Number(bareM[1]) })
+      } else {
+        const sourceCol = bareM[1].includes('.') ? bareM[1].split('.').pop() : bareM[1]
+        cols.push({ sourceCol, alias: sourceCol })
+      }
+      continue
+    }
+
+    // Unrecognised expression — fall back to full rows
+    return null
+  }
+
+  return cols.length > 0 ? cols : null
+}
+
+/**
+ * Project an array of full seed rows down to only the columns in the SELECT list.
+ * When cols is null (SELECT * or unrecognised), rows are returned as-is.
+ */
+function projectRows(rows, cols) {
+  if (!cols) return rows
+  return rows.map((row) => {
+    const projected = {}
+    for (const { sourceCol, alias, literal } of cols) {
+      projected[alias] = sourceCol === null ? literal : row[sourceCol]
+    }
+    return projected
+  })
 }
 
 // ---- ORDER BY handler ----
@@ -153,7 +232,7 @@ class MockStatement {
     const countAlias = extractCountAlias(sql)
     if (countAlias) return [{ [countAlias]: rows.length }]
 
-    return rows
+    return projectRows(rows, extractSelectColumns(sql))
   }
 
   /**

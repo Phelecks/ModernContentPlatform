@@ -175,6 +175,11 @@ If the new handler uses a SQL pattern not yet handled by `MockStatement._run()`,
 - two-table `LEFT JOIN` (topics + daily_status pattern)
 - `?` parameter binding
 - equality, inequality, and `<` / `>` comparisons in `WHERE`
+- column projection to only the fields listed in `SELECT`
+- `col AS alias` and `table.col AS alias` in the SELECT list
+- `SELECT 1` for existence-check queries
+
+Any unsupported `WHERE` segment will throw immediately with a descriptive error, so new SQL patterns are caught at test time rather than silently ignored.
 
 ---
 
