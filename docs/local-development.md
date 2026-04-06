@@ -132,11 +132,38 @@ npm run dev
 
 The app starts at **http://localhost:5173**.
 
-### Option B — Full local stack (frontend + Pages Functions + D1)
+### Option B — Full local stack with hot reload (recommended for vertical slice testing)
 
-Use this when working on Pages Functions or testing API integrations end-to-end.
+Use this when working on Pages Functions or testing the full API + frontend integration.
+The Vite dev server proxies `/api/*` requests to the wrangler server, so you get hot reload **and** live API access without a rebuild loop.
 
-**Step 1:** Build the Vue app (Wrangler Pages dev serves the built output):
+**Terminal 1 — Wrangler Pages dev server (API + D1):**
+
+```bash
+wrangler pages dev app/dist --d1=DB
+```
+
+> Wrangler serves Pages Functions and the local D1 database at **http://localhost:8788**.
+> You must have built the app at least once (`npm run build`) before running this command,
+> but you do **not** need to rebuild after every frontend change when using Terminal 2.
+
+**Terminal 2 — Vite dev server (Vue hot reload):**
+
+```bash
+cd app
+npm run dev
+```
+
+The Vue app starts at **http://localhost:5173** with hot reload enabled.
+All `/api/*` calls from the Vue app are automatically proxied to `localhost:8788`.
+
+> **Tip:** Run the wrangler command first so the proxy target is available when Vite starts.
+
+### Option C — Full local stack (build mode, no hot reload)
+
+Use this when you want a single server that mirrors the production deployment exactly.
+
+**Step 1:** Build the Vue app:
 
 ```bash
 cd app
@@ -144,7 +171,7 @@ npm run build
 cd ..
 ```
 
-**Step 2:** Start Wrangler Pages dev server (serves functions + static files + local D1):
+**Step 2:** Start Wrangler Pages dev server:
 
 ```bash
 wrangler pages dev app/dist --d1=DB
@@ -154,7 +181,7 @@ The full stack starts at **http://localhost:8788**.
 
 > **Tip:** Run `npm run build -- --watch` in a separate terminal inside `app/` to automatically rebuild on Vue file changes while `wrangler pages dev` is running.
 
-### Option C — Query the local D1 database directly
+### Option D — Query the local D1 database directly
 
 ```bash
 # Interactive REPL
@@ -201,10 +228,11 @@ Recommended extensions are defined in `.vscode/extensions.json`:
 | Task | Command |
 |---|---|
 | Install frontend dependencies | `cd app && npm install` |
-| Start Vue dev server | `cd app && npm run dev` |
+| Start Vue dev server (hot reload + API proxy) | `cd app && npm run dev` |
+| Start wrangler API server (needed for proxy) | `wrangler pages dev app/dist --d1=DB` |
 | Build Vue app | `cd app && npm run build` |
 | Lint frontend | `cd app && npm run lint` |
-| Start full Pages dev stack | `wrangler pages dev app/dist --d1=DB` |
+| Start full Pages dev stack (single server) | `wrangler pages dev app/dist --d1=DB` |
 | Apply migrations (remote) | `wrangler d1 migrations apply modern-content-platform-db` |
 | Apply migrations (local) | `wrangler d1 migrations apply modern-content-platform-db --local` |
 | Seed topics (remote) | `wrangler d1 execute modern-content-platform-db --file=db/seeds/topics.sql` |
@@ -243,7 +271,7 @@ Ensure you pass `--d1=DB` to `wrangler pages dev`. The binding name `DB` must ma
 You need to provision D1 first: `wrangler d1 create modern-content-platform-db`. Copy the returned ID into `wrangler.toml`.
 
 **Vue hot-reload not working with wrangler pages dev**
-Run `npm run dev` inside `app/` for a hot-reload Vue experience. Use `wrangler pages dev` only when you need to test Pages Functions.
+Use the two-terminal setup described in Option B: run `wrangler pages dev app/dist --d1=DB` in one terminal and `cd app && npm run dev` in another. Vite's dev server proxies `/api/*` to wrangler, so you get hot reload and live API data simultaneously.
 
 **ESLint not highlighting errors in VS Code**
 Check that the **ESLint** extension is installed and that `eslint.workingDirectories` in `.vscode/settings.json` points to `app`. Run `npm install` inside `app/` to ensure eslint is installed.
