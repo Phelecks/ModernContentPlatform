@@ -15,7 +15,7 @@
  *     has_more: boolean
  *   }
  */
-import { queryAll, queryOne, jsonResponse, errorResponse, isValidTopicSlug, isValidDateKey } from '../../../lib/db.js'
+import { queryAll, queryOne, jsonResponse, errorResponse, isValidTopicSlug, isValidDateKey, isValidISOTimestamp } from '../../../lib/db.js'
 
 const MAX_LIMIT = 100
 const DEFAULT_LIMIT = 30
@@ -41,8 +41,16 @@ export async function onRequestGet({ params, request, env }) {
     ? Math.min(Math.floor(rawLimit), MAX_LIMIT)
     : DEFAULT_LIMIT
   const before = url.searchParams.get('before') || null
+  if (before !== null && !isValidISOTimestamp(before)) {
+    return errorResponse('Invalid before cursor — expected ISO-8601 date-time', 400)
+  }
 
   try {
+    const topicRow = await queryOne(db, `SELECT 1 FROM topics WHERE topic_slug = ? AND is_active = 1`, [topicSlug])
+    if (!topicRow) {
+      return errorResponse(`Unknown topic: ${topicSlug}`, 404)
+    }
+
     let sql
     let bindParams
 

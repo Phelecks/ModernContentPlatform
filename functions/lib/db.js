@@ -74,3 +74,15 @@ export function isValidDateKey(value) {
 export function isValidTopicSlug(value) {
   return typeof value === 'string' && /^[a-z0-9-]+$/.test(value)
 }
+
+/**
+ * Validate that a value is a well-formed ISO-8601 date-time string.
+ * Accepts the subset used as event_at cursors: YYYY-MM-DDTHH:MM:SS[.sss]Z
+ * @param {string} value
+ * @returns {boolean}
+ */
+export function isValidISOTimestamp(value) {
+  if (typeof value !== 'string') return false
+  const ts = Date.parse(value)
+  return Number.isFinite(ts) && value.includes('T')
+}
