@@ -73,6 +73,10 @@ web_modules/
 # Wrangler local secrets file (do not commit)
 .dev.vars
 
+# n8n local Docker state (workflows, credentials, execution history)
+# Persisted across restarts but should not be committed to version control.
+n8n/local_data/
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache

@@ -4,6 +4,7 @@
     "dbaeumer.vscode-eslint",
     "EditorConfig.EditorConfig",
     "esbenp.prettier-vscode",
-    "cloudflare.cloudflare-workers-bindings"
+    "cloudflare.cloudflare-workers-bindings",
+    "ms-azuretools.vscode-docker"
   ]
 }
