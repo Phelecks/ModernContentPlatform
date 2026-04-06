@@ -243,23 +243,24 @@ deliverables per phase, dependencies, risks, and the recommended best next step.
 # 1. Install frontend dependencies
 cd app && npm install && cd ..
 
-# 2. Copy environment variable template
-cp .env.example .env
-# Edit .env and fill in your Cloudflare credentials
-
-# 3. Authenticate Wrangler
+# 2. Authenticate Wrangler (handles Cloudflare auth — no .env needed for CLI)
 wrangler login
 
-# 4. Apply D1 migrations locally
+# 3. Apply D1 migrations locally
 wrangler d1 migrations apply modern-content-platform-db --local
 
-# 5a. Vue frontend only (hot-reload, no API)
+# 4a. Vue frontend only (hot-reload, no API)
 cd app && npm run dev
 
-# 5b. Full stack: frontend + Pages Functions + D1
+# 4b. Full stack: frontend + Pages Functions + D1
 cd app && npm run build && cd ..
 wrangler pages dev app/dist --d1=DB
 ```
+
+> **Note:** Wrangler does not automatically read `.env`. Use `wrangler login` for Cloudflare auth.
+> For local Pages Functions secrets (e.g. API keys used at runtime), create a `.dev.vars` file
+> (see [`docs/local-development.md`](docs/local-development.md) for details).
+> Copy `.env.example` to `.env` only for services that need it (n8n, external tooling).
 
 See **[`docs/local-development.md`](docs/local-development.md)** for the full setup guide, VS Code configuration, and common commands reference.
 

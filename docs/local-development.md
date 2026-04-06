@@ -32,27 +32,32 @@ npm install
 cd ..
 ```
 
-### 2. Configure environment variables
-
-```bash
-cp .env.example .env
-```
-
-Open `.env` and fill in at minimum:
-
-- `CLOUDFLARE_ACCOUNT_ID` — your Cloudflare account ID (found in the dashboard sidebar)
-- `CLOUDFLARE_API_TOKEN` — a token with D1 and Pages edit permissions
-- `CLOUDFLARE_D1_DATABASE_ID` — set this after provisioning D1 (see step 4)
-
-Variables marked `[n8n]` are configured inside your n8n instance. You do not need them locally unless you are testing n8n workflows.
-
-### 3. Log in to Wrangler
+### 2. Authenticate Wrangler
 
 ```bash
 wrangler login
 ```
 
-This opens a browser window to authenticate with your Cloudflare account. Required for D1 operations and remote deploys.
+This opens a browser window to authenticate with your Cloudflare account. Wrangler uses this session for all D1 and Pages CLI operations — **you do not need to set `CLOUDFLARE_ACCOUNT_ID` or `CLOUDFLARE_API_TOKEN` in `.env` for local development**.
+
+### 3. Configure local runtime secrets (optional)
+
+If your Pages Functions need secret values at runtime (e.g. an API key read from the environment inside a function), create a `.dev.vars` file in the repository root. Wrangler reads this file automatically during `wrangler pages dev`:
+
+```bash
+# .dev.vars — local-only, never commit this file
+MY_SECRET_KEY=some-local-value
+```
+
+`.dev.vars` is excluded by `.gitignore`. See the [Wrangler `.dev.vars` docs](https://developers.cloudflare.com/workers/configuration/secrets/#local-development-with-dev-vars) for full details.
+
+For services outside Wrangler (n8n, external tooling), copy `.env.example` to `.env` and fill in the relevant variables:
+
+```bash
+cp .env.example .env
+```
+
+Variables in `.env.example` are annotated with `[local]`, `[deploy]`, or `[n8n]` scope markers so you know which ones you actually need for a given task.
 
 ### 4. Provision the D1 database (first time only)
 
@@ -62,7 +67,6 @@ wrangler d1 create modern-content-platform-db
 
 Copy the `database_id` value from the output. Paste it into:
 - `wrangler.toml` → `database_id` field under `[[d1_databases]]`
-- `.env` → `CLOUDFLARE_D1_DATABASE_ID`
 
 ### 5. Apply database migrations
 
@@ -162,7 +166,8 @@ Recommended extensions are defined in `.vscode/extensions.json`:
 ### Workspace settings
 
 `.vscode/settings.json` pre-configures:
-- Format on save using the correct formatter per file type
+- Format on save using Prettier for all files (Vue files use Volar's formatter)
+- ESLint auto-fix on save for `.js` files via `editor.codeActionsOnSave`
 - ESLint validation for `.js` and `.vue` files
 - EditorConfig-consistent indentation and line endings
 
@@ -210,7 +215,7 @@ Run `npm install -g wrangler` and ensure your global npm bin directory is in you
 Ensure you pass `--d1=DB` to `wrangler pages dev`. The binding name `DB` must match the `binding` field in `wrangler.toml`.
 
 **`database_id` is still `YOUR_D1_DATABASE_ID` in wrangler.toml**
-You need to provision D1 first: `wrangler d1 create modern-content-platform-db`. Copy the returned ID into `wrangler.toml` and `.env`.
+You need to provision D1 first: `wrangler d1 create modern-content-platform-db`. Copy the returned ID into `wrangler.toml`.
 
 **Vue hot-reload not working with wrangler pages dev**
 Run `npm run dev` inside `app/` for a hot-reload Vue experience. Use `wrangler pages dev` only when you need to test Pages Functions.
