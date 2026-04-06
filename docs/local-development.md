@@ -212,6 +212,7 @@ Recommended extensions are defined in `.vscode/extensions.json`:
 | **EditorConfig** (`EditorConfig.EditorConfig`) | Consistent editor formatting from `.editorconfig` |
 | **Prettier** (`esbenp.prettier-vscode`) | Code formatting |
 | **Cloudflare Workers** (`cloudflare.cloudflare-workers-bindings`) | Wrangler and Workers IntelliSense |
+| **Docker** (`ms-azuretools.vscode-docker`) | Manage the local n8n container and view logs from VS Code |
 
 ### Workspace settings
 
@@ -241,6 +242,9 @@ Recommended extensions are defined in `.vscode/extensions.json`:
 | Reset local D1 (wipe + reseed) | `bash scripts/local-reset.sh` |
 | Query D1 locally | `wrangler d1 execute modern-content-platform-db --local --command "SELECT ..."` |
 | Authenticate Wrangler | `wrangler login` |
+| Start local n8n | `docker compose -f n8n/docker-compose.yml --env-file .env up -d` |
+| Stop local n8n | `docker compose -f n8n/docker-compose.yml down` |
+| Reset local n8n state | `docker compose -f n8n/docker-compose.yml down && rm -rf n8n/local_data` |
 
 ---
 
@@ -252,10 +256,67 @@ functions/   Pages Functions — served by wrangler pages dev
 db/          D1 schema, migrations, seeds, and query examples
 content/     GitHub-backed editorial content (static at build time)
 docs/        Architecture and operations documentation
+n8n/         Docker Compose setup for local n8n workflow development
 scripts/     Utility scripts for local and CI tasks (e.g. local-reset.sh)
 wrangler.toml  Cloudflare deployment and D1 binding configuration
 .env.example   Environment variable template — copy to .env
 ```
+
+---
+
+## Running n8n locally
+
+The platform uses self-hosted n8n for ingestion, normalization, AI orchestration, D1
+persistence, and delivery workflows. A Docker Compose file is provided in `n8n/` for
+running n8n locally without affecting the production instance.
+
+### Prerequisites
+
+- Docker 24 or later (Docker Desktop includes Compose v2)
+
+### Start n8n
+
+```bash
+# Copy environment variables (if you haven't already)
+cp .env.example .env
+# Edit .env and fill in any values required by the workflows you are testing
+
+# Start n8n (from the repository root)
+docker compose -f n8n/docker-compose.yml --env-file .env up -d
+```
+
+n8n is available at **http://localhost:5678**.
+
+On first launch, n8n prompts you to create a local owner account. Use any credentials —
+they are stored only in `n8n/local_data/` and are never committed to version control.
+
+### Stop n8n
+
+```bash
+docker compose -f n8n/docker-compose.yml down
+```
+
+### Persistent state
+
+All n8n state (workflows, credentials, execution history) is stored in `n8n/local_data/`.
+This directory is created automatically on first run and is excluded from version control.
+State survives Docker restarts as long as `local_data/` exists on disk.
+
+### Reset local n8n state
+
+```bash
+docker compose -f n8n/docker-compose.yml down
+rm -rf n8n/local_data
+docker compose -f n8n/docker-compose.yml --env-file .env up -d
+```
+
+### Develop and export workflows
+
+1. Open **http://localhost:5678** and create or import workflows.
+2. Workflow JSON files (without credentials) live in `workflows/n8n/`.
+3. Input/output contracts for each workflow module are documented in `workflows/contracts/`.
+
+See `n8n/README.md` for the full list of environment variables and additional setup detail.
 
 ---
 
