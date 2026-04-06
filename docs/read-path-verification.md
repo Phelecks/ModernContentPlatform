@@ -39,7 +39,7 @@ cd app
 npm run test:run
 ```
 
-Expected output: **98 tests passing across 10 test files**.
+Expected output: **all integration tests pass successfully**.
 
 ---
 

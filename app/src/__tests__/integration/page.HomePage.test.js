@@ -10,7 +10,7 @@
  *   - shows a loading spinner before data resolves
  *   - renders all 7 seeded topics as TopicCard components
  *   - shows an error message when the API call fails
- *   - renders each topic's display name and description
+ *   - renders each topic's display name
  *   - links each card to the correct /topics/:topicSlug route
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
@@ -18,18 +18,25 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import HomePage from '@/pages/HomePage.vue'
 
-// ---- Fixture data (mirrors createSeededDb topics) ----
+// ---- Fixture data ----
+//
+// Keep a single fixture definition for homepage topic rendering tests.
+// If/when mockD1 exports the canonical seeded topics fixture, replace
+// createSeededTopics() with that import so these tests stay in sync.
 
-const SEEDED_TOPICS = [
-  { topic_slug: 'crypto',     display_name: 'Crypto',      description: 'Cryptocurrency markets, blockchain technology, and digital assets.',         sort_order: 1 },
-  { topic_slug: 'finance',    display_name: 'Finance',     description: 'Global financial markets, equities, bonds, and macroeconomic indicators.',   sort_order: 2 },
-  { topic_slug: 'economy',    display_name: 'Economy',     description: 'Macroeconomic trends, central bank policy, trade, and economic data.',       sort_order: 3 },
-  { topic_slug: 'health',     display_name: 'Health',      description: 'Healthcare developments, medical research, public health, and biotech.',     sort_order: 4 },
-  { topic_slug: 'ai',         display_name: 'AI',          description: 'Artificial intelligence breakthroughs, research, products, and policy.',     sort_order: 5 },
-  { topic_slug: 'energy',     display_name: 'Energy',      description: 'Energy markets, renewables, oil and gas, and climate-related developments.', sort_order: 6 },
-  { topic_slug: 'technology', display_name: 'Technology',  description: 'Technology industry news, products, infrastructure, and regulation.',        sort_order: 7 }
-]
+function createSeededTopics() {
+  return [
+    { topic_slug: 'crypto',     display_name: 'Crypto',      description: 'Cryptocurrency markets, blockchain technology, and digital assets.',         sort_order: 1 },
+    { topic_slug: 'finance',    display_name: 'Finance',     description: 'Global financial markets, equities, bonds, and macroeconomic indicators.',   sort_order: 2 },
+    { topic_slug: 'economy',    display_name: 'Economy',     description: 'Macroeconomic trends, central bank policy, trade, and economic data.',       sort_order: 3 },
+    { topic_slug: 'health',     display_name: 'Health',      description: 'Healthcare developments, medical research, public health, and biotech.',     sort_order: 4 },
+    { topic_slug: 'ai',         display_name: 'AI',          description: 'Artificial intelligence breakthroughs, research, products, and policy.',     sort_order: 5 },
+    { topic_slug: 'energy',     display_name: 'Energy',      description: 'Energy markets, renewables, oil and gas, and climate-related developments.', sort_order: 6 },
+    { topic_slug: 'technology', display_name: 'Technology',  description: 'Technology industry news, products, infrastructure, and regulation.',        sort_order: 7 }
+  ]
+}
 
+const SEEDED_TOPICS = Object.freeze(createSeededTopics())
 // ---- Fetch mock helpers ----
 
 function jsonRes(data, status = 200) {
@@ -70,6 +77,7 @@ async function createTestRouter() {
 describe('HomePage — topic list rendering integration', () => {
   afterEach(() => {
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   it('shows the loading spinner before data resolves', async () => {
