@@ -210,6 +210,7 @@ deliverables per phase, dependencies, risks, and the recommended best next step.
 - [x] n8n daily workflow: aggregate → summarize → publish to GitHub → trigger redeploy
 - [x] AI prompt schemas: classification, summarization, video script, tomorrow outlook
 - [x] Content model: article.md, summary.json, metadata.json, video.json per topic/date
+- [x] Local development environment: wrangler.toml, .env.example, VS Code config, setup guide
 - [ ] Cloudflare D1 provisioned and migrations applied
 - [ ] Cloudflare Pages connected to this repository
 - [ ] n8n instance deployed and workflows configured
@@ -230,19 +231,37 @@ deliverables per phase, dependencies, risks, and the recommended best next step.
 
 ## Getting Started
 
-> **Note:** This platform is under active development. Full setup instructions will be added as components stabilize.
+### Prerequisites
 
-### Prerequisites (planned)
+- **Node.js** 20 LTS or later
+- **Wrangler CLI** — `npm install -g wrangler`
+- A **Cloudflare account** with Pages and D1 enabled (for remote operations)
 
-- Node.js (for Vue frontend development)
-- Wrangler CLI (for Cloudflare Pages and D1)
-- A Cloudflare account with Pages and D1 enabled
-- A self-hosted n8n instance
-- API keys for news and data sources
+### Quick local start
 
-### Local development (placeholder)
+```bash
+# 1. Install frontend dependencies
+cd app && npm install && cd ..
 
-Setup steps will be documented here once the Vue app and Pages Functions scaffolding is in place.
+# 2. Copy environment variable template
+cp .env.example .env
+# Edit .env and fill in your Cloudflare credentials
+
+# 3. Authenticate Wrangler
+wrangler login
+
+# 4. Apply D1 migrations locally
+wrangler d1 migrations apply modern-content-platform-db --local
+
+# 5a. Vue frontend only (hot-reload, no API)
+cd app && npm run dev
+
+# 5b. Full stack: frontend + Pages Functions + D1
+cd app && npm run build && cd ..
+wrangler pages dev app/dist --d1=DB
+```
+
+See **[`docs/local-development.md`](docs/local-development.md)** for the full setup guide, VS Code configuration, and common commands reference.
 
 ### Deployment (placeholder)
 

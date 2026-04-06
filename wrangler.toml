@@ -3,7 +3,21 @@ compatibility_date = "2024-01-01"
 
 pages_build_output_dir = "app/dist"
 
+# ------------------------------------------------------------------
+# Cloudflare D1 database binding
+# Replace YOUR_D1_DATABASE_ID with your actual database ID after
+# running: wrangler d1 create modern-content-platform-db
+# ------------------------------------------------------------------
 [[d1_databases]]
 binding = "DB"
 database_name = "modern-content-platform-db"
 database_id = "YOUR_D1_DATABASE_ID"
+migrations_dir = "db/migrations"
+
+# ------------------------------------------------------------------
+# Local development overrides
+# These settings apply only when running `wrangler pages dev` locally.
+# ------------------------------------------------------------------
+[dev]
+port = 8788
+local_protocol = "http"
