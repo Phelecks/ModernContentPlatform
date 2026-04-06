@@ -56,3 +56,33 @@ export function jsonResponse(data, status = 200) {
 export function errorResponse(message, status = 500) {
   return jsonResponse({ error: message }, status)
 }
+
+/**
+ * Validate that a date key is in YYYY-MM-DD format.
+ * @param {string} value
+ * @returns {boolean}
+ */
+export function isValidDateKey(value) {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+}
+
+/**
+ * Validate that a topic slug contains only lowercase letters, digits, and hyphens.
+ * @param {string} value
+ * @returns {boolean}
+ */
+export function isValidTopicSlug(value) {
+  return typeof value === 'string' && /^[a-z0-9-]+$/.test(value)
+}
+
+/**
+ * Validate that a value is a well-formed ISO-8601 date-time string.
+ * Accepts the subset used as event_at cursors: YYYY-MM-DDTHH:MM:SS[.sss]Z
+ * @param {string} value
+ * @returns {boolean}
+ */
+export function isValidISOTimestamp(value) {
+  if (typeof value !== 'string') return false
+  const ts = Date.parse(value)
+  return Number.isFinite(ts) && value.includes('T')
+}
