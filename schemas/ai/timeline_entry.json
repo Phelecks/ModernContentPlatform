@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "timeline_entry",
+  "title": "Timeline Entry AI Output",
+  "description": "Structured JSON output from the AI timeline entry formatting step. Produces a display-ready entry for the intraday alert timeline from an already-classified alert. Validated before writing to D1 and rendering in the frontend.",
+  "type": "object",
+  "required": [
+    "headline",
+    "summary_text",
+    "severity_level",
+    "label"
+  ],
+  "properties": {
+    "headline": {
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 150,
+      "description": "Display-ready headline for the timeline entry. Shorter and punchier than the classification headline. Factual. No HTML. No sensationalism."
+    },
+    "summary_text": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 300,
+      "description": "One to two sentence summary written for timeline scanning. Plain language. Factual, third-person. No HTML."
+    },
+    "severity_level": {
+      "type": "string",
+      "enum": ["high", "medium", "low"],
+      "description": "Display severity level derived from the classification severity_score. high = score >= 75, medium = score >= 40, low = score < 40. Used by the frontend for visual styling."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 40,
+      "description": "Short categorical label displayed as a badge on the timeline entry (e.g. 'Price Action', 'Regulatory', 'Macro', 'Earnings', 'On-Chain'). Topic-appropriate and human-readable."
+    },
+    "label_color": {
+      "type": ["string", "null"],
+      "enum": ["red", "orange", "yellow", "green", "blue", "purple", "gray", null],
+      "description": "Optional semantic color hint for the label badge. Null lets the frontend apply its default. Use 'red' for regulatory/risk events, 'green' for positive market events, 'gray' for neutral/routine."
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "headline": "Bitcoin Breaks $120K All-Time High",
+      "summary_text": "Bitcoin surged past $120,000 for the first time, driven by record institutional ETF inflows exceeding $1.5 billion in a single session.",
+      "severity_level": "high",
+      "label": "Price Action",
+      "label_color": "green"
+    },
+    {
+      "headline": "SEC Issues Warning on Unregistered Crypto Exchanges",
+      "summary_text": "The SEC released a formal warning targeting unregistered cryptocurrency exchanges operating in the US, signalling increased enforcement pressure.",
+      "severity_level": "medium",
+      "label": "Regulatory",
+      "label_color": "red"
+    },
+    {
+      "headline": "US 10-Year Treasury Yield Edges Up to 4.32%",
+      "summary_text": "The 10-year US Treasury yield rose 2 basis points to 4.32% ahead of tomorrow's CPI print, with no significant market reaction.",
+      "severity_level": "low",
+      "label": "Macro",
+      "label_color": "gray"
+    }
+  ]
+}
