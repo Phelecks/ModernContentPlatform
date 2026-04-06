@@ -97,7 +97,7 @@ function applyConditions(rows, conditions) {
  * of descriptors, each with:
  *   { sourceCol: string|null, alias: string, literal?: number }
  *
- * Returns null to signal "return full rows" when SELECT * or an unrecognised
+ * Returns null to signal "return full rows" when SELECT * or an unrecognized
  * expression is encountered.
  *
  * Skips:
@@ -139,7 +139,7 @@ function extractSelectColumns(sql) {
       continue
     }
 
-    // Unrecognised expression — fall back to full rows
+    // Unrecognized expression — fall back to full rows
     return null
   }
 
@@ -148,7 +148,7 @@ function extractSelectColumns(sql) {
 
 /**
  * Project an array of full seed rows down to only the columns in the SELECT list.
- * When cols is null (SELECT * or unrecognised), rows are returned as-is.
+ * When cols is null (SELECT * or unrecognized), rows are returned as-is.
  */
 function projectRows(rows, cols) {
   if (!cols) return rows
