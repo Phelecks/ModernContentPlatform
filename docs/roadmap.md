@@ -35,13 +35,15 @@ They do **not** need to be re-implemented; they need to be wired and deployed.
 
 ```
 Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5
-                          ↘
-                           Phase 6 → Phase 7 → Phase 8
+                                    ↓
+                               Phase 6 → Phase 7 → Phase 8
+                                                        ↓
+                                                    Phase 9
 ```
 
-Phases 4 and 6 are independent of each other once Phase 3 is done.  
-Phase 5 depends on Phase 4. Phase 7 depends on Phase 6.  
-Phase 8 (end-to-end) depends on all prior phases.
+Phase 6 depends on Phase 4 (the daily workflow requires at least one day of intraday alerts in D1).  
+Phase 5 depends on Phase 4. Phase 7 depends on Phase 6. Phase 8 depends on Phase 6.  
+Phase 9 (end-to-end) depends on all prior phases.
 
 ---
 
@@ -246,6 +248,7 @@ Set all `*_WORKFLOW_ID` variables after import, before activating the orchestrat
 - [ ] n8n variables set (see daily orchestrator for full list):
   - All `DAILY_*_WORKFLOW_ID` variables
   - `CF_ACCOUNT_ID`, `CF_D1_DATABASE_ID`
+  - `CF_API_TOKEN` (Cloudflare API token with D1:Edit permission — used by module 01 when marking a publish job as failed on the no-alerts path)
   - `GITHUB_REPO_OWNER`, `GITHUB_REPO_NAME`, `GITHUB_CONTENT_BRANCH`
   - `GITHUB_TOKEN` (fine-grained personal access token with `contents:write` on this repo)
   - `CLOUDFLARE_PAGES_DEPLOY_HOOK` (optional — webhook URL to trigger redeploy)
