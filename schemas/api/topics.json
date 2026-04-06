@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "api/topics",
+  "title": "GET /api/topics Response",
+  "description": "Response shape returned by the /api/topics Pages Function. Returns all active topics ordered by sort_order.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["topic_slug", "display_name", "sort_order"],
+    "properties": {
+      "topic_slug": {
+        "type": "string",
+        "description": "Stable identifier for the topic (e.g. 'crypto', 'finance', 'health')."
+      },
+      "display_name": {
+        "type": "string",
+        "description": "Human-readable topic name shown in the UI (e.g. 'Crypto', 'Finance')."
+      },
+      "description": {
+        "type": ["string", "null"],
+        "description": "Optional short description of the topic."
+      },
+      "sort_order": {
+        "type": "integer",
+        "description": "Display order for the topic on the homepage. Lower values appear first."
+      }
+    },
+    "additionalProperties": false
+  },
+  "examples": [
+    [
+      { "topic_slug": "crypto", "display_name": "Crypto", "description": "Cryptocurrency and blockchain news", "sort_order": 1 },
+      { "topic_slug": "finance", "display_name": "Finance", "description": "Markets and financial news", "sort_order": 2 }
+    ]
+  ]
+}

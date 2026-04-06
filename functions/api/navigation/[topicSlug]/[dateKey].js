@@ -7,12 +7,18 @@
  * Response shape:
  *   { prev_date_key: string|null, next_date_key: string|null }
  */
-import { queryOne, jsonResponse, errorResponse } from '../../../lib/db.js'
+import { queryOne, jsonResponse, errorResponse, isValidTopicSlug, isValidDateKey } from '../../../lib/db.js'
 
 export async function onRequestGet({ params, env }) {
   const { topicSlug, dateKey } = params
   if (!topicSlug || !dateKey) {
     return errorResponse('Missing topicSlug or dateKey', 400)
+  }
+  if (!isValidTopicSlug(topicSlug)) {
+    return errorResponse('Invalid topicSlug format', 400)
+  }
+  if (!isValidDateKey(dateKey)) {
+    return errorResponse('Invalid dateKey format — expected YYYY-MM-DD', 400)
   }
 
   const db = env.DB

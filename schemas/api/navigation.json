@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "api/navigation",
+  "title": "GET /api/navigation/:topicSlug/:dateKey Response",
+  "description": "Response shape returned by the /api/navigation/:topicSlug/:dateKey Pages Function. Returns the previous and next published day keys for use by the DateNavigator component. Both fields are null when no adjacent days with content exist.",
+  "type": "object",
+  "required": ["prev_date_key", "next_date_key"],
+  "properties": {
+    "prev_date_key": {
+      "type": ["string", "null"],
+      "description": "YYYY-MM-DD date of the previous day that has content for this topic. Null when there is no earlier day."
+    },
+    "next_date_key": {
+      "type": ["string", "null"],
+      "description": "YYYY-MM-DD date of the next day that has content for this topic. Null when there is no later day."
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "prev_date_key": "2025-01-14",
+      "next_date_key": "2025-01-16"
+    },
+    {
+      "prev_date_key": null,
+      "next_date_key": null
+    }
+  ]
+}

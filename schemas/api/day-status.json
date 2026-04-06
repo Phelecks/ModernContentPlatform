@@ -1,0 +1,103 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "api/day-status",
+  "title": "GET /api/day-status/:topicSlug/:dateKey Response",
+  "description": "Response shape returned by the /api/day-status/:topicSlug/:dateKey Pages Function. Returns publish state, readiness flags, and navigation keys for a topic/day page. Returns 404 when the topic_slug is not found in the topics table.",
+  "type": "object",
+  "required": [
+    "topic_slug",
+    "date_key",
+    "page_state",
+    "display_name",
+    "alert_count",
+    "cluster_count",
+    "summary_available",
+    "video_available",
+    "article_available"
+  ],
+  "properties": {
+    "topic_slug": {
+      "type": "string",
+      "description": "Stable topic identifier (e.g. 'crypto', 'finance')."
+    },
+    "date_key": {
+      "type": "string",
+      "description": "Date in YYYY-MM-DD format that this status row covers."
+    },
+    "page_state": {
+      "type": "string",
+      "enum": ["pending", "ready", "published", "error"],
+      "description": "Current publish state of the topic/day page. Defaults to 'pending' when no daily_status row exists."
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Human-readable topic name for display in the UI."
+    },
+    "alert_count": {
+      "type": "integer",
+      "description": "Number of alerts collected for this topic/day."
+    },
+    "cluster_count": {
+      "type": "integer",
+      "description": "Number of event clusters formed for this topic/day."
+    },
+    "summary_available": {
+      "type": "integer",
+      "enum": [0, 1],
+      "description": "1 when the AI-generated daily summary is ready."
+    },
+    "video_available": {
+      "type": "integer",
+      "enum": [0, 1],
+      "description": "1 when the daily video has been published to YouTube."
+    },
+    "article_available": {
+      "type": "integer",
+      "enum": [0, 1],
+      "description": "1 when the editorial article has been published to GitHub."
+    },
+    "prev_date_key": {
+      "type": ["string", "null"],
+      "description": "YYYY-MM-DD date of the previous day that has content for this topic. Null when there is no earlier day."
+    },
+    "next_date_key": {
+      "type": ["string", "null"],
+      "description": "YYYY-MM-DD date of the next day that has content for this topic. Null when there is no later day."
+    },
+    "published_at": {
+      "type": ["string", "null"],
+      "description": "ISO-8601 timestamp when the page was published. Null when not yet published."
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "topic_slug": "crypto",
+      "date_key": "2025-01-15",
+      "page_state": "published",
+      "display_name": "Crypto",
+      "alert_count": 12,
+      "cluster_count": 4,
+      "summary_available": 1,
+      "video_available": 1,
+      "article_available": 1,
+      "prev_date_key": "2025-01-14",
+      "next_date_key": "2025-01-16",
+      "published_at": "2025-01-15T22:00:00Z"
+    },
+    {
+      "topic_slug": "finance",
+      "date_key": "2025-01-15",
+      "page_state": "pending",
+      "display_name": "Finance",
+      "alert_count": 0,
+      "cluster_count": 0,
+      "summary_available": 0,
+      "video_available": 0,
+      "article_available": 0,
+      "prev_date_key": null,
+      "next_date_key": null,
+      "published_at": null
+    }
+  ]
+}
