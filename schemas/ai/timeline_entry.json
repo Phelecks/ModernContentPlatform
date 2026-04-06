@@ -26,7 +26,7 @@
     "severity_level": {
       "type": "string",
       "enum": ["high", "medium", "low"],
-      "description": "Display severity level derived from the classification severity_score. high = score >= 75, medium = score >= 40, low = score < 40. Used by the frontend for visual styling."
+      "description": "Normalized display severity derived from the classification severity_score. high = score >= 75, medium = score >= 40, low = score < 40. Included in the structured AI output for validation, storage, and downstream consumers."
     },
     "label": {
       "type": "string",

@@ -20,7 +20,7 @@ All AI outputs must be valid JSON matching the relevant schema before any downst
 | File | AI step | Consumed by | Flow |
 |---|---|---|---|
 | `alert_classification.json` | Alert classification | n8n module 05 → modules 06–09 | Intraday |
-| `timeline_entry.json` | Timeline entry formatting | n8n module 07 → D1 alerts → frontend | Intraday |
+| `timeline_entry.json` | Timeline entry formatting | *(not yet wired — future intraday step after module 05)* | Intraday |
 | `daily_summary.json` | Daily summary generation | n8n module 02 → module 08 → GitHub | Daily editorial |
 | `expectation_check.json` | Expectation check | n8n module 04 → module 08 → GitHub | Daily editorial |
 | `tomorrow_outlook.json` | Tomorrow outlook | n8n module 05 → module 08 → GitHub | Daily editorial |
@@ -52,19 +52,20 @@ All AI outputs must be valid JSON matching the relevant schema before any downst
 
 **AI step:** Timeline entry formatting (intraday, after classification).
 
-**Purpose:** Produces the display-ready version of an alert for the live timeline. Takes a classified alert and reformats the headline and summary for scannability, assigns a human-readable label and severity level for visual styling in the frontend.
+**Purpose:** Defines the structured output for a display-ready version of an alert for the live timeline. It reformats the headline and summary for scannability and assigns a human-readable label and severity level for frontend styling when that formatting step is wired into the intraday flow.
 
 **Required fields:** `headline`, `summary_text`, `severity_level`, `label`
 
 **Optional fields:** `label_color`
 
 **Usage notes:**
-- Run after `alert_classification` when `send_alert` is true (or when `importance_score` exceeds the display threshold).
+- Intended to run after `alert_classification` for alerts that have already passed the intraday alert decision flow; there is no separate display-threshold path in the current workflow.
 - `severity_level` is derived from the classification `severity_score`: high ≥ 75, medium ≥ 40, low < 40.
 - `label` should be a short human-readable category badge (e.g. "Price Action", "Regulatory", "Macro").
 - `headline` has a tighter 150-character limit than the classification headline to suit the timeline UI.
-- Outputs are stored in the `alerts.metadata_json` column or used to patch the headline/summary_text fields before the D1 write.
-- `label_color` is a semantic hint; the frontend may ignore it and apply its own colour logic.
+- Current intraday D1 persistence does not write these timeline formatting fields into `alerts.metadata_json`; the existing `metadata_json` payload only includes `item_id`, `secondary_topics`, and `alert_reason`.
+- Treat this schema as the contract for future timeline-formatting wiring unless and until the workflow is updated to persist or otherwise consume `headline`, `summary_text`, `severity_level`, `label`, and `label_color`.
+- `label_color` is a semantic hint; if this schema is wired into the frontend later, the UI may still ignore it and apply its own colour logic.
 
 ---
 
