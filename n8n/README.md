@@ -78,8 +78,9 @@ docker compose -f n8n/docker-compose.yml --env-file .env up -d
 
 ## Environment variables
 
-Environment variables are loaded from the root `.env` file at startup. The full list of
-supported variables is documented in `.env.example`.
+Environment variables are loaded from the root `.env` file at startup. Use
+`.env.example` as the starting point for local configuration. The table below documents
+the variables passed to n8n at runtime via `docker-compose.yml`.
 
 Variables passed to n8n at runtime (via `docker-compose.yml`):
 
