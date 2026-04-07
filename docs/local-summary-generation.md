@@ -214,7 +214,7 @@ This local script mirrors the function of the n8n daily editorial workflow:
 | `01_aggregate_alerts.json` | Steps 1–2: loads alerts + clusters from D1 |
 | `02_generate_summary.json` | Step 3: generates `summary.json` (mock, no AI call) |
 | `03_generate_article.json` | Step 3: generates `article.md` (templated, no AI call) |
-| `08_validate_outputs.json` | Implicit: script validates required fields before writing |
+| `08_validate_outputs.json` | Not implemented locally: script writes generated outputs without explicit schema validation |
 | `10_update_d1_state.json` | Step 5: updates `daily_status` row |
 
 The production workflow also generates video scripts, YouTube metadata, and pushes

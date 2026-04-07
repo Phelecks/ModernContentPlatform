@@ -34,15 +34,14 @@
  *   files and updates the D1 row in-place — safe for iterative local testing.
  */
 
-import { execSync } from 'node:child_process'
-import { mkdirSync, writeFileSync, existsSync } from 'node:fs'
-import { join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+const { execSync } = require('node:child_process')
+const { mkdirSync, writeFileSync } = require('node:fs')
+const { join } = require('node:path')
 
 // ---------------------------------------------------------------------------
 // Resolve repo root regardless of working directory
 // ---------------------------------------------------------------------------
-const SCRIPT_DIR = fileURLToPath(new URL('.', import.meta.url))
+const SCRIPT_DIR = __dirname
 const REPO_ROOT = join(SCRIPT_DIR, '..')
 const DB_NAME = 'modern-content-platform-db'
 
@@ -83,7 +82,7 @@ function validateArgs(args) {
 
 /**
  * Execute a SQL query against the local D1 database via Wrangler.
- * Returns the first result set's rows, or an empty array on failure.
+ * Throws an Error on failure; returns the first result set's rows on success.
  *
  * @param {string} sql
  * @returns {Array<Object>}
@@ -351,8 +350,8 @@ function writeContentFiles(topicSlug, dateKey, summary, articleMd) {
  * Update the daily_status row for the given topic/date to reflect that
  * summary and article content is now available.
  *
- * Uses INSERT OR REPLACE so the operation is safe whether or not a row
- * already exists.
+ * Uses INSERT ... ON CONFLICT(topic_slug, date_key) DO UPDATE so the
+ * operation is safe whether or not a row already exists.
  *
  * @param {string} topicSlug
  * @param {string} dateKey
@@ -371,14 +370,13 @@ function updateDailyStatus(topicSlug, dateKey, alertCount, clusterCount) {
        ('${topicSlug}', '${dateKey}', 'ready',
         ${alertCount}, ${clusterCount},
         1, 0, 1,
-        '${now}', '${now}')
+        NULL, '${now}')
      ON CONFLICT(topic_slug, date_key) DO UPDATE SET
        page_state        = 'ready',
        summary_available = 1,
        article_available = 1,
        alert_count       = ${alertCount},
        cluster_count     = ${clusterCount},
-       published_at      = COALESCE(daily_status.published_at, '${now}'),
        updated_at        = '${now}'`
   )
 }

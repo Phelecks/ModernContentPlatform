@@ -123,7 +123,7 @@ async function createTestRouter(topicSlug = 'ai', dateKey = '2025-01-15') {
 // Schema validation helpers
 // ---------------------------------------------------------------------------
 
-function hasDailySubmmaryShape(summary) {
+function hasDailySummaryShape(summary) {
   return (
     typeof summary.topic_slug === 'string' &&
     typeof summary.date_key === 'string' &&
@@ -162,7 +162,7 @@ function hasMetadataShape(metadata) {
 
 describe('Generated content — ai/2025-01-15 schema validation', () => {
   it('summary.json has the required daily summary fields', () => {
-    expect(hasDailySubmmaryShape(AI_SUMMARY)).toBe(true)
+    expect(hasDailySummaryShape(AI_SUMMARY)).toBe(true)
   })
 
   it('summary.json topic_slug matches the expected topic', () => {
