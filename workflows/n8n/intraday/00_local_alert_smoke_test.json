@@ -1,5 +1,5 @@
 {
-  "name": "Intraday — 00 Local Alert Smoke Test",
+  "name": "Intraday \u2014 00 Local Alert Smoke Test",
   "nodes": [
     {
       "parameters": {},
@@ -7,29 +7,38 @@
       "name": "Manual Trigger",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Build a mock classified-alert payload that satisfies the\n// intraday_classified_alert contract (workflows/contracts/intraday_classified_alert.json).\n// date_key is derived from event_at (same convention used throughout the pipeline).\n//\n// Edit topic_slug and headline below to test different topics.\nconst now = new Date().toISOString();\nconst dateKey = now.slice(0, 10); // YYYY-MM-DD\n\nreturn [{\n  json: {\n    item_id:          'smoke-test-' + Date.now(),\n    topic_slug:       'crypto',\n    secondary_topics: ['finance'],\n    headline:         '[Smoke Test] Alert write-flow verification — ' + now,\n    summary_text:     'Synthetic alert inserted by the local smoke test workflow to verify that the n8n → Cloudflare D1 write path is functioning correctly.',\n    source_url:       'https://example.com/smoke-test',\n    source_name:      'Smoke Test',\n    severity_score:   50,\n    importance_score: 65,\n    confidence_score: 99,\n    send_alert:       true,\n    alert_reason:     'Local smoke test — not a real event.',\n    event_at:         now,\n    cluster_label:    'Smoke Test',\n    date_key:         dateKey\n  }\n}];"
+        "jsCode": "// Build a mock classified-alert payload based on the\n// intraday_classified_alert contract (workflows/contracts/intraday_classified_alert.json),\n// with an additional derived date_key field for downstream smoke-test writes.\n// date_key is NOT part of the base contract (additionalProperties: false there)\n// but is derived from event_at by the pipeline before the D1 write step.\n//\n// Edit topic_slug and headline below to test different topics.\nconst now = new Date().toISOString();\nconst dateKey = now.slice(0, 10); // YYYY-MM-DD\n\nreturn [{\n  json: {\n    item_id:          'smoke-test-' + Date.now(),\n    topic_slug:       'crypto',\n    secondary_topics: ['finance'],\n    headline:         '[Smoke Test] Alert write-flow verification \u2014 ' + now,\n    summary_text:     'Synthetic alert inserted by the local smoke test workflow to verify that the n8n \u2192 Cloudflare D1 write path is functioning correctly.',\n    source_url:       'https://example.com/smoke-test',\n    source_name:      'Smoke Test',\n    severity_score:   50,\n    importance_score: 65,\n    confidence_score: 99,\n    send_alert:       true,\n    alert_reason:     'Local smoke test \u2014 not a real event.',\n    event_at:         now,\n    cluster_label:    'Smoke Test',\n    date_key:         dateKey\n  }\n}];"
       },
       "id": "a0b0c0d0-0000-0000-0000-000000000002",
       "name": "Build Mock Alert",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Validate that the mock alert payload satisfies the alert contract\n// before attempting any D1 writes.\nconst item = $input.first().json;\n\nconst requiredFields = [\n  'item_id', 'topic_slug', 'headline', 'summary_text', 'source_name',\n  'severity_score', 'importance_score', 'confidence_score',\n  'send_alert', 'event_at', 'cluster_label', 'date_key'\n];\n\nconst missing = requiredFields.filter(\n  f => item[f] === undefined || item[f] === null || item[f] === ''\n);\nif (missing.length > 0) {\n  throw new Error(\n    'Mock alert payload is missing required fields: ' + missing.join(', ')\n  );\n}\n\nconst validTopics = ['crypto', 'finance', 'economy', 'health', 'ai', 'energy', 'technology'];\nif (!validTopics.includes(item.topic_slug)) {\n  throw new Error('Invalid topic_slug: ' + item.topic_slug);\n}\n\nif (!/^\\d{4}-\\d{2}-\\d{2}$/.test(item.date_key)) {\n  throw new Error('Invalid date_key format (expected YYYY-MM-DD): ' + item.date_key);\n}\n\nif (item.severity_score < 0 || item.severity_score > 100 ||\n    item.importance_score < 0 || item.importance_score > 100 ||\n    item.confidence_score < 0 || item.confidence_score > 100) {\n  throw new Error('Score fields must be integers between 0 and 100.');\n}\n\nreturn [$input.first()];"
+        "jsCode": "// Validate the pipeline payload (contract + pipeline-derived fields)\n// before attempting any D1 writes.\n// Note: cluster_label is required by the contract but may be null;\n// date_key is derived by the pipeline and not part of the base contract.\nconst item = $input.first().json;\n\nconst requiredFields = [\n  'item_id', 'topic_slug', 'headline', 'summary_text', 'source_name',\n  'severity_score', 'importance_score', 'confidence_score',\n  'send_alert', 'event_at', 'date_key'\n];\n\nconst missing = requiredFields.filter(\n  f => item[f] === undefined || item[f] === null || item[f] === ''\n);\nif (missing.length > 0) {\n  throw new Error(\n    'Mock alert payload is missing required fields: ' + missing.join(', ')\n  );\n}\n\n// cluster_label is required by the contract but may be null.\n// When null, the write step falls back to topic_slug (matching module 07).\nif (item.cluster_label === undefined) {\n  throw new Error('cluster_label must be present in the payload (may be null).');\n}\n\nconst validTopics = ['crypto', 'finance', 'economy', 'health', 'ai', 'energy', 'technology'];\nif (!validTopics.includes(item.topic_slug)) {\n  throw new Error('Invalid topic_slug: ' + item.topic_slug);\n}\n\nif (!/^\\d{4}-\\d{2}-\\d{2}$/.test(item.date_key)) {\n  throw new Error('Invalid date_key format (expected YYYY-MM-DD): ' + item.date_key);\n}\n\nconst scoreFields = ['severity_score', 'importance_score', 'confidence_score'];\nconst invalidScoreField = scoreFields.find(field => {\n  const value = item[field];\n  return !Number.isInteger(value) || value < 0 || value > 100;\n});\n\nif (invalidScoreField) {\n  throw new Error(\n    'Invalid score field ' + invalidScoreField + ': received ' + JSON.stringify(item[invalidScoreField]) + '. Score fields must be integers between 0 and 100.'\n  );\n}\n\nreturn [$input.first()];"
       },
       "id": "a0b0c0d0-0000-0000-0000-000000000003",
       "name": "Validate Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [680, 300]
+      "position": [
+        680,
+        300
+      ]
     },
     {
       "parameters": {
@@ -47,7 +56,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ {\n  sql: \"INSERT INTO event_clusters (topic_slug, date_key, cluster_label, alert_count, importance_score) VALUES (?, ?, ?, 1, ?) ON CONFLICT(topic_slug, date_key, cluster_label) DO UPDATE SET alert_count = alert_count + 1, importance_score = MAX(importance_score, excluded.importance_score), updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') RETURNING id\",\n  params: [\n    $json.topic_slug,\n    $json.date_key,\n    $json.cluster_label,\n    $json.importance_score\n  ]\n} }}",
+        "jsonBody": "={{ {\n  sql: \"INSERT INTO event_clusters (topic_slug, date_key, cluster_label, alert_count, importance_score) VALUES (?, ?, ?, 1, ?) ON CONFLICT(topic_slug, date_key, cluster_label) DO UPDATE SET alert_count = alert_count + 1, importance_score = MAX(importance_score, excluded.importance_score), updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') RETURNING id\",\n  params: [\n    $json.topic_slug,\n    $json.date_key,\n    ($json.cluster_label || $json.topic_slug),\n    $json.importance_score\n  ]\n} }}",
         "options": {
           "timeout": 10000
         }
@@ -56,7 +65,10 @@
       "name": "Upsert Event Cluster",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [900, 300],
+      "position": [
+        900,
+        300
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "cloudflare-d1-api",
@@ -76,7 +88,10 @@
       "name": "Extract Cluster ID",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1120, 300]
+      "position": [
+        1120,
+        300
+      ]
     },
     {
       "parameters": {
@@ -103,7 +118,10 @@
       "name": "Insert Alert Row",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1340, 300],
+      "position": [
+        1340,
+        300
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "cloudflare-d1-api",
@@ -123,7 +141,10 @@
       "name": "Extract Alert ID",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1560, 300]
+      "position": [
+        1560,
+        300
+      ]
     },
     {
       "parameters": {
@@ -150,7 +171,10 @@
       "name": "Upsert Daily Status",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1780, 300],
+      "position": [
+        1780,
+        300
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "cloudflare-d1-api",
@@ -170,7 +194,10 @@
       "name": "Collect Write Results",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2000, 300]
+      "position": [
+        2000,
+        300
+      ]
     },
     {
       "parameters": {
@@ -197,7 +224,10 @@
       "name": "Read Back Alert from D1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [2220, 300],
+      "position": [
+        2220,
+        300
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "cloudflare-d1-api",
@@ -211,64 +241,127 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Produce a human-readable smoke test result summary.\n// A SUCCESS result means the alert was written AND read back from D1.\n// The console.log output appears in the n8n execution log.\n\nconst d1ReadBack = $input.first().json;\nconst writeResults = $('Collect Write Results').first().json;\nconst readRow = d1ReadBack?.result?.[0]?.results?.[0] || null;\n\nconst writeOk = writeResults.alert_id !== null;\nconst readOk  = readRow !== null && readRow.id === writeResults.alert_id;\n\nlet status, message;\nif (writeOk && readOk) {\n  status  = 'SUCCESS';\n  message = '✅ Alert written to D1 and confirmed via read-back.';\n} else if (writeOk && !readOk) {\n  status  = 'WARNING';\n  message = '⚠️  Alert was written (ID=' + writeResults.alert_id + ') but read-back returned no matching row. Check D1 consistency.';\n} else {\n  status  = 'FAILURE';\n  message = '❌ Alert write failed — no alert_id was returned by the INSERT step.';\n}\n\nconst siteBase = $vars.LOCAL_SITE_URL || 'http://localhost:8788';\nconst timelineUrl = `${siteBase}/${writeResults.topic_slug}/${writeResults.date_key}`;\nconst apiUrl      = `${siteBase}/api/timeline/${writeResults.topic_slug}/${writeResults.date_key}`;\n\nconst summary = {\n  status,\n  message,\n  alert_id:            writeResults.alert_id,\n  cluster_id:          writeResults.cluster_id,\n  topic_slug:          writeResults.topic_slug,\n  date_key:            writeResults.date_key,\n  headline:            writeResults.headline,\n  event_at:            writeResults.event_at,\n  daily_status_ok:     writeResults.daily_status_ok,\n  d1_read_back_ok:     readOk,\n  site_timeline_page:  timelineUrl,\n  api_timeline_url:    apiUrl,\n  next_step:           readOk\n    ? `Open ${timelineUrl} in a browser (requires wrangler pages dev with remote D1, or your deployed site).`\n    : 'Investigate the D1 write error in the execution log above.'\n};\n\nconsole.log(JSON.stringify(summary, null, 2));\nreturn [{ json: summary }];"
+        "jsCode": "// Produce a human-readable smoke test result summary.\n// A SUCCESS result means the alert was written AND read back from D1.\n// The console.log output appears in the n8n execution log.\n\nconst d1ReadBack = $input.first().json;\nconst writeResults = $('Collect Write Results').first().json;\nconst readRow = d1ReadBack?.result?.[0]?.results?.[0] || null;\n\nconst writeOk = writeResults.alert_id !== null;\nconst readOk  = readRow !== null && readRow.id === writeResults.alert_id;\n\nlet status, message;\nif (writeOk && readOk) {\n  status  = 'SUCCESS';\n  message = '\u2705 Alert written to D1 and confirmed via read-back.';\n} else if (writeOk && !readOk) {\n  status  = 'WARNING';\n  message = '\u26a0\ufe0f  Alert was written (ID=' + writeResults.alert_id + ') but read-back returned no matching row. Check D1 consistency.';\n} else {\n  status  = 'FAILURE';\n  message = '\u274c Alert write failed \u2014 no alert_id was returned by the INSERT step.';\n}\n\nconst siteBase = $vars.LOCAL_SITE_URL || 'http://localhost:8788';\nconst timelineUrl = `${siteBase}/${writeResults.topic_slug}/${writeResults.date_key}`;\nconst apiUrl      = `${siteBase}/api/timeline/${writeResults.topic_slug}/${writeResults.date_key}`;\n\nconst summary = {\n  status,\n  message,\n  alert_id:            writeResults.alert_id,\n  cluster_id:          writeResults.cluster_id,\n  topic_slug:          writeResults.topic_slug,\n  date_key:            writeResults.date_key,\n  headline:            writeResults.headline,\n  event_at:            writeResults.event_at,\n  daily_status_ok:     writeResults.daily_status_ok,\n  d1_read_back_ok:     readOk,\n  site_timeline_page:  timelineUrl,\n  api_timeline_url:    apiUrl,\n  next_step:           readOk\n    ? `Open ${timelineUrl} in a browser (requires wrangler pages dev with remote D1, or your deployed site).`\n    : 'Investigate the D1 write error in the execution log above.'\n};\n\nconsole.log(JSON.stringify(summary, null, 2));\nreturn [{ json: summary }];"
       },
       "id": "a0b0c0d0-0000-0000-0000-000000000011",
       "name": "Log Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2440, 300]
+      "position": [
+        2440,
+        300
+      ]
     }
   ],
   "connections": {
     "Manual Trigger": {
       "main": [
-        [{ "node": "Build Mock Alert", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Build Mock Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Build Mock Alert": {
       "main": [
-        [{ "node": "Validate Payload", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Validate Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Validate Payload": {
       "main": [
-        [{ "node": "Upsert Event Cluster", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Upsert Event Cluster",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Upsert Event Cluster": {
       "main": [
-        [{ "node": "Extract Cluster ID", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Extract Cluster ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Extract Cluster ID": {
       "main": [
-        [{ "node": "Insert Alert Row", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Insert Alert Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Insert Alert Row": {
       "main": [
-        [{ "node": "Extract Alert ID", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Extract Alert ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Extract Alert ID": {
       "main": [
-        [{ "node": "Upsert Daily Status", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Upsert Daily Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Upsert Daily Status": {
       "main": [
-        [{ "node": "Collect Write Results", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Collect Write Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Collect Write Results": {
       "main": [
-        [{ "node": "Read Back Alert from D1", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Read Back Alert from D1",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Read Back Alert from D1": {
       "main": [
-        [{ "node": "Log Result", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Log Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
