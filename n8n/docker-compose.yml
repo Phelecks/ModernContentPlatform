@@ -63,3 +63,9 @@ services:
       # Persist n8n workflows, credentials, and execution history locally.
       # local_data/ is excluded from version control via .gitignore.
       - ./local_data:/home/node/.n8n
+
+    # Allow workflow HTTP Request nodes to reach the host machine.
+    # On Linux, host.docker.internal is not available by default — this adds it.
+    # On Docker Desktop (macOS / Windows) this entry is a no-op.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

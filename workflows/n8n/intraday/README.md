@@ -19,6 +19,7 @@ Schedule → Ingestion → Normalization → Deduplication → Clustering
 
 | File | Module | Purpose |
 |------|--------|---------|
+| `00_local_alert_smoke_test.json` | Smoke Test | **Local dev only.** Manual trigger, mock payload, D1 write + read-back verify. No external dependencies. |
 | `orchestrator.json` | Orchestrator | Schedule trigger + module chain |
 | `01_source_ingestion.json` | 01 | Fetch raw items from RSS and API sources |
 | `02_normalization.json` | 02 | Normalize to internal format, compute item_id |
@@ -35,6 +36,17 @@ The shared `failure_notifier.json` lives in `../shared/` and is set as the
 
 ## Import order
 
+### Smoke test only (quickest path to verify the write path)
+
+1. Import `00_local_alert_smoke_test.json`.
+2. Set the `CF_ACCOUNT_ID` and `CF_D1_DATABASE_ID` variables.
+3. Configure the `CloudflareD1Api` credential (HTTP Header Auth, `Authorization: Bearer <token>`).
+4. Click **Execute workflow**.
+
+See `docs/alert-write-flow.md` for the full step-by-step guide.
+
+### Full intraday pipeline
+
 1. Import `../shared/failure_notifier.json` first and note its workflow ID.
 2. Import modules `01` through `09` and note each workflow ID.
 3. Import `orchestrator.json` last.
@@ -46,27 +58,28 @@ The shared `failure_notifier.json` lives in `../shared/` and is set as the
 
 Set these in **Settings → Variables** in your n8n instance.
 
-| Variable | Description |
-|---------|-------------|
-| `FAILURE_NOTIFIER_WORKFLOW_ID` | Workflow ID of `failure_notifier.json` |
-| `INTRADAY_INGESTION_WORKFLOW_ID` | Workflow ID of `01_source_ingestion.json` |
-| `INTRADAY_NORMALIZATION_WORKFLOW_ID` | Workflow ID of `02_normalization.json` |
-| `INTRADAY_DEDUPLICATION_WORKFLOW_ID` | Workflow ID of `03_deduplication.json` |
-| `INTRADAY_CLUSTERING_WORKFLOW_ID` | Workflow ID of `04_clustering.json` |
-| `INTRADAY_AI_CLASSIFICATION_WORKFLOW_ID` | Workflow ID of `05_ai_classification.json` |
-| `INTRADAY_ALERT_DECISION_WORKFLOW_ID` | Workflow ID of `06_alert_decision.json` |
-| `INTRADAY_D1_PERSISTENCE_WORKFLOW_ID` | Workflow ID of `07_d1_persistence.json` |
-| `INTRADAY_TELEGRAM_WORKFLOW_ID` | Workflow ID of `08_telegram_delivery.json` |
-| `INTRADAY_DISCORD_WORKFLOW_ID` | Workflow ID of `09_discord_delivery.json` |
-| `CF_ACCOUNT_ID` | Cloudflare account ID |
-| `CF_D1_DATABASE_ID` | D1 database ID |
-| `ALERT_IMPORTANCE_THRESHOLD` | Minimum importance score to send (default: `60`) |
-| `ALERT_SEVERITY_THRESHOLD` | Minimum severity score to send (default: `50`) |
-| `ALERT_CONFIDENCE_THRESHOLD` | Minimum AI confidence to send (default: `40`) |
-| `TELEGRAM_CHAT_ID` | Target Telegram chat or channel ID |
-| `DISCORD_WEBHOOK_URL` | Discord incoming webhook URL |
-| `FAILURE_ALERT_CHANNEL` | Telegram chat ID for failure notifications |
-| `INTRADAY_SOURCES_JSON` | JSON array of source configs (see below) |
+| Variable | Description | Required for |
+|---------|-------------|-------------|
+| `CF_ACCOUNT_ID` | Cloudflare account ID | Smoke test + modules 03, 07, 08, 09 |
+| `CF_D1_DATABASE_ID` | D1 database ID | Smoke test + modules 03, 07, 08, 09 |
+| `LOCAL_SITE_URL` | Local site base URL (default: `http://localhost:8788`) | Smoke test (URL output only) |
+| `FAILURE_NOTIFIER_WORKFLOW_ID` | Workflow ID of `failure_notifier.json` | Full pipeline |
+| `INTRADAY_INGESTION_WORKFLOW_ID` | Workflow ID of `01_source_ingestion.json` | Full pipeline |
+| `INTRADAY_NORMALIZATION_WORKFLOW_ID` | Workflow ID of `02_normalization.json` | Full pipeline |
+| `INTRADAY_DEDUPLICATION_WORKFLOW_ID` | Workflow ID of `03_deduplication.json` | Full pipeline |
+| `INTRADAY_CLUSTERING_WORKFLOW_ID` | Workflow ID of `04_clustering.json` | Full pipeline |
+| `INTRADAY_AI_CLASSIFICATION_WORKFLOW_ID` | Workflow ID of `05_ai_classification.json` | Full pipeline |
+| `INTRADAY_ALERT_DECISION_WORKFLOW_ID` | Workflow ID of `06_alert_decision.json` | Full pipeline |
+| `INTRADAY_D1_PERSISTENCE_WORKFLOW_ID` | Workflow ID of `07_d1_persistence.json` | Full pipeline |
+| `INTRADAY_TELEGRAM_WORKFLOW_ID` | Workflow ID of `08_telegram_delivery.json` | Full pipeline |
+| `INTRADAY_DISCORD_WORKFLOW_ID` | Workflow ID of `09_discord_delivery.json` | Full pipeline |
+| `ALERT_IMPORTANCE_THRESHOLD` | Minimum importance score to send (default: `60`) | Full pipeline |
+| `ALERT_SEVERITY_THRESHOLD` | Minimum severity score to send (default: `50`) | Full pipeline |
+| `ALERT_CONFIDENCE_THRESHOLD` | Minimum AI confidence to send (default: `40`) | Full pipeline |
+| `TELEGRAM_CHAT_ID` | Target Telegram chat or channel ID | Full pipeline |
+| `DISCORD_WEBHOOK_URL` | Discord incoming webhook URL | Full pipeline |
+| `FAILURE_ALERT_CHANNEL` | Telegram chat ID for failure notifications | Full pipeline |
+| `INTRADAY_SOURCES_JSON` | JSON array of source configs (see below) | Full pipeline |
 
 ## Source configuration
 
