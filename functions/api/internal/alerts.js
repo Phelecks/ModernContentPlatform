@@ -9,7 +9,8 @@
  *
  * The alert insert and daily_status upsert are executed in a single
  * db.batch() call for transactional guarantees. The cluster upsert
- * runs first because the alert row needs the returned cluster_id.
+ * runs first so the alert insert can resolve the matching
+ * event_clusters row within the same transactional flow.
  *
  * Authentication: X-Write-Key header (must match env.WRITE_API_KEY)
  *

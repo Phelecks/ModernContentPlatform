@@ -34,6 +34,12 @@
       "type": ["string", "null"],
       "description": "Error message if the job failed."
     },
+    "attempt": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1,
+      "description": "Attempt number for this topic/day. Defaults to 1; the orchestrator increments this for retries."
+    },
     "id": {
       "type": "integer",
       "minimum": 1,

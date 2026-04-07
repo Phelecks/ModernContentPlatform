@@ -155,6 +155,8 @@ Creates a new publish job or updates an existing one.
 ```json
 {
   "id": 1,
+  "topic_slug": "crypto",
+  "date_key": "2025-01-15",
   "status": "success",
   "success": true
 }

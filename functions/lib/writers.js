@@ -10,11 +10,6 @@
  *   import { writeAlertBatch, upsertDailyStatus } from '../../lib/writers.js'
  */
 
-// ---- Status constants ----
-
-const STARTED_STATUSES = ['running', 'success', 'failed']
-const TERMINAL_STATUSES = ['success', 'failed']
-
 // ---- SQL templates (used by both batch and individual helpers) ----
 
 const UPSERT_EVENT_CLUSTER_SQL = `
@@ -130,6 +125,9 @@ export async function writeAlertBatch(db, {
  * On conflict, updates page_state, keeps the maximum of the existing and
  * provided count/availability fields, and refreshes updated_at.
  *
+ * When page_state is 'published', sets published_at server-side using
+ * COALESCE to preserve the original timestamp if already set.
+ *
  * @param {D1Database} db
  * @param {{ topic_slug: string, date_key: string, page_state?: string, alert_count?: number, cluster_count?: number, summary_available?: number, video_available?: number, article_available?: number }} params
  * @returns {Promise<{ success: boolean }>}
@@ -146,8 +144,12 @@ export async function upsertDailyStatus(db, {
   const sql = `
     INSERT INTO daily_status
       (topic_slug, date_key, page_state, alert_count, cluster_count,
-       summary_available, video_available, article_available)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       summary_available, video_available, article_available, published_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?,
+      CASE WHEN ? = 'published'
+        THEN strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+        ELSE NULL
+      END)
     ON CONFLICT (topic_slug, date_key)
     DO UPDATE SET
       page_state         = excluded.page_state,
@@ -156,11 +158,14 @@ export async function upsertDailyStatus(db, {
       summary_available  = MAX(summary_available, excluded.summary_available),
       video_available    = MAX(video_available, excluded.video_available),
       article_available  = MAX(article_available, excluded.article_available),
+      published_at       = CASE WHEN excluded.page_state = 'published'
+                             THEN COALESCE(published_at, excluded.published_at)
+                             ELSE published_at END,
       updated_at         = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')`
 
   const result = await db.prepare(sql)
     .bind(topic_slug, date_key, page_state, alert_count, cluster_count,
-      summary_available, video_available, article_available)
+      summary_available, video_available, article_available, page_state)
     .run()
 
   return { success: result.success ?? true }
@@ -169,24 +174,26 @@ export async function upsertDailyStatus(db, {
 /**
  * Insert a new publish_jobs row.
  *
- * Sets started_at when creating with status 'running', and sets
- * completed_at / error_message when creating with a terminal status.
+ * Sets started_at only when creating with status 'running' (per daily
+ * editorial workflow convention). Sets completed_at and error_message
+ * when creating with a terminal status ('success' or 'failed').
+ * Accepts an explicit attempt number; defaults to 1 (DB default).
  *
  * @param {D1Database} db
- * @param {{ topic_slug: string, date_key: string, status?: string, triggered_by?: string|null, workflow_run_id?: string|null, error_message?: string|null }} params
+ * @param {{ topic_slug: string, date_key: string, status?: string, attempt?: number, triggered_by?: string|null, workflow_run_id?: string|null, error_message?: string|null }} params
  * @returns {Promise<{ id: number }>}
  */
 export async function createPublishJob(db, {
-  topic_slug, date_key, status = 'pending',
+  topic_slug, date_key, status = 'pending', attempt = 1,
   triggered_by = null, workflow_run_id = null, error_message = null
 }) {
   const sql = `
     INSERT INTO publish_jobs
-      (topic_slug, date_key, status, triggered_by, workflow_run_id,
+      (topic_slug, date_key, status, attempt, triggered_by, workflow_run_id,
        error_message, started_at, completed_at)
     VALUES (
-      ?, ?, ?, ?, ?, ?,
-      CASE WHEN ? IN ('running', 'success', 'failed')
+      ?, ?, ?, ?, ?, ?, ?,
+      CASE WHEN ? = 'running'
         THEN strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
         ELSE NULL
       END,
@@ -198,7 +205,7 @@ export async function createPublishJob(db, {
     RETURNING id`
 
   const row = await db.prepare(sql)
-    .bind(topic_slug, date_key, status, triggered_by, workflow_run_id,
+    .bind(topic_slug, date_key, status, attempt, triggered_by, workflow_run_id,
       error_message, status, status)
     .first()
 

@@ -68,5 +68,8 @@
       "video_available": 0,
       "article_available": 1
     }
-  ]
+  ],
+  "x-server-side-fields": {
+    "published_at": "Set automatically when page_state transitions to 'published'. Uses COALESCE to preserve the original timestamp on subsequent updates."
+  }
 }

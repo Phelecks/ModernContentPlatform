@@ -11,7 +11,6 @@
 import { isValidTopicSlug, isValidDateKey, isValidISOTimestamp } from './db.js'
 
 const VALID_TOPICS = ['crypto', 'finance', 'economy', 'health', 'ai', 'energy', 'technology']
-const VALID_ALERT_STATUSES = ['active', 'archived', 'suppressed']
 const VALID_PAGE_STATES = ['pending', 'ready', 'published', 'error']
 const VALID_JOB_STATUSES = ['pending', 'running', 'success', 'failed', 'retrying']
 const VALID_TRIGGERS = ['schedule', 'manual', 'retry']
@@ -209,7 +208,7 @@ export function validateDailyStatusPayload(body) {
 }
 
 const PUBLISH_JOB_ALLOWED_KEYS = [
-  'topic_slug', 'date_key', 'status', 'triggered_by',
+  'topic_slug', 'date_key', 'status', 'attempt', 'triggered_by',
   'workflow_run_id', 'error_message', 'id'
 ]
 
@@ -217,7 +216,7 @@ const PUBLISH_JOB_ALLOWED_KEYS = [
  * Validate a publish_jobs write payload.
  *
  * Required: topic_slug, date_key
- * Optional: status, triggered_by, workflow_run_id, error_message, id
+ * Optional: status, attempt, triggered_by, workflow_run_id, error_message, id
  */
 export function validatePublishJobPayload(body) {
   if (!body || typeof body !== 'object') return fail('Request body must be a JSON object')
@@ -226,7 +225,7 @@ export function validatePublishJobPayload(body) {
   if (unknownError) return fail(unknownError)
 
   const {
-    topic_slug, date_key, status, triggered_by,
+    topic_slug, date_key, status, attempt, triggered_by,
     workflow_run_id, error_message
   } = body
 
@@ -238,6 +237,9 @@ export function validatePublishJobPayload(body) {
   }
   if (status !== undefined && !VALID_JOB_STATUSES.includes(status)) {
     return fail(`Invalid status: must be one of ${VALID_JOB_STATUSES.join(', ')}`)
+  }
+  if (attempt !== undefined && (!Number.isInteger(attempt) || attempt < 1)) {
+    return fail('attempt must be a positive integer')
   }
   if (triggered_by !== undefined && triggered_by !== null && !VALID_TRIGGERS.includes(triggered_by)) {
     return fail(`Invalid triggered_by: must be one of ${VALID_TRIGGERS.join(', ')}`)
@@ -252,6 +254,7 @@ export function validatePublishJobPayload(body) {
   return ok({
     topic_slug, date_key,
     status: status ?? 'pending',
+    attempt: attempt ?? 1,
     triggered_by: triggered_by ?? null,
     workflow_run_id: workflow_run_id ?? null,
     error_message: error_message ?? null

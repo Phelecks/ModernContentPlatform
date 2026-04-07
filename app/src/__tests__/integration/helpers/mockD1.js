@@ -247,7 +247,8 @@ class MockStatement {
 
   /**
    * INSERT handler for write endpoint testing.
-   * Validates target table against known schema tables, auto-increments an ID,
+   * Validates target table against known schema tables, parses column values,
+   * inserts the row into in-memory state, auto-increments an ID,
    * and returns it when the SQL contains a RETURNING clause.
    */
   _runInsert() {
@@ -262,6 +263,25 @@ class MockStatement {
     if (!this._tables._counters[tableName]) this._tables._counters[tableName] = 100
     const id = ++this._tables._counters[tableName]
 
+    // Parse column list from INSERT INTO table (col1, col2, ...) VALUES
+    const colsMatch = this._sql.match(/\bINTO\s+\w+\s*\(([^)]+)\)\s*VALUES\b/i)
+    const row = { id }
+    if (colsMatch) {
+      const columns = colsMatch[1].split(',').map(c => c.trim().replace(/^["'`]|["'`]$/g, ''))
+      let paramIdx = 0
+      for (const col of columns) {
+        if (paramIdx < this._params.length) {
+          row[col] = this._params[paramIdx++]
+        }
+      }
+    }
+
+    // Store the row in the in-memory table
+    if (!Array.isArray(this._tables[tableName])) {
+      this._tables[tableName] = []
+    }
+    this._tables[tableName].push(row)
+
     if (/\bRETURNING\s+id\b/i.test(this._sql)) {
       return [{ id }]
     }
@@ -271,7 +291,8 @@ class MockStatement {
   /**
    * UPDATE handler for write endpoint testing.
    * Validates target table against known schema tables.
-   * Returns an empty result set (updates don't return rows unless RETURNING).
+   * Applies SET assignments to matching in-memory rows so subsequent reads
+   * in the same test see state transitions as they would against real D1.
    */
   _runUpdate() {
     const m = this._sql.match(/\bUPDATE\s+(\w+)/i)
@@ -281,8 +302,57 @@ class MockStatement {
       throw new Error(`MockD1: UPDATE on unknown table "${tableName ?? 'null'}"`)
     }
 
+    const table = this._tables[tableName] ?? []
+
+    // Parse SET assignments (simple col = ? patterns)
+    const setMatch = this._sql.match(/\bSET\s+(.+?)(?=\s+WHERE\b|\s+RETURNING\b|\s*$)/is)
+    const assignments = []
+    let setParamCount = 0
+    if (setMatch) {
+      for (const part of setMatch[1].split(',')) {
+        const am = part.trim().match(/^["'`]?(\w+)["'`]?\s*=\s*\?/i)
+        if (am) {
+          assignments.push({ column: am[1], paramIdx: setParamCount })
+          setParamCount++
+        } else {
+          // Non-param assignment (e.g. CASE expression) — skip param consumption
+          // but count ? placeholders within it
+          const qCount = (part.match(/\?/g) || []).length
+          setParamCount += qCount
+        }
+      }
+    }
+
+    // Parse WHERE conditions
+    const whereClause = extractWhere(this._sql)
+    let whereParamCount = 0
+    const whereMatchers = []
+    if (whereClause) {
+      for (const part of whereClause.split(/\bAND\b/i)) {
+        const wm = part.trim().match(/^["'`]?(\w+)["'`]?\s*=\s*\?$/i)
+        if (wm) {
+          whereMatchers.push({ column: wm[1], paramIdx: setParamCount + whereParamCount })
+          whereParamCount++
+        }
+      }
+    }
+
+    // Apply updates to matching rows
+    const updatedRows = []
+    for (const row of table) {
+      const matches = whereMatchers.every(({ column, paramIdx }) =>
+        String(row[column]) === String(this._params[paramIdx])
+      )
+      if (!matches) continue
+
+      for (const { column, paramIdx } of assignments) {
+        row[column] = this._params[paramIdx]
+      }
+      updatedRows.push({ ...row })
+    }
+
     if (/\bRETURNING\b/i.test(this._sql)) {
-      return [{ changes: 1 }]
+      return updatedRows.length > 0 ? updatedRows : [{ changes: updatedRows.length }]
     }
     return []
   }
