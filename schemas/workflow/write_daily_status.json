@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "write_daily_status",
+  "title": "Write Daily Status Payload",
+  "description": "Payload for POST /api/internal/daily-status. Upserts page readiness and content availability for a topic/day.",
+  "type": "object",
+  "required": [
+    "topic_slug",
+    "date_key"
+  ],
+  "properties": {
+    "topic_slug": {
+      "type": "string",
+      "enum": ["crypto", "finance", "economy", "health", "ai", "energy", "technology"],
+      "description": "Topic slug identifier."
+    },
+    "date_key": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "Date key in YYYY-MM-DD format."
+    },
+    "page_state": {
+      "type": "string",
+      "enum": ["pending", "ready", "published", "error"],
+      "default": "ready",
+      "description": "Page readiness state."
+    },
+    "alert_count": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": "Number of alerts for this topic/day."
+    },
+    "cluster_count": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": "Number of event clusters for this topic/day."
+    },
+    "summary_available": {
+      "type": "integer",
+      "enum": [0, 1],
+      "default": 0,
+      "description": "Whether a summary is available (0 or 1)."
+    },
+    "video_available": {
+      "type": "integer",
+      "enum": [0, 1],
+      "default": 0,
+      "description": "Whether a video is available (0 or 1)."
+    },
+    "article_available": {
+      "type": "integer",
+      "enum": [0, 1],
+      "default": 0,
+      "description": "Whether an article is available (0 or 1)."
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "topic_slug": "crypto",
+      "date_key": "2025-01-15",
+      "page_state": "published",
+      "alert_count": 5,
+      "cluster_count": 2,
+      "summary_available": 1,
+      "video_available": 0,
+      "article_available": 1
+    }
+  ],
+  "x-server-side-fields": {
+    "published_at": "Set automatically when page_state transitions to 'published'. Uses COALESCE to preserve the original timestamp on subsequent updates."
+  }
+}

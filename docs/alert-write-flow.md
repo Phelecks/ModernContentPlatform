@@ -1,5 +1,10 @@
 # Alert Write Flow — n8n to Cloudflare D1
 
+> **See also:** [D1 Write Path](d1-write-path.md) for the recommended
+> centralized write approach using internal API endpoints. The flow described
+> below documents the direct Cloudflare REST API write path used by the
+> smoke test and n8n module 07.
+
 This document describes the alert payload contract, the write-flow path from
 n8n to Cloudflare D1, how to run the local smoke test, and how to verify the
 result on the website timeline.

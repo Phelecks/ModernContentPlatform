@@ -1,0 +1,116 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "write_alert",
+  "title": "Write Alert Payload",
+  "description": "Payload for POST /api/internal/alerts. Creates an alert record along with its event cluster and daily_status updates.",
+  "type": "object",
+  "required": [
+    "topic_slug",
+    "date_key",
+    "headline",
+    "summary_text",
+    "source_name",
+    "severity_score",
+    "importance_score",
+    "confidence_score",
+    "event_at"
+  ],
+  "properties": {
+    "topic_slug": {
+      "type": "string",
+      "enum": ["crypto", "finance", "economy", "health", "ai", "energy", "technology"],
+      "description": "Primary topic for the alert."
+    },
+    "date_key": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "Date key in YYYY-MM-DD format, derived from event_at."
+    },
+    "headline": {
+      "type": "string",
+      "maxLength": 250,
+      "minLength": 1,
+      "description": "Alert headline (max 250 chars)."
+    },
+    "summary_text": {
+      "type": "string",
+      "maxLength": 500,
+      "minLength": 1,
+      "description": "One- to two-sentence summary for the timeline (max 500 chars)."
+    },
+    "source_url": {
+      "type": ["string", "null"],
+      "format": "uri",
+      "description": "Canonical URL for the source item."
+    },
+    "source_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable source label."
+    },
+    "severity_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Urgency / disruption score (0–100)."
+    },
+    "importance_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Audience relevance score (0–100)."
+    },
+    "confidence_score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "AI classification confidence (0–100)."
+    },
+    "event_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 UTC event timestamp."
+    },
+    "cluster_label": {
+      "type": ["string", "null"],
+      "maxLength": 100,
+      "description": "Event cluster label. When null, falls back to topic_slug."
+    },
+    "alert_reason": {
+      "type": ["string", "null"],
+      "description": "Short AI explanation of why this event warrants an alert."
+    },
+    "secondary_topics": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["crypto", "finance", "economy", "health", "ai", "energy", "technology"]
+      },
+      "maxItems": 2,
+      "description": "Up to two secondary topics."
+    },
+    "item_id": {
+      "type": ["string", "null"],
+      "description": "Deterministic item identifier from the ingest pipeline."
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "topic_slug": "crypto",
+      "date_key": "2025-01-15",
+      "headline": "Bitcoin Hits New All-Time High Above $120K",
+      "summary_text": "Bitcoin surged past $120,000, driven by strong institutional inflows.",
+      "source_url": "https://www.example.com/btc-ath",
+      "source_name": "CoinDesk RSS",
+      "severity_score": 72,
+      "importance_score": 88,
+      "confidence_score": 95,
+      "event_at": "2025-01-15T14:32:00Z",
+      "cluster_label": "Bitcoin price rally",
+      "alert_reason": "New all-time high is a high-importance milestone.",
+      "secondary_topics": ["finance"],
+      "item_id": "a3f8c2d14e7b9f01234567890abcdef1234567890abcdef1234567890abcdef12"
+    }
+  ]
+}
