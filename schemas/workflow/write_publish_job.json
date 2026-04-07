@@ -4,10 +4,6 @@
   "title": "Write Publish Job Payload",
   "description": "Payload for POST /api/internal/publish-jobs. Creates a new publish job or updates an existing one.",
   "type": "object",
-  "required": [
-    "topic_slug",
-    "date_key"
-  ],
   "properties": {
     "topic_slug": {
       "type": "string",
@@ -41,10 +37,21 @@
     "id": {
       "type": "integer",
       "minimum": 1,
-      "description": "When present, update the existing job instead of creating a new one. Only id, status, and error_message are used for updates."
+      "description": "When present, update the existing job instead of creating a new one."
     }
   },
   "additionalProperties": false,
+  "oneOf": [
+    {
+      "description": "Create a new publish job",
+      "required": ["topic_slug", "date_key"],
+      "not": { "required": ["id"] }
+    },
+    {
+      "description": "Update an existing publish job",
+      "required": ["id", "topic_slug", "date_key", "status"]
+    }
+  ],
   "examples": [
     {
       "topic_slug": "crypto",

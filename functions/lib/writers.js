@@ -7,70 +7,87 @@
  * workflow modules.
  *
  * Usage:
- *   import { upsertEventCluster, insertAlert, upsertDailyStatus } from '../../lib/writers.js'
+ *   import { writeAlertBatch, upsertDailyStatus } from '../../lib/writers.js'
  */
 
+// ---- SQL templates (used by both batch and individual helpers) ----
+
+const UPSERT_EVENT_CLUSTER_SQL = `
+  INSERT INTO event_clusters
+    (topic_slug, date_key, cluster_label, alert_count, importance_score)
+  VALUES (?, ?, ?, 1, ?)
+  ON CONFLICT(topic_slug, date_key, cluster_label)
+  DO UPDATE SET
+    alert_count      = alert_count + 1,
+    importance_score = MAX(importance_score, excluded.importance_score),
+    updated_at       = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+  RETURNING id`
+
+const INSERT_ALERT_SQL = `
+  INSERT INTO alerts (
+    topic_slug, date_key, cluster_id,
+    headline, summary_text, source_url, source_name,
+    severity_score, importance_score, confidence_score,
+    status, delivered_telegram, delivered_discord,
+    event_at, metadata_json
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 0, 0, ?,
+    json_object(
+      'item_id',          ?,
+      'secondary_topics', json(?),
+      'alert_reason',     ?
+    )
+  )
+  RETURNING id`
+
+const UPSERT_DAILY_STATUS_FOR_ALERT_SQL = `
+  INSERT INTO daily_status
+    (topic_slug, date_key, page_state, alert_count, cluster_count)
+  VALUES (?, ?, 'ready', 1, 1)
+  ON CONFLICT (topic_slug, date_key)
+  DO UPDATE SET
+    alert_count   = alert_count + 1,
+    cluster_count = (
+      SELECT COUNT(DISTINCT id) FROM event_clusters
+      WHERE topic_slug = excluded.topic_slug
+        AND date_key = excluded.date_key
+    ),
+    updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')`
+
 /**
- * Upsert an event cluster row.
+ * Write an alert as a D1 batch transaction (atomic).
  *
- * Creates a new cluster or increments alert_count / updates importance_score
- * when the (topic_slug, date_key, cluster_label) combination already exists.
+ * Executes three statements in a single `db.batch()` call:
+ *   1. Upsert event_clusters — returns cluster id
+ *   2. Insert alerts row — returns alert id
+ *   3. Upsert daily_status — increments counters
  *
+ * If any statement fails, the entire batch is rolled back.
  * Requires migration 0002_event_clusters_unique.sql for the UNIQUE constraint.
  *
  * @param {D1Database} db
- * @param {{ topic_slug: string, date_key: string, cluster_label: string, importance_score: number }} params
- * @returns {Promise<{ id: number }>}
+ * @param {Object} data - Validated alert payload
+ * @returns {Promise<{ alert_id: number, cluster_id: number }>}
  */
-export async function upsertEventCluster(db, { topic_slug, date_key, cluster_label, importance_score }) {
-  const sql = `
-    INSERT INTO event_clusters
-      (topic_slug, date_key, cluster_label, alert_count, importance_score)
-    VALUES (?, ?, ?, 1, ?)
-    ON CONFLICT(topic_slug, date_key, cluster_label)
-    DO UPDATE SET
-      alert_count      = alert_count + 1,
-      importance_score = MAX(importance_score, excluded.importance_score),
-      updated_at       = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
-    RETURNING id`
-
-  const row = await db.prepare(sql)
-    .bind(topic_slug, date_key, cluster_label, importance_score)
-    .first()
-
-  return { id: row?.id ?? null }
-}
-
-/**
- * Insert an alert row and return the new row ID.
- *
- * @param {D1Database} db
- * @param {Object} params - Alert fields
- * @returns {Promise<{ id: number }>}
- */
-export async function insertAlert(db, {
-  topic_slug, date_key, cluster_id,
+export async function writeAlertBatch(db, {
+  topic_slug, date_key, cluster_label,
   headline, summary_text, source_url, source_name,
   severity_score, importance_score, confidence_score,
   event_at, item_id, secondary_topics, alert_reason
 }) {
-  const sql = `
-    INSERT INTO alerts (
-      topic_slug, date_key, cluster_id,
-      headline, summary_text, source_url, source_name,
-      severity_score, importance_score, confidence_score,
-      status, delivered_telegram, delivered_discord,
-      event_at, metadata_json
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 0, 0, ?,
-      json_object(
-        'item_id',          ?,
-        'secondary_topics', json(?),
-        'alert_reason',     ?
-      )
-    )
-    RETURNING id`
+  // Step 1: Upsert event cluster
+  const clusterStmt = db.prepare(UPSERT_EVENT_CLUSTER_SQL)
+    .bind(topic_slug, date_key, cluster_label, importance_score)
 
-  const row = await db.prepare(sql)
+  // We need the cluster_id from step 1 before step 2, so we execute
+  // the cluster upsert first, then batch the remaining two statements.
+  const clusterRow = await clusterStmt.first()
+  if (!clusterRow || clusterRow.id == null) {
+    throw new Error('Failed to upsert event cluster: no id returned from D1')
+  }
+  const cluster_id = clusterRow.id
+
+  // Step 2 + 3: Insert alert and upsert daily_status in a batch
+  const alertStmt = db.prepare(INSERT_ALERT_SQL)
     .bind(
       topic_slug, date_key, cluster_id,
       headline, summary_text, source_url, source_name,
@@ -80,17 +97,26 @@ export async function insertAlert(db, {
       JSON.stringify(secondary_topics ?? []),
       alert_reason
     )
-    .first()
 
-  return { id: row?.id ?? null }
+  const dailyStatusStmt = db.prepare(UPSERT_DAILY_STATUS_FOR_ALERT_SQL)
+    .bind(topic_slug, date_key)
+
+  const [alertResult] = await db.batch([alertStmt, dailyStatusStmt])
+
+  const alertRow = alertResult.results?.[0]
+  if (!alertRow || alertRow.id == null) {
+    throw new Error('Failed to insert alert: no id returned from D1')
+  }
+
+  return { alert_id: alertRow.id, cluster_id }
 }
 
 /**
  * Upsert a daily_status row.
  *
- * On first insert for a (topic_slug, date_key), sets initial counts.
- * On conflict, increments alert_count and recalculates cluster_count from
- * the event_clusters table.
+ * On first insert for a (topic_slug, date_key), sets the provided counts.
+ * On conflict, updates page_state, keeps the maximum of the existing and
+ * provided count/availability fields, and refreshes updated_at.
  *
  * @param {D1Database} db
  * @param {{ topic_slug: string, date_key: string, page_state?: string, alert_count?: number, cluster_count?: number, summary_available?: number, video_available?: number, article_available?: number }} params
@@ -129,77 +155,66 @@ export async function upsertDailyStatus(db, {
 }
 
 /**
- * Upsert daily_status specifically for the intraday alert flow.
- *
- * Increments alert_count by 1 and recounts clusters from event_clusters.
- * Used after each individual alert write.
- *
- * @param {D1Database} db
- * @param {{ topic_slug: string, date_key: string }} params
- * @returns {Promise<{ success: boolean }>}
- */
-export async function upsertDailyStatusForAlert(db, { topic_slug, date_key }) {
-  const sql = `
-    INSERT INTO daily_status
-      (topic_slug, date_key, page_state, alert_count, cluster_count)
-    VALUES (?, ?, 'ready', 1, 1)
-    ON CONFLICT (topic_slug, date_key)
-    DO UPDATE SET
-      alert_count   = alert_count + 1,
-      cluster_count = (
-        SELECT COUNT(DISTINCT id) FROM event_clusters
-        WHERE topic_slug = excluded.topic_slug
-          AND date_key = excluded.date_key
-      ),
-      updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')`
-
-  const result = await db.prepare(sql)
-    .bind(topic_slug, date_key)
-    .run()
-
-  return { success: result.success ?? true }
-}
-
-/**
  * Insert a new publish_jobs row.
  *
+ * Sets started_at when creating with status 'running', and sets
+ * completed_at / error_message when creating with a terminal status.
+ *
  * @param {D1Database} db
- * @param {Object} params
+ * @param {{ topic_slug: string, date_key: string, status?: string, triggered_by?: string|null, workflow_run_id?: string|null, error_message?: string|null }} params
  * @returns {Promise<{ id: number }>}
  */
 export async function createPublishJob(db, {
   topic_slug, date_key, status = 'pending',
-  triggered_by = null, workflow_run_id = null
+  triggered_by = null, workflow_run_id = null, error_message = null
 }) {
   const sql = `
     INSERT INTO publish_jobs
-      (topic_slug, date_key, status, triggered_by, workflow_run_id)
-    VALUES (?, ?, ?, ?, ?)
+      (topic_slug, date_key, status, triggered_by, workflow_run_id,
+       error_message, started_at, completed_at)
+    VALUES (
+      ?, ?, ?, ?, ?, ?,
+      CASE WHEN ? IN ('running', 'success', 'failed')
+        THEN strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+        ELSE NULL
+      END,
+      CASE WHEN ? IN ('success', 'failed')
+        THEN strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+        ELSE NULL
+      END
+    )
     RETURNING id`
 
   const row = await db.prepare(sql)
-    .bind(topic_slug, date_key, status, triggered_by, workflow_run_id)
+    .bind(topic_slug, date_key, status, triggered_by, workflow_run_id,
+      error_message, status, status)
     .first()
 
-  return { id: row?.id ?? null }
+  if (!row || row.id == null) {
+    throw new Error('Failed to create publish job: no id returned from D1')
+  }
+
+  return { id: row.id }
 }
 
 /**
  * Update an existing publish_jobs row.
  *
+ * Sets started_at when transitioning to 'running', and sets
+ * completed_at when transitioning to 'success' or 'failed'.
+ *
  * @param {D1Database} db
- * @param {{ id: number, status: string, error_message?: string|null, metadata_json?: string|null }} params
+ * @param {{ id: number, status: string, error_message?: string|null }} params
  * @returns {Promise<{ success: boolean }>}
  */
 export async function updatePublishJob(db, { id, status, error_message = null }) {
-  const completedAt = (status === 'success' || status === 'failed')
-    ? "strftime('%Y-%m-%dT%H:%M:%SZ', 'now')"
-    : 'NULL'
-
   const sql = `
     UPDATE publish_jobs SET
       status        = ?,
       error_message = ?,
+      started_at    = CASE WHEN ? = 'running' AND started_at IS NULL
+                        THEN strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+                        ELSE started_at END,
       completed_at  = CASE WHEN ? IN ('success', 'failed')
                         THEN strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
                         ELSE completed_at END,
@@ -207,7 +222,7 @@ export async function updatePublishJob(db, { id, status, error_message = null })
     WHERE id = ?`
 
   const result = await db.prepare(sql)
-    .bind(status, error_message, status, id)
+    .bind(status, error_message, status, status, id)
     .run()
 
   return { success: result.success ?? true }

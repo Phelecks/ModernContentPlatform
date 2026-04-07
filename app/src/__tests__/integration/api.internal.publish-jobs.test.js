@@ -132,25 +132,68 @@ describe('POST /api/internal/publish-jobs', () => {
     expect(res.status).toBe(400)
   })
 
+  it('returns 400 when unknown fields are present on create', async () => {
+    const ctx = makeCtx(db, validCreatePayload({ extra_field: 'value' }), { 'X-Write-Key': WRITE_KEY })
+    const res = await onRequestPost(ctx)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/unknown/i)
+  })
+
+  it('returns 400 when error_message is not a string on update', async () => {
+    const ctx = makeCtx(db, { id: 42, status: 'failed', error_message: 123, topic_slug: 'crypto', date_key: '2025-01-15' }, { 'X-Write-Key': WRITE_KEY })
+    const res = await onRequestPost(ctx)
+    expect(res.status).toBe(400)
+  })
+
   // --- Update: successful write ---
 
   it('returns 200 with success on valid update', async () => {
+    // Seed a publish job so the update can find it
+    db.seed('publish_jobs', [
+      { id: 42, topic_slug: 'crypto', date_key: '2025-01-15', status: 'running' }
+    ])
     const ctx = makeCtx(db, { id: 42, status: 'success', topic_slug: 'crypto', date_key: '2025-01-15' }, { 'X-Write-Key': WRITE_KEY })
     const res = await onRequestPost(ctx)
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.id).toBe(42)
     expect(body.status).toBe('success')
+    expect(body.topic_slug).toBe('crypto')
+    expect(body.date_key).toBe('2025-01-15')
     expect(body.success).toBe(true)
   })
 
   it('returns 200 with error_message on failed update', async () => {
+    db.seed('publish_jobs', [
+      { id: 42, topic_slug: 'crypto', date_key: '2025-01-15', status: 'running' }
+    ])
     const ctx = makeCtx(db, { id: 42, status: 'failed', error_message: 'Out of memory', topic_slug: 'crypto', date_key: '2025-01-15' }, { 'X-Write-Key': WRITE_KEY })
     const res = await onRequestPost(ctx)
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.status).toBe('failed')
     expect(body.success).toBe(true)
+  })
+
+  it('returns 404 when updating a non-existent job', async () => {
+    db.seed('publish_jobs', [])
+    const ctx = makeCtx(db, { id: 999, status: 'success', topic_slug: 'crypto', date_key: '2025-01-15' }, { 'X-Write-Key': WRITE_KEY })
+    const res = await onRequestPost(ctx)
+    expect(res.status).toBe(404)
+    const body = await res.json()
+    expect(body.error).toMatch(/not found/i)
+  })
+
+  it('returns 409 when job id does not match topic/date', async () => {
+    db.seed('publish_jobs', [
+      { id: 42, topic_slug: 'finance', date_key: '2025-01-16', status: 'running' }
+    ])
+    const ctx = makeCtx(db, { id: 42, status: 'success', topic_slug: 'crypto', date_key: '2025-01-15' }, { 'X-Write-Key': WRITE_KEY })
+    const res = await onRequestPost(ctx)
+    expect(res.status).toBe(409)
+    const body = await res.json()
+    expect(body.error).toMatch(/does not match/i)
   })
 
   it('returns JSON Content-Type header', async () => {

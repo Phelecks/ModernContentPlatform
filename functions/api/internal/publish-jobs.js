@@ -13,7 +13,7 @@
  *
  * Response (201 for create, 200 for update):
  *   Create: { id, topic_slug, date_key, status }
- *   Update: { id, status, success: true }
+ *   Update: { id, topic_slug, date_key, status, success: true }
  */
 import { jsonResponse, errorResponse } from '../../lib/db.js'
 import { authenticateWrite } from '../../lib/auth.js'
@@ -36,6 +36,14 @@ export async function onRequestPost(ctx) {
     return errorResponse('Invalid JSON body', 400)
   }
 
+  // Validate full payload (both create and update paths)
+  const validation = validatePublishJobPayload(body)
+  if (!validation.valid) {
+    return errorResponse(validation.error, 400)
+  }
+
+  const data = validation.data
+
   // If `id` is present, this is an update to an existing job
   if (body.id !== undefined) {
     if (!Number.isInteger(body.id) || body.id < 1) {
@@ -44,21 +52,33 @@ export async function onRequestPost(ctx) {
     if (body.status === undefined) {
       return errorResponse('status is required when updating a publish job', 400)
     }
-    const validStatuses = ['pending', 'running', 'success', 'failed', 'retrying']
-    if (!validStatuses.includes(body.status)) {
-      return errorResponse(`Invalid status: must be one of ${validStatuses.join(', ')}`, 400)
-    }
 
     try {
+      // Verify the job exists and matches the provided topic/date
+      const existing = await db
+        .prepare('SELECT id, topic_slug, date_key FROM publish_jobs WHERE id = ?')
+        .bind(body.id)
+        .first()
+
+      if (!existing) {
+        return errorResponse('Publish job not found', 404)
+      }
+
+      if (existing.topic_slug !== data.topic_slug || existing.date_key !== data.date_key) {
+        return errorResponse('Publish job id does not match the provided topic_slug and date_key', 409)
+      }
+
       const result = await updatePublishJob(db, {
         id: body.id,
-        status: body.status,
-        error_message: body.error_message ?? null
+        status: data.status,
+        error_message: data.error_message
       })
 
       return jsonResponse({
         id: body.id,
-        status: body.status,
+        topic_slug: data.topic_slug,
+        date_key: data.date_key,
+        status: data.status,
         success: result.success
       })
     } catch (err) {
@@ -68,13 +88,6 @@ export async function onRequestPost(ctx) {
   }
 
   // Otherwise, create a new publish job
-  const validation = validatePublishJobPayload(body)
-  if (!validation.valid) {
-    return errorResponse(validation.error, 400)
-  }
-
-  const data = validation.data
-
   try {
     const result = await createPublishJob(db, data)
 

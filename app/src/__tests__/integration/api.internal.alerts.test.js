@@ -153,6 +153,22 @@ describe('POST /api/internal/alerts', () => {
     expect(res.status).toBe(400)
   })
 
+  it('returns 400 when unknown fields are present', async () => {
+    const ctx = makeCtx(db, validPayload({ unknown_field: 'foo' }), { 'X-Write-Key': WRITE_KEY })
+    const res = await onRequestPost(ctx)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/unknown/i)
+  })
+
+  it('returns 400 when source_url is not a valid URL', async () => {
+    const ctx = makeCtx(db, validPayload({ source_url: 'not-a-url' }), { 'X-Write-Key': WRITE_KEY })
+    const res = await onRequestPost(ctx)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/source_url/i)
+  })
+
   // --- Successful writes ---
 
   it('returns 201 with alert_id and cluster_id on success', async () => {

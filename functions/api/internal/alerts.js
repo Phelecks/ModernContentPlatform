@@ -2,10 +2,14 @@
  * POST /api/internal/alerts
  *
  * Safe write endpoint for creating an alert record in D1.
- * Performs three atomic writes per alert:
+ * Performs three coordinated writes per alert using D1 batch:
  *   1. Upsert event_clusters
  *   2. Insert alerts row
  *   3. Upsert daily_status (increment counters)
+ *
+ * The alert insert and daily_status upsert are executed in a single
+ * db.batch() call for transactional guarantees. The cluster upsert
+ * runs first because the alert row needs the returned cluster_id.
  *
  * Authentication: X-Write-Key header (must match env.WRITE_API_KEY)
  *
@@ -17,11 +21,7 @@
 import { jsonResponse, errorResponse } from '../../lib/db.js'
 import { authenticateWrite } from '../../lib/auth.js'
 import { validateAlertPayload } from '../../lib/validate.js'
-import {
-  upsertEventCluster,
-  insertAlert,
-  upsertDailyStatusForAlert
-} from '../../lib/writers.js'
+import { writeAlertBatch } from '../../lib/writers.js'
 
 export async function onRequestPost(ctx) {
   const { request, env } = ctx
@@ -51,19 +51,10 @@ export async function onRequestPost(ctx) {
     // (event_clusters.cluster_label is NOT NULL in the schema)
     const effectiveClusterLabel = data.cluster_label || data.topic_slug
 
-    // Step 1: Upsert event cluster
-    const cluster = await upsertEventCluster(db, {
+    const result = await writeAlertBatch(db, {
       topic_slug: data.topic_slug,
       date_key: data.date_key,
       cluster_label: effectiveClusterLabel,
-      importance_score: data.importance_score
-    })
-
-    // Step 2: Insert alert row
-    const alert = await insertAlert(db, {
-      topic_slug: data.topic_slug,
-      date_key: data.date_key,
-      cluster_id: cluster.id,
       headline: data.headline,
       summary_text: data.summary_text,
       source_url: data.source_url,
@@ -77,15 +68,9 @@ export async function onRequestPost(ctx) {
       alert_reason: data.alert_reason
     })
 
-    // Step 3: Upsert daily_status
-    await upsertDailyStatusForAlert(db, {
-      topic_slug: data.topic_slug,
-      date_key: data.date_key
-    })
-
     return jsonResponse({
-      alert_id: alert.id,
-      cluster_id: cluster.id,
+      alert_id: result.alert_id,
+      cluster_id: result.cluster_id,
       topic_slug: data.topic_slug,
       date_key: data.date_key
     }, 201)

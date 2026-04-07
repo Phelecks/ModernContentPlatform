@@ -39,11 +39,15 @@ Cloudflare D1
 ### POST /api/internal/alerts
 
 Creates an alert record along with its event cluster and daily_status updates.
-Performs three atomic writes per call:
+Performs three coordinated writes per call:
 
 1. **Upsert event_clusters** — creates or increments the cluster.
 2. **Insert alerts** — adds the alert row.
 3. **Upsert daily_status** — increments alert_count and recalculates cluster_count.
+
+The alert insert and daily_status upsert are executed in a single `db.batch()`
+call for transactional guarantees. The cluster upsert runs first because the
+alert row needs the returned cluster_id.
 
 **Request:**
 ```json

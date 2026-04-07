@@ -246,29 +246,41 @@ class MockStatement {
   }
 
   /**
-   * Minimal INSERT handler for write endpoint testing.
-   * Extracts target table, auto-increments an ID, and returns it
-   * when the SQL contains a RETURNING clause.
+   * INSERT handler for write endpoint testing.
+   * Validates target table against known schema tables, auto-increments an ID,
+   * and returns it when the SQL contains a RETURNING clause.
    */
   _runInsert() {
     const m = this._sql.match(/\bINTO\s+(\w+)/i)
-    const tableName = m ? m[1].toLowerCase() : 'unknown'
+    const tableName = m ? m[1].toLowerCase() : null
+
+    if (!tableName || !KNOWN_TABLES.has(tableName)) {
+      throw new Error(`MockD1: INSERT into unknown table "${tableName ?? 'null'}"`)
+    }
 
     if (!this._tables._counters) this._tables._counters = {}
     if (!this._tables._counters[tableName]) this._tables._counters[tableName] = 100
     const id = ++this._tables._counters[tableName]
 
-    if (/\bRETURNING\b/i.test(this._sql)) {
+    if (/\bRETURNING\s+id\b/i.test(this._sql)) {
       return [{ id }]
     }
     return []
   }
 
   /**
-   * Minimal UPDATE handler for write endpoint testing.
+   * UPDATE handler for write endpoint testing.
+   * Validates target table against known schema tables.
    * Returns an empty result set (updates don't return rows unless RETURNING).
    */
   _runUpdate() {
+    const m = this._sql.match(/\bUPDATE\s+(\w+)/i)
+    const tableName = m ? m[1].toLowerCase() : null
+
+    if (!tableName || !KNOWN_TABLES.has(tableName)) {
+      throw new Error(`MockD1: UPDATE on unknown table "${tableName ?? 'null'}"`)
+    }
+
     if (/\bRETURNING\b/i.test(this._sql)) {
       return [{ changes: 1 }]
     }
@@ -320,6 +332,10 @@ class MockStatement {
 
 // ---- Database ----
 
+const KNOWN_TABLES = new Set([
+  'topics', 'alerts', 'event_clusters', 'daily_status', 'publish_jobs'
+])
+
 export class MockD1Database {
   constructor() {
     this._tables = {}
@@ -338,6 +354,21 @@ export class MockD1Database {
 
   prepare(sql) {
     return new MockStatement(sql, this._tables)
+  }
+
+  /**
+   * Execute multiple statements as a batch (mimics D1 transactional batch).
+   * Each statement is executed sequentially. Returns an array of results.
+   * @param {MockStatement[]} statements
+   * @returns {Promise<Array<{ results: Array, success: boolean }>>}
+   */
+  async batch(statements) {
+    const results = []
+    for (const stmt of statements) {
+      const rows = stmt._run()
+      results.push({ results: rows, success: true, meta: {} })
+    }
+    return results
   }
 }
 

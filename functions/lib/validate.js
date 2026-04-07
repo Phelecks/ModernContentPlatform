@@ -6,6 +6,7 @@
  *
  * Validators enforce the same rules as the workflow contracts in
  * schemas/workflow/ and the D1 column constraints in db/migrations/.
+ * Unknown fields are rejected (matching additionalProperties: false).
  */
 import { isValidTopicSlug, isValidDateKey, isValidISOTimestamp } from './db.js'
 
@@ -32,6 +33,43 @@ function isOptionalString(v, maxLen) {
 }
 
 /**
+ * Check for unexpected keys in the payload.
+ * @param {Object} body
+ * @param {string[]} allowedKeys
+ * @returns {string|null} error message or null
+ */
+function checkUnknownKeys(body, allowedKeys) {
+  const allowed = new Set(allowedKeys)
+  const unknown = Object.keys(body).filter(k => !allowed.has(k))
+  if (unknown.length > 0) {
+    return `Unknown fields not allowed: ${unknown.join(', ')}`
+  }
+  return null
+}
+
+/**
+ * Basic URL format validation.
+ * Accepts http: and https: URLs with a host component.
+ * @param {string} value
+ * @returns {boolean}
+ */
+function isValidUrl(value) {
+  try {
+    const url = new URL(value)
+    return url.protocol === 'http:' || url.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+const ALERT_ALLOWED_KEYS = [
+  'topic_slug', 'date_key', 'headline', 'summary_text', 'source_name',
+  'severity_score', 'importance_score', 'confidence_score',
+  'event_at', 'source_url', 'cluster_label', 'alert_reason',
+  'secondary_topics', 'item_id'
+]
+
+/**
  * Validate an alert write payload.
  *
  * Required: topic_slug, date_key, headline, summary_text, source_name,
@@ -40,6 +78,9 @@ function isOptionalString(v, maxLen) {
  */
 export function validateAlertPayload(body) {
   if (!body || typeof body !== 'object') return fail('Request body must be a JSON object')
+
+  const unknownError = checkUnknownKeys(body, ALERT_ALLOWED_KEYS)
+  if (unknownError) return fail(unknownError)
 
   const {
     topic_slug, date_key, headline, summary_text, source_name,
@@ -77,6 +118,7 @@ export function validateAlertPayload(body) {
   }
   if (source_url !== undefined && source_url !== null) {
     if (typeof source_url !== 'string') return fail('source_url must be a string or null')
+    if (!isValidUrl(source_url)) return fail('source_url must be a valid HTTP or HTTPS URL')
   }
   if (!isOptionalString(cluster_label, 100)) {
     return fail('cluster_label must be a string (max 100 chars) or null')
@@ -108,6 +150,12 @@ export function validateAlertPayload(body) {
   })
 }
 
+const DAILY_STATUS_ALLOWED_KEYS = [
+  'topic_slug', 'date_key', 'page_state',
+  'alert_count', 'cluster_count',
+  'summary_available', 'video_available', 'article_available'
+]
+
 /**
  * Validate a daily_status write payload.
  *
@@ -117,6 +165,9 @@ export function validateAlertPayload(body) {
  */
 export function validateDailyStatusPayload(body) {
   if (!body || typeof body !== 'object') return fail('Request body must be a JSON object')
+
+  const unknownError = checkUnknownKeys(body, DAILY_STATUS_ALLOWED_KEYS)
+  if (unknownError) return fail(unknownError)
 
   const {
     topic_slug, date_key, page_state,
@@ -157,14 +208,22 @@ export function validateDailyStatusPayload(body) {
   })
 }
 
+const PUBLISH_JOB_ALLOWED_KEYS = [
+  'topic_slug', 'date_key', 'status', 'triggered_by',
+  'workflow_run_id', 'error_message', 'id'
+]
+
 /**
  * Validate a publish_jobs write payload.
  *
  * Required: topic_slug, date_key
- * Optional: status, triggered_by, workflow_run_id, error_message
+ * Optional: status, triggered_by, workflow_run_id, error_message, id
  */
 export function validatePublishJobPayload(body) {
   if (!body || typeof body !== 'object') return fail('Request body must be a JSON object')
+
+  const unknownError = checkUnknownKeys(body, PUBLISH_JOB_ALLOWED_KEYS)
+  if (unknownError) return fail(unknownError)
 
   const {
     topic_slug, date_key, status, triggered_by,
