@@ -45,7 +45,7 @@ The table below summarises every field and its D1 mapping.
 | `send_alert` | boolean | ✅ | — | AI recommendation; overridden by thresholds in module 06 |
 | `alert_reason` | string \| null | — | `metadata_json.alert_reason` | Short AI explanation |
 | `event_at` | ISO-8601 UTC string | ✅ | `alerts.event_at` | Best-available event timestamp |
-| `cluster_label` | string ≤ 100 chars \| null | ✅ | `event_clusters.cluster_label` | Short label for the event cluster |
+| `cluster_label` | string ≤ 100 chars \| null | ✅ | `event_clusters.cluster_label` | Short label for the event cluster; if null in the contract, module 07 falls back to `topic_slug` before writing because `event_clusters.cluster_label` is NOT NULL |
 | `date_key` | YYYY-MM-DD string | derived | `alerts.date_key` | Derived from `event_at`; not in base contract but added by the pipeline |
 
 The `status` column in `alerts` is always set to `'active'` on insert.
