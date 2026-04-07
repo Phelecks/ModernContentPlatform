@@ -203,8 +203,18 @@ class MockStatement {
     return { results: this._run() }
   }
 
+  async run() {
+    this._run()
+    return { success: true, meta: {} }
+  }
+
   _run() {
     const sql = this._sql
+
+    // Handle INSERT / UPDATE for write endpoint testing
+    if (/^\s*INSERT\b/i.test(sql)) return this._runInsert()
+    if (/^\s*UPDATE\b/i.test(sql)) return this._runUpdate()
+
     const params = this._params
 
     if (/\bJOIN\b/i.test(sql)) return this._runJoin()
@@ -233,6 +243,36 @@ class MockStatement {
     if (countAlias) return [{ [countAlias]: rows.length }]
 
     return projectRows(rows, extractSelectColumns(sql))
+  }
+
+  /**
+   * Minimal INSERT handler for write endpoint testing.
+   * Extracts target table, auto-increments an ID, and returns it
+   * when the SQL contains a RETURNING clause.
+   */
+  _runInsert() {
+    const m = this._sql.match(/\bINTO\s+(\w+)/i)
+    const tableName = m ? m[1].toLowerCase() : 'unknown'
+
+    if (!this._tables._counters) this._tables._counters = {}
+    if (!this._tables._counters[tableName]) this._tables._counters[tableName] = 100
+    const id = ++this._tables._counters[tableName]
+
+    if (/\bRETURNING\b/i.test(this._sql)) {
+      return [{ id }]
+    }
+    return []
+  }
+
+  /**
+   * Minimal UPDATE handler for write endpoint testing.
+   * Returns an empty result set (updates don't return rows unless RETURNING).
+   */
+  _runUpdate() {
+    if (/\bRETURNING\b/i.test(this._sql)) {
+      return [{ changes: 1 }]
+    }
+    return []
   }
 
   /**

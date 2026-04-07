@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "write_publish_job",
+  "title": "Write Publish Job Payload",
+  "description": "Payload for POST /api/internal/publish-jobs. Creates a new publish job or updates an existing one.",
+  "type": "object",
+  "required": [
+    "topic_slug",
+    "date_key"
+  ],
+  "properties": {
+    "topic_slug": {
+      "type": "string",
+      "enum": ["crypto", "finance", "economy", "health", "ai", "energy", "technology"],
+      "description": "Topic slug identifier."
+    },
+    "date_key": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "Date key in YYYY-MM-DD format."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "running", "success", "failed", "retrying"],
+      "default": "pending",
+      "description": "Job status."
+    },
+    "triggered_by": {
+      "type": ["string", "null"],
+      "enum": ["schedule", "manual", "retry", null],
+      "description": "What triggered this publish job."
+    },
+    "workflow_run_id": {
+      "type": ["string", "null"],
+      "description": "n8n execution ID for traceability."
+    },
+    "error_message": {
+      "type": ["string", "null"],
+      "description": "Error message if the job failed."
+    },
+    "id": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "When present, update the existing job instead of creating a new one. Only id, status, and error_message are used for updates."
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "topic_slug": "crypto",
+      "date_key": "2025-01-15",
+      "status": "pending",
+      "triggered_by": "schedule"
+    },
+    {
+      "id": 42,
+      "status": "success",
+      "topic_slug": "crypto",
+      "date_key": "2025-01-15"
+    }
+  ]
+}
