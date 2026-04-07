@@ -45,9 +45,10 @@ Performs three coordinated writes per call:
 2. **Insert alerts** — adds the alert row.
 3. **Upsert daily_status** — increments alert_count and recalculates cluster_count.
 
-The alert insert and daily_status upsert are executed in a single `db.batch()`
-call for transactional guarantees. The cluster upsert runs first because the
-alert row needs the returned cluster_id.
+All three statements are executed in a single `db.batch()` call for
+transactional guarantees — if any statement fails, all writes are rolled back.
+The alert insert uses a subquery to resolve the cluster_id from the
+event_clusters row upserted in statement 1.
 
 **Request:**
 ```json

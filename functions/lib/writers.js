@@ -10,6 +10,11 @@
  *   import { writeAlertBatch, upsertDailyStatus } from '../../lib/writers.js'
  */
 
+// ---- Status constants ----
+
+const STARTED_STATUSES = ['running', 'success', 'failed']
+const TERMINAL_STATUSES = ['success', 'failed']
+
 // ---- SQL templates (used by both batch and individual helpers) ----
 
 const UPSERT_EVENT_CLUSTER_SQL = `
@@ -23,14 +28,18 @@ const UPSERT_EVENT_CLUSTER_SQL = `
     updated_at       = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
   RETURNING id`
 
-const INSERT_ALERT_SQL = `
+const INSERT_ALERT_WITH_SUBQUERY_SQL = `
   INSERT INTO alerts (
     topic_slug, date_key, cluster_id,
     headline, summary_text, source_url, source_name,
     severity_score, importance_score, confidence_score,
     status, delivered_telegram, delivered_discord,
     event_at, metadata_json
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 0, 0, ?,
+  ) VALUES (?, ?,
+    (SELECT id FROM event_clusters
+     WHERE topic_slug = ? AND date_key = ? AND cluster_label = ?),
+    ?, ?, ?, ?,
+    ?, ?, ?, 'active', 0, 0, ?,
     json_object(
       'item_id',          ?,
       'secondary_topics', json(?),
@@ -56,12 +65,12 @@ const UPSERT_DAILY_STATUS_FOR_ALERT_SQL = `
 /**
  * Write an alert as a D1 batch transaction (atomic).
  *
- * Executes three statements in a single `db.batch()` call:
+ * Executes three statements in a single `db.batch()` call so that
+ * all writes succeed or none are committed:
  *   1. Upsert event_clusters — returns cluster id
- *   2. Insert alerts row — returns alert id
+ *   2. Insert alerts row (uses subquery to resolve cluster_id) — returns alert id
  *   3. Upsert daily_status — increments counters
  *
- * If any statement fails, the entire batch is rolled back.
  * Requires migration 0002_event_clusters_unique.sql for the UNIQUE constraint.
  *
  * @param {D1Database} db
@@ -74,22 +83,17 @@ export async function writeAlertBatch(db, {
   severity_score, importance_score, confidence_score,
   event_at, item_id, secondary_topics, alert_reason
 }) {
-  // Step 1: Upsert event cluster
+  // Statement 1: Upsert event cluster
   const clusterStmt = db.prepare(UPSERT_EVENT_CLUSTER_SQL)
     .bind(topic_slug, date_key, cluster_label, importance_score)
 
-  // We need the cluster_id from step 1 before step 2, so we execute
-  // the cluster upsert first, then batch the remaining two statements.
-  const clusterRow = await clusterStmt.first()
-  if (!clusterRow || clusterRow.id == null) {
-    throw new Error('Failed to upsert event cluster: no id returned from D1')
-  }
-  const cluster_id = clusterRow.id
-
-  // Step 2 + 3: Insert alert and upsert daily_status in a batch
-  const alertStmt = db.prepare(INSERT_ALERT_SQL)
+  // Statement 2: Insert alert (uses subquery to resolve cluster_id from the
+  // event_clusters row upserted in statement 1, since batch statements
+  // execute sequentially within the same transaction)
+  const alertStmt = db.prepare(INSERT_ALERT_WITH_SUBQUERY_SQL)
     .bind(
-      topic_slug, date_key, cluster_id,
+      topic_slug, date_key,
+      topic_slug, date_key, cluster_label,
       headline, summary_text, source_url, source_name,
       severity_score, importance_score, confidence_score,
       event_at,
@@ -98,17 +102,25 @@ export async function writeAlertBatch(db, {
       alert_reason
     )
 
+  // Statement 3: Upsert daily_status
   const dailyStatusStmt = db.prepare(UPSERT_DAILY_STATUS_FOR_ALERT_SQL)
     .bind(topic_slug, date_key)
 
-  const [alertResult] = await db.batch([alertStmt, dailyStatusStmt])
+  const [clusterResult, alertResult] = await db.batch([
+    clusterStmt, alertStmt, dailyStatusStmt
+  ])
+
+  const clusterRow = clusterResult.results?.[0]
+  if (!clusterRow || clusterRow.id == null) {
+    throw new Error('Failed to upsert event cluster: no id returned from D1')
+  }
 
   const alertRow = alertResult.results?.[0]
   if (!alertRow || alertRow.id == null) {
     throw new Error('Failed to insert alert: no id returned from D1')
   }
 
-  return { alert_id: alertRow.id, cluster_id }
+  return { alert_id: alertRow.id, cluster_id: clusterRow.id }
 }
 
 /**
