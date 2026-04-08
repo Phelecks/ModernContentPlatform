@@ -123,7 +123,7 @@ See `app/src/__tests__/integration/helpers/fixtures.js` for the full set of name
 
 ### In local development (seeding D1)
 
-The `db/seeds/sample_alerts.sql` file seeds the same data as these fixtures into a local D1 database:
+The `db/seeds/sample_alerts.sql` file seeds the same core alert data and `daily_status` flags/counts as these fixtures into a local D1 database. Note that the seed does not set `published_at` on `daily_status` rows, so the published page-state fixtures reflect the final API response shape (with `published_at` set by the write path) rather than the raw seed state:
 
 ```bash
 wrangler d1 execute modern-content-platform-db --file=db/seeds/topics.sql --local
@@ -144,7 +144,7 @@ Use source-event fixtures as manual trigger payloads to test the intraday ingest
 
 ## Design notes
 
-- All fixture data uses the canonical sample date **2025-01-15** for consistency with `db/seeds/sample_alerts.sql` and the integration test seed in `app/src/__tests__/integration/helpers/mockD1.js`.
+- Fixture data uses the canonical sample date **2025-01-15** for consistency with `db/seeds/sample_alerts.sql` and the integration test seed in `app/src/__tests__/integration/helpers/mockD1.js`, except for the pending page-state snapshot (`page-states/crypto-2025-01-16-pending.json`), which uses the next-day date to demonstrate navigation/pending behavior.
 - `item_id` values in `normalized-items/` and `classified-alerts/` are deterministic hex strings (fixed, not computed at runtime) so fixtures remain stable across runs.
 - Fixtures do not contain credentials, tokens, or real external URLs — all `source_url` values point to `example.com`.
 - Adding a new topic or date: follow the naming convention and add a corresponding row to the seed SQL if D1 seeding is needed.

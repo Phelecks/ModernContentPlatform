@@ -57,11 +57,17 @@ function assertClassifiedAlert(alert, label) {
   expect(alert.headline.length, `${label}: headline non-empty`).toBeGreaterThan(0)
   expect(alert.summary_text, `${label}: summary_text`).toBeTypeOf('string')
   expect(alert.source_name, `${label}: source_name`).toBeTypeOf('string')
+  expect(alert.cluster_label, `${label}: cluster_label`).toBeTypeOf('string')
+  expect(alert.cluster_label.length, `${label}: cluster_label non-empty`).toBeGreaterThan(0)
   expect(alert.severity_score, `${label}: severity_score`).toBeTypeOf('number')
   expect(alert.severity_score, `${label}: severity_score 0–100`).toBeGreaterThanOrEqual(0)
   expect(alert.severity_score, `${label}: severity_score 0–100`).toBeLessThanOrEqual(100)
   expect(alert.importance_score, `${label}: importance_score`).toBeTypeOf('number')
+  expect(alert.importance_score, `${label}: importance_score 0–100`).toBeGreaterThanOrEqual(0)
+  expect(alert.importance_score, `${label}: importance_score 0–100`).toBeLessThanOrEqual(100)
   expect(alert.confidence_score, `${label}: confidence_score`).toBeTypeOf('number')
+  expect(alert.confidence_score, `${label}: confidence_score 0–100`).toBeGreaterThanOrEqual(0)
+  expect(alert.confidence_score, `${label}: confidence_score 0–100`).toBeLessThanOrEqual(100)
   expect(alert.send_alert, `${label}: send_alert`).toBeTypeOf('boolean')
   expect(alert.event_at, `${label}: event_at`).toMatch(/^\d{4}-\d{2}-\d{2}T/)
 }
@@ -101,6 +107,7 @@ function assertNormalizedItem(item, label) {
   expect(item.headline, `${label}: headline`).toBeTypeOf('string')
   expect(item.published_at, `${label}: published_at`).toMatch(/^\d{4}-\d{2}-\d{2}T/)
   expect(item.fetched_at, `${label}: fetched_at`).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+  expect(Array.isArray(item.topic_candidates), `${label}: topic_candidates must be an array`).toBe(true)
   expect(item.is_duplicate, `${label}: is_duplicate`).toBeTypeOf('boolean')
 }
 
