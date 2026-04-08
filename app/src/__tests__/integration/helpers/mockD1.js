@@ -403,7 +403,7 @@ class MockStatement {
 // ---- Database ----
 
 const KNOWN_TABLES = new Set([
-  'topics', 'alerts', 'event_clusters', 'daily_status', 'publish_jobs', 'workflow_logs'
+  'topics', 'alerts', 'event_clusters', 'daily_status', 'publish_jobs', 'workflow_logs', 'sources'
 ])
 
 export class MockD1Database {

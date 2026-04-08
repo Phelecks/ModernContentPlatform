@@ -135,3 +135,55 @@
 --   AND (delivered_telegram = 0 OR delivered_discord = 0)
 -- ORDER BY event_at ASC
 -- LIMIT 50;
+
+
+-- ============================================================
+-- SOURCES: Active sources for a specific topic (ingestion query)
+-- Used by: n8n intraday module 01 source ingestion
+-- ============================================================
+-- SELECT
+--   id, source_slug, source_name, source_type, trust_tier,
+--   trust_score, priority_weight, url,
+--   poll_interval_minutes, ingestion_method, metadata_json
+-- FROM sources
+-- WHERE topic_slug = :topic_slug
+--   AND is_active  = 1
+-- ORDER BY priority_weight DESC;
+
+
+-- ============================================================
+-- SOURCES: All active sources across topics (global source list)
+-- Used by: /api/sources or n8n combined ingestion run
+-- ============================================================
+-- SELECT
+--   id, source_slug, source_name, topic_slug, source_type,
+--   trust_tier, trust_score, priority_weight, url,
+--   is_active, poll_interval_minutes, ingestion_method
+-- FROM sources
+-- WHERE is_active = 1
+-- ORDER BY topic_slug ASC, priority_weight DESC;
+
+
+-- ============================================================
+-- SOURCES: Source lookup by slug (attribution / detail)
+-- Used by: alert attribution display, source detail pages
+-- ============================================================
+-- SELECT
+--   id, source_slug, source_name, topic_slug, source_type,
+--   trust_tier, trust_score, priority_weight, url,
+--   is_active, poll_interval_minutes, ingestion_method, metadata_json
+-- FROM sources
+-- WHERE source_slug = :source_slug;
+
+
+-- ============================================================
+-- SOURCES: Sources by trust tier (trust audit)
+-- Used by: admin dashboards, trust policy review
+-- ============================================================
+-- SELECT
+--   source_slug, source_name, topic_slug, source_type,
+--   trust_tier, trust_score, is_active
+-- FROM sources
+-- WHERE trust_tier = :trust_tier
+--   AND is_active  = 1
+-- ORDER BY topic_slug ASC, trust_score DESC;
