@@ -7,7 +7,10 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
@@ -18,7 +21,10 @@
       "name": "Validate Input",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
@@ -28,19 +34,27 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ {\n  sql: \"INSERT INTO daily_status (topic_slug, date_key, page_state, alert_count, cluster_count, summary_available, article_available, video_available, published_at, updated_at) VALUES (?, ?, 'published', ?, ?, 1, 1, 0, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), strftime('%Y-%m-%dT%H:%M:%SZ', 'now')) ON CONFLICT(topic_slug, date_key) DO UPDATE SET page_state = 'published', alert_count = MAX(alert_count, excluded.alert_count), cluster_count = MAX(cluster_count, excluded.cluster_count), summary_available = 1, article_available = 1, published_at = COALESCE(published_at, strftime('%Y-%m-%dT%H:%M:%SZ', 'now')), updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')\",\n  params: [$json.topic_slug, $json.date_key, $json.alert_count || 0, $json.cluster_count || 0]\n} }}",
-        "options": { "timeout": 15000 }
+        "options": {
+          "timeout": 15000
+        }
       },
       "id": "d1e2f3a4-0010-0010-0010-000000000003",
       "name": "Update daily_status in D1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [680, 200],
+      "position": [
+        680,
+        200
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "cloudflare-d1-credentials",
@@ -59,19 +73,27 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ {\n  sql: \"UPDATE publish_jobs SET status = 'success', completed_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), metadata_json = json_set(COALESCE(metadata_json, '{}'), '$.github_commit_sha', ?), updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ?\",\n  params: [$('Validate Input').first().json.github_commit_sha ?? null, $('Validate Input').first().json.publish_job_id]\n} }}",
-        "options": { "timeout": 15000 }
+        "options": {
+          "timeout": 15000
+        }
       },
       "id": "d1e2f3a4-0010-0010-0010-000000000004",
       "name": "Update publish_jobs in D1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [680, 400],
+      "position": [
+        680,
+        400
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "cloudflare-d1-credentials",
@@ -91,31 +113,107 @@
       "name": "Confirm D1 Writes",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 300]
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $vars.PAGES_BASE_URL }}/api/internal/workflow-logs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Write-Key",
+              "value": "={{ $vars.WRITE_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  workflow_name: 'Daily — Orchestrator',\n  execution_id: $execution.id != null ? String($execution.id) : null,\n  topic_slug: $json.topic_slug,\n  date_key: $json.date_key,\n  event_type: 'completed',\n  module_name: '10 Update D1 State',\n  metadata_json: JSON.stringify({\n    publish_job_id: $json.publish_job_id,\n    github_commit_sha: $json.github_commit_sha\n  })\n} }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "d1e2f3a4-0010-0010-0010-000000000006",
+      "name": "Write Completion Log",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1120,
+        300
+      ],
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000
     }
   ],
   "connections": {
     "Execute Workflow Trigger": {
       "main": [
-        [{ "node": "Validate Input", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Validate Input": {
       "main": [
         [
-          { "node": "Update daily_status in D1", "type": "main", "index": 0 },
-          { "node": "Update publish_jobs in D1", "type": "main", "index": 0 }
+          {
+            "node": "Update daily_status in D1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update publish_jobs in D1",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Update daily_status in D1": {
       "main": [
-        [{ "node": "Confirm D1 Writes", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Confirm D1 Writes",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Update publish_jobs in D1": {
       "main": [
-        [{ "node": "Confirm D1 Writes", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Confirm D1 Writes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirm D1 Writes": {
+      "main": [
+        [
+          {
+            "node": "Write Completion Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -128,5 +226,11 @@
     "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
   },
   "id": "daily-10-update-d1-state-v1",
-  "tags": ["daily", "editorial", "d1", "state", "v1"]
+  "tags": [
+    "daily",
+    "editorial",
+    "d1",
+    "state",
+    "v1"
+  ]
 }

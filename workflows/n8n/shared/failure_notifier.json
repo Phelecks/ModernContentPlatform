@@ -52,6 +52,177 @@
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "url": "={{ $vars.PAGES_BASE_URL }}/api/internal/workflow-logs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Write-Key",
+              "value": "={{ $vars.WRITE_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  workflow_name: $('Format Failure Message').first().json.workflowName,\n  execution_id: String($('Format Failure Message').first().json.executionId),\n  event_type: 'error',\n  module_name: $('Format Failure Message').first().json.errorNode,\n  error_message: $('Format Failure Message').first().json.errorMessage,\n  metadata_json: JSON.stringify({ timestamp: $('Format Failure Message').first().json.timestamp })\n} }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "e1f2a3b4-0011-0011-0011-000000000004",
+      "name": "Write Failure Log to D1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        680,
+        460
+      ],
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Check whether the failed workflow is the daily orchestrator.\n// If so, we need to find any stale 'running' publish_job and mark it failed.\nconst workflowName = $('Format Failure Message').first().json.workflowName || '';\nconst isDailyOrchestrator = workflowName.toLowerCase().includes('daily');\nreturn [{ json: { isDailyOrchestrator, workflowName } }];"
+      },
+      "id": "e1f2a3b4-0011-0011-0011-000000000005",
+      "name": "Is Daily Workflow?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.isDailyOrchestrator }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "e1f2a3b4-0011-0011-0011-000000000006",
+      "name": "Daily Workflow?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.cloudflare.com/client/v4/accounts/{{ $vars.CF_ACCOUNT_ID }}/d1/database/{{ $vars.CF_D1_DATABASE_ID }}/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  sql: \"SELECT id, topic_slug, date_key FROM publish_jobs WHERE workflow_run_id = ? AND status = 'running' ORDER BY created_at DESC\",\n  params: [String($('Format Failure Message').first().json.executionId)]\n}) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "e1f2a3b4-0011-0011-0011-000000000007",
+      "name": "Find Running Jobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1340,
+        380
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cloudflare-d1-credentials",
+          "name": "CloudflareD1Api"
+        }
+      },
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Mark all found running publish_jobs as failed.\n// Returns one item per job to update, or an empty array if none found.\nconst resp = $input.first().json;\nconst jobs = resp?.result?.[0]?.results || [];\nconst errorMessage = $('Format Failure Message').first().json.errorMessage || 'Workflow failed';\n\nif (jobs.length === 0) {\n  return [];\n}\n\nreturn jobs.map(job => ({\n  json: {\n    id: job.id,\n    topic_slug: job.topic_slug,\n    date_key: job.date_key,\n    errorMessage\n  }\n}));"
+      },
+      "id": "e1f2a3b4-0011-0011-0011-000000000008",
+      "name": "Extract Running Jobs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.cloudflare.com/client/v4/accounts/{{ $vars.CF_ACCOUNT_ID }}/d1/database/{{ $vars.CF_D1_DATABASE_ID }}/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  sql: \"UPDATE publish_jobs SET status = 'failed', error_message = ?, completed_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ? AND status = 'running'\",\n  params: [$json.errorMessage, $json.id]\n} }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "e1f2a3b4-0011-0011-0011-000000000009",
+      "name": "Mark Jobs Failed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1780,
+        380
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cloudflare-d1-credentials",
+          "name": "CloudflareD1Api"
+        }
+      },
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000
     }
   ],
   "connections": {
@@ -71,6 +242,66 @@
         [
           {
             "node": "Send Failure Alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Write Failure Log to D1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Failure Log to D1": {
+      "main": [
+        [
+          {
+            "node": "Is Daily Workflow?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Daily Workflow?": {
+      "main": [
+        [
+          {
+            "node": "Daily Workflow?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily Workflow?": {
+      "main": [
+        [
+          {
+            "node": "Find Running Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Running Jobs": {
+      "main": [
+        [
+          {
+            "node": "Extract Running Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Running Jobs": {
+      "main": [
+        [
+          {
+            "node": "Mark Jobs Failed",
             "type": "main",
             "index": 0
           }
