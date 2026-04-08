@@ -1,0 +1,24 @@
+[
+  {
+    "name": "BLS News RSS",
+    "type": "rss",
+    "url": "https://www.bls.gov/feed/bls_latest.rss",
+    "topic_slug": "economy",
+    "trust_tier": "T1"
+  },
+  {
+    "name": "Federal Reserve FRED API",
+    "type": "api",
+    "url": "https://api.stlouisfed.org/fred/releases/news?api_key=&file_type=json",
+    "topic_slug": "economy",
+    "trust_tier": "T1",
+    "notes": "Requires FRED_API_KEY credential in n8n"
+  },
+  {
+    "name": "Reuters Economy RSS",
+    "type": "rss",
+    "url": "https://feeds.reuters.com/reuters/companyNews",
+    "topic_slug": "economy",
+    "trust_tier": "T2"
+  }
+]

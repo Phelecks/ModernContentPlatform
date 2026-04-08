@@ -1,0 +1,23 @@
+[
+  {
+    "name": "IEA News RSS",
+    "type": "rss",
+    "url": "https://www.iea.org/news.xml",
+    "topic_slug": "energy",
+    "trust_tier": "T1"
+  },
+  {
+    "name": "EIA News RSS",
+    "type": "rss",
+    "url": "https://www.eia.gov/rss/todayinenergy.xml",
+    "topic_slug": "energy",
+    "trust_tier": "T1"
+  },
+  {
+    "name": "Reuters Energy RSS",
+    "type": "rss",
+    "url": "https://feeds.reuters.com/reuters/companyNews",
+    "topic_slug": "energy",
+    "trust_tier": "T2"
+  }
+]

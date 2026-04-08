@@ -1,0 +1,24 @@
+[
+  {
+    "name": "CoinGecko API",
+    "type": "api",
+    "url": "https://api.coingecko.com/api/v3/news",
+    "topic_slug": "crypto",
+    "trust_tier": "T1",
+    "notes": "Market data — treat as T1 equivalent for price/volume signals"
+  },
+  {
+    "name": "CoinDesk RSS",
+    "type": "rss",
+    "url": "https://www.coindesk.com/arc/outboundfeeds/rss/",
+    "topic_slug": "crypto",
+    "trust_tier": "T3"
+  },
+  {
+    "name": "Reuters Crypto RSS",
+    "type": "rss",
+    "url": "https://feeds.reuters.com/reuters/technologyNews",
+    "topic_slug": "crypto",
+    "trust_tier": "T2"
+  }
+]
