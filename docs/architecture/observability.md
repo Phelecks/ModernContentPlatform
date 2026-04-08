@@ -89,7 +89,7 @@ Format Failure Message
          Is Daily Workflow?
               │
          (yes) ▼
-         Find Running Jobs  (query publish_jobs WHERE status='running')
+         Find Running Jobs  (query publish_jobs WHERE workflow_run_id=execution_id AND status='running')
               │
               ▼
          Extract Running Jobs
@@ -101,8 +101,7 @@ Format Failure Message
 Key properties:
 - The D1 write and the publish_job update both use `continueOnFail: true`
   so a Telegram API failure never causes the log to be missed, and vice versa.
-- The publish_job cleanup queries for `status = 'running'` and only updates
-  jobs that are still running, preventing double-updates on reruns.
+- The publish_job cleanup queries by `workflow_run_id = execution_id` (and `status = 'running'`) so only the job from the exact failing execution is updated, preventing unrelated concurrent jobs from being incorrectly marked failed.
 - Non-daily workflows (e.g. intraday) skip the publish_job cleanup branch.
 
 ---
@@ -132,7 +131,7 @@ Required payload fields:
 |---|---|---|
 | `workflow_name` | string | Required. Human-readable workflow name. |
 | `event_type` | string | `info \| warning \| error \| retry \| completed` |
-| `execution_id` | string\|null | n8n execution ID |
+| `execution_id` | string\|number\|null | n8n execution ID (normalized to string on write) |
 | `topic_slug` | string\|null | Topic if event is topic-scoped |
 | `date_key` | string\|null | YYYY-MM-DD if event is date-scoped |
 | `module_name` | string\|null | Node or sub-workflow name |

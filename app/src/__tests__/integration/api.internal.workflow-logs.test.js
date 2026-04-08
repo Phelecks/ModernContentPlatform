@@ -214,6 +214,75 @@ describe('POST /api/internal/workflow-logs', () => {
     expect(res.headers.get('Content-Type')).toContain('application/json')
   })
 
+  // --- execution_id accepts numbers ---
+
+  it('returns 201 when execution_id is a number (normalizes to string)', async () => {
+    const ctx = makeCtx(db, validPayload({ execution_id: 12345 }), { 'X-Write-Key': WRITE_KEY })
+    const res = await onRequestPost(ctx)
+    expect(res.status).toBe(201)
+  })
+
+  it('returns 400 when execution_id is a boolean', async () => {
+    const ctx = makeCtx(db, validPayload({ execution_id: true }), { 'X-Write-Key': WRITE_KEY })
+    const res = await onRequestPost(ctx)
+    expect(res.status).toBe(400)
+  })
+
+  // --- error_message required for error/retry events ---
+
+  it('returns 400 when event_type is "error" but error_message is missing', async () => {
+    const payload = validPayload({ event_type: 'error' })
+    delete payload.error_message
+    const ctx = makeCtx(db, payload, { 'X-Write-Key': WRITE_KEY })
+    const res = await onRequestPost(ctx)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/error_message/i)
+  })
+
+  it('returns 400 when event_type is "error" but error_message is null', async () => {
+    const ctx = makeCtx(db, validPayload({ event_type: 'error', error_message: null }), { 'X-Write-Key': WRITE_KEY })
+    const res = await onRequestPost(ctx)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/error_message/i)
+  })
+
+  it('returns 400 when event_type is "retry" but error_message is missing', async () => {
+    const ctx = makeCtx(db, {
+      workflow_name: 'Intraday — Orchestrator',
+      event_type: 'retry',
+      module_name: '07 D1 Persistence'
+    }, { 'X-Write-Key': WRITE_KEY })
+    const res = await onRequestPost(ctx)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/error_message/i)
+  })
+
+  it('returns 201 for event_type "info" with no error_message (not required)', async () => {
+    const ctx = makeCtx(db, { workflow_name: 'Daily — Orchestrator', event_type: 'info' }, { 'X-Write-Key': WRITE_KEY })
+    const res = await onRequestPost(ctx)
+    expect(res.status).toBe(201)
+  })
+
+  it('returns 201 for event_type "warning" with no error_message (not required)', async () => {
+    const ctx = makeCtx(db, { workflow_name: 'Daily — Orchestrator', event_type: 'warning' }, { 'X-Write-Key': WRITE_KEY })
+    const res = await onRequestPost(ctx)
+    expect(res.status).toBe(201)
+  })
+
+  it('returns 201 for event_type "completed" with no error_message (not required)', async () => {
+    const ctx = makeCtx(db, {
+      workflow_name: 'Daily — Orchestrator',
+      event_type: 'completed',
+      topic_slug: 'crypto',
+      date_key: '2025-01-15'
+    }, { 'X-Write-Key': WRITE_KEY })
+    const res = await onRequestPost(ctx)
+    expect(res.status).toBe(201)
+  })
+
   // --- All valid event_type values ---
 
   it.each(['info', 'warning', 'error', 'retry', 'completed'])(

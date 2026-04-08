@@ -7,18 +7,24 @@
       "name": "Error Trigger",
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Build a structured failure notification payload.\n// All dynamic values are HTML-escaped to prevent Telegram parse errors.\nconst error = $input.first().json;\n\nconst escHtml = (s) =>\n  String(s || '')\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;');\n\nconst workflowName = error.workflow?.name || 'Unknown workflow';\nconst executionId  = error.execution?.id  || 'unknown';\nconst errorMessage = error.execution?.error?.message || 'Unknown error';\nconst errorNode    = error.execution?.error?.node?.name || 'Unknown node';\nconst timestamp    = new Date().toISOString();\n\nconst text = [\n  `\ud83d\udea8 <b>Workflow Failure</b>`,\n  ``,\n  `<b>Workflow:</b> ${escHtml(workflowName)}`,\n  `<b>Node:</b> ${escHtml(errorNode)}`,\n  `<b>Error:</b> ${escHtml(errorMessage)}`,\n  `<b>Execution ID:</b> ${escHtml(executionId)}`,\n  `<b>Time:</b> ${timestamp}`\n].join('\\n');\n\nreturn [{ json: { text, workflowName, executionId, errorMessage, errorNode, timestamp } }];"
+        "jsCode": "// Build a structured failure notification payload.\n// All dynamic values are HTML-escaped to prevent Telegram parse errors.\nconst error = $input.first().json;\n\nconst escHtml = (s) =>\n  String(s || '')\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;');\n\nconst workflowName = error.workflow?.name || 'Unknown workflow';\nconst executionId  = error.execution?.id  || 'unknown';\nconst errorMessage = error.execution?.error?.message || 'Unknown error';\nconst errorNode    = error.execution?.error?.node?.name || 'Unknown node';\nconst timestamp    = new Date().toISOString();\n\nconst text = [\n  `🚨 <b>Workflow Failure</b>`,\n  ``,\n  `<b>Workflow:</b> ${escHtml(workflowName)}`,\n  `<b>Node:</b> ${escHtml(errorNode)}`,\n  `<b>Error:</b> ${escHtml(errorMessage)}`,\n  `<b>Execution ID:</b> ${escHtml(executionId)}`,\n  `<b>Time:</b> ${timestamp}`\n].join('\\n');\n\nreturn [{ json: { text, workflowName, executionId, errorMessage, errorNode, timestamp } }];"
       },
       "id": "e1f2a3b4-0011-0011-0011-000000000002",
       "name": "Format Failure Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
@@ -33,7 +39,10 @@
       "name": "Send Failure Alert",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1,
-      "position": [680, 300],
+      "position": [
+        680,
+        300
+      ],
       "credentials": {
         "telegramApi": {
           "id": "telegram-bot-credentials",
@@ -50,20 +59,31 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            { "name": "X-Write-Key", "value": "={{ $vars.WRITE_API_KEY }}" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Write-Key",
+              "value": "={{ $vars.WRITE_API_KEY }}"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ {\n  workflow_name: $('Format Failure Message').first().json.workflowName,\n  execution_id: $('Format Failure Message').first().json.executionId,\n  event_type: 'error',\n  module_name: $('Format Failure Message').first().json.errorNode,\n  error_message: $('Format Failure Message').first().json.errorMessage,\n  metadata_json: JSON.stringify({ timestamp: $('Format Failure Message').first().json.timestamp })\n} }}",
-        "options": { "timeout": 10000 }
+        "jsonBody": "={{ {\n  workflow_name: $('Format Failure Message').first().json.workflowName,\n  execution_id: String($('Format Failure Message').first().json.executionId),\n  event_type: 'error',\n  module_name: $('Format Failure Message').first().json.errorNode,\n  error_message: $('Format Failure Message').first().json.errorMessage,\n  metadata_json: JSON.stringify({ timestamp: $('Format Failure Message').first().json.timestamp })\n} }}",
+        "options": {
+          "timeout": 10000
+        }
       },
       "id": "e1f2a3b4-0011-0011-0011-000000000004",
       "name": "Write Failure Log to D1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [680, 460],
+      "position": [
+        680,
+        460
+      ],
       "continueOnFail": true,
       "retryOnFail": true,
       "maxTries": 2,
@@ -78,17 +98,25 @@
       "name": "Is Daily Workflow?",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 460]
+      "position": [
+        900,
+        460
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": false },
+          "options": {
+            "caseSensitive": false
+          },
           "conditions": [
             {
               "leftValue": "={{ $json.isDailyOrchestrator }}",
               "rightValue": true,
-              "operator": { "type": "boolean", "operation": "equals" }
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
             }
           ]
         }
@@ -97,7 +125,10 @@
       "name": "Daily Workflow?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1120, 460]
+      "position": [
+        1120,
+        460
+      ]
     },
     {
       "parameters": {
@@ -107,19 +138,27 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={ \"sql\": \"SELECT id, topic_slug, date_key FROM publish_jobs WHERE status = 'running' ORDER BY created_at DESC LIMIT 5\", \"params\": [] }",
-        "options": { "timeout": 10000 }
+        "jsonBody": "={{ JSON.stringify({\n  sql: \"SELECT id, topic_slug, date_key FROM publish_jobs WHERE workflow_run_id = ? AND status = 'running' ORDER BY created_at DESC\",\n  params: [String($('Format Failure Message').first().json.executionId)]\n}) }}",
+        "options": {
+          "timeout": 10000
+        }
       },
       "id": "e1f2a3b4-0011-0011-0011-000000000007",
       "name": "Find Running Jobs",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1340, 380],
+      "position": [
+        1340,
+        380
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "cloudflare-d1-credentials",
@@ -140,7 +179,10 @@
       "name": "Extract Running Jobs",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1560, 380]
+      "position": [
+        1560,
+        380
+      ]
     },
     {
       "parameters": {
@@ -150,19 +192,27 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ {\n  sql: \"UPDATE publish_jobs SET status = 'failed', error_message = ?, completed_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ? AND status = 'running'\",\n  params: [$json.errorMessage, $json.id]\n} }}",
-        "options": { "timeout": 10000 }
+        "options": {
+          "timeout": 10000
+        }
       },
       "id": "e1f2a3b4-0011-0011-0011-000000000009",
       "name": "Mark Jobs Failed",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1780, 380],
+      "position": [
+        1780,
+        380
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "cloudflare-d1-credentials",
@@ -178,40 +228,84 @@
   "connections": {
     "Error Trigger": {
       "main": [
-        [{ "node": "Format Failure Message", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Format Failure Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Format Failure Message": {
       "main": [
         [
-          { "node": "Send Failure Alert", "type": "main", "index": 0 },
-          { "node": "Write Failure Log to D1", "type": "main", "index": 0 }
+          {
+            "node": "Send Failure Alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Write Failure Log to D1",
+            "type": "main",
+            "index": 0
+          }
         ]
       ]
     },
     "Write Failure Log to D1": {
       "main": [
-        [{ "node": "Is Daily Workflow?", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Is Daily Workflow?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Is Daily Workflow?": {
       "main": [
-        [{ "node": "Daily Workflow?", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Daily Workflow?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Daily Workflow?": {
       "main": [
-        [{ "node": "Find Running Jobs", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Find Running Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Find Running Jobs": {
       "main": [
-        [{ "node": "Extract Running Jobs", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Extract Running Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Extract Running Jobs": {
       "main": [
-        [{ "node": "Mark Jobs Failed", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Mark Jobs Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -223,5 +317,10 @@
     "saveManualExecutions": true
   },
   "id": "shared-failure-notifier-v1",
-  "tags": ["shared", "failure", "monitoring", "v1"]
+  "tags": [
+    "shared",
+    "failure",
+    "monitoring",
+    "v1"
+  ]
 }

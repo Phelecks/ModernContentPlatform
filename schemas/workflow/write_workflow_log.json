@@ -13,8 +13,8 @@
       "description": "Human-readable name of the n8n workflow (e.g. 'Daily — Orchestrator')."
     },
     "execution_id": {
-      "type": ["string", "null"],
-      "description": "n8n execution ID for cross-referencing logs with n8n execution history."
+      "type": ["string", "number", "null"],
+      "description": "n8n execution ID for cross-referencing logs with n8n execution history. Accepts string or number; normalized to string on write."
     },
     "topic_slug": {
       "type": ["string", "null"],
@@ -51,6 +51,26 @@
     }
   },
   "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": { "event_type": { "const": "error" } },
+        "required": ["event_type"]
+      },
+      "then": {
+        "required": ["error_message"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "event_type": { "const": "retry" } },
+        "required": ["event_type"]
+      },
+      "then": {
+        "required": ["error_message"]
+      }
+    }
+  ],
   "examples": [
     {
       "workflow_name": "Daily — Orchestrator",

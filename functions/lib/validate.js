@@ -235,8 +235,10 @@ export function validateWorkflowLogPayload(body) {
   if (!isNonEmptyString(workflow_name, 200)) {
     return fail('workflow_name is required and must be a non-empty string (max 200 chars)')
   }
-  if (!isOptionalString(execution_id)) {
-    return fail('execution_id must be a string or null')
+  if (execution_id !== undefined && execution_id !== null) {
+    if (typeof execution_id !== 'string' && typeof execution_id !== 'number') {
+      return fail('execution_id must be a string, number, or null')
+    }
   }
   if (topic_slug !== undefined && topic_slug !== null) {
     if (!isValidTopicSlug(topic_slug) || !VALID_TOPICS.includes(topic_slug)) {
@@ -257,6 +259,11 @@ export function validateWorkflowLogPayload(body) {
   if (!isOptionalString(error_message)) {
     return fail('error_message must be a string or null')
   }
+  const resolvedEventType = event_type ?? 'info'
+  if ((resolvedEventType === 'error' || resolvedEventType === 'retry') &&
+      !isNonEmptyString(error_message)) {
+    return fail('error_message is required and must be a non-empty string for error and retry events')
+  }
   if (!isOptionalString(error_details)) {
     return fail('error_details must be a string or null')
   }
@@ -266,10 +273,10 @@ export function validateWorkflowLogPayload(body) {
 
   return ok({
     workflow_name,
-    execution_id: execution_id ?? null,
+    execution_id: execution_id != null ? String(execution_id) : null,
     topic_slug: topic_slug ?? null,
     date_key: date_key ?? null,
-    event_type: event_type ?? 'info',
+    event_type: resolvedEventType,
     module_name: module_name ?? null,
     error_message: error_message ?? null,
     error_details: error_details ?? null,
