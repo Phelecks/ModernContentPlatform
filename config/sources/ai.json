@@ -28,5 +28,23 @@
     "url": "https://www.technologyreview.com/feed/",
     "topic_slug": "ai",
     "trust_tier": "T3"
+  },
+  {
+    "name": "OpenAI (X)",
+    "type": "x_account",
+    "url": "https://x.com/OpenAI",
+    "topic_slug": "ai",
+    "trust_tier": "T4",
+    "notes": "X account monitoring — disabled by default; enable after X API credentials are configured. Severity capped at 50 per AI T4 rules.",
+    "x_user_id": "OpenAI"
+  },
+  {
+    "name": "X Search: AI Model Launch",
+    "type": "x_query",
+    "url": "https://api.twitter.com/2/tweets/search/recent",
+    "topic_slug": "ai",
+    "trust_tier": "T4",
+    "notes": "X keyword search — disabled by default; enable after X API credentials are configured. Severity capped at 50 per AI T4 rules.",
+    "search_query": "(#GPT OR #LLM OR #AI) (launched OR released OR announced) -is:retweet lang:en"
   }
 ]

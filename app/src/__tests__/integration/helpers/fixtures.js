@@ -35,9 +35,11 @@ export { default as FINANCE_DAILY_SUMMARY } from '@fixtures/daily-summaries/fina
 export { default as CRYPTO_SOURCE_EVENT_BTC_ETF } from '@fixtures/source-events/crypto-2025-01-15-btc-etf-inflows.json'
 export { default as FINANCE_SOURCE_EVENT_FED_MINUTES } from '@fixtures/source-events/finance-2025-01-15-fed-minutes.json'
 export { default as AI_SOURCE_EVENT_OPEN_WEIGHT_MODEL } from '@fixtures/source-events/ai-2025-01-15-open-weight-model.json'
+export { default as CRYPTO_SOURCE_EVENT_X_WHALE_ALERT } from '@fixtures/source-events/crypto-2025-01-15-x-whale-alert.json'
 
 // ---- Normalized items (intraday_normalized_item, individual items) ----
 
 export { default as CRYPTO_NORMALIZED_ITEM_BTC_ETF } from '@fixtures/normalized-items/crypto-2025-01-15-btc-etf-inflows.json'
 export { default as FINANCE_NORMALIZED_ITEM_FED_MINUTES } from '@fixtures/normalized-items/finance-2025-01-15-fed-minutes.json'
 export { default as AI_NORMALIZED_ITEM_OPEN_WEIGHT_MODEL } from '@fixtures/normalized-items/ai-2025-01-15-open-weight-model.json'
+export { default as CRYPTO_NORMALIZED_ITEM_X_WHALE_ALERT } from '@fixtures/normalized-items/crypto-2025-01-15-x-whale-alert.json'

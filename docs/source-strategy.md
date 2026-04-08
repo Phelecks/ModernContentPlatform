@@ -8,15 +8,17 @@ source class, and any topic-specific rules that govern when signal or social
 sources may be used directly versus when they require confirmation from a
 higher-trust source.
 
-The platform supports four source types (as defined in
+The platform supports six source types (as defined in
 `workflows/contracts/intraday_source_item.json`):
 
 | Source type | Description |
 |-------------|-------------|
 | `rss`       | News RSS / Atom feeds |
 | `api`       | Structured data APIs (market data, official statistics) |
-| `social`    | Social / signal sources (X / Twitter, Reddit, Telegram channels) |
+| `social`    | Social / signal sources (Telegram channels, Reddit) |
 | `webhook`   | Push-based event feeds |
+| `x_account` | X (Twitter) account monitoring — fetches recent posts from a specific user |
+| `x_query`   | X (Twitter) keyword/hashtag search — fetches recent posts matching a query |
 
 Active v1 topics: `crypto`, `finance`, `economy`, `health`, `ai`, `energy`.
 
@@ -36,6 +38,9 @@ but never loosen this baseline.
 
 ### Global rules for T4 (signal / social) sources
 
+These rules apply to all T4 sources, including `x_account`, `x_query`, and
+generic `social` sources:
+
 - A T4 item alone **must not** produce a `severity_score` above 60 (on the
   0–100 scale used by the intraday pipeline contracts).
 - A T4 item may raise an alert at lower severity to flag a potential event.
@@ -44,6 +49,22 @@ but never loosen this baseline.
   source tier.
 - Topics that explicitly disallow direct T4 triggering must filter social sources
   out of the alert decision step (module 06).
+
+### X-specific trust rules
+
+X sources (`x_account` and `x_query`) are always classified as T4 with a
+default `trust_score` of 25. The following additional rules apply:
+
+- **Confidence reduction:** When X is the only source for an event, the AI
+  classification step (module 05) should reduce `confidence_score` by at least
+  20 points compared to the same event from a T1–T3 source.
+- **Severity cap enforcement:** Module 06 (alert decision) must enforce the
+  per-topic T4 severity cap (see per-topic tables below).
+- **Account vs. query distinction:** `x_account` sources monitoring known
+  official accounts (e.g. `@OpenAI`, `@IEA`) may be treated with slightly
+  higher confidence than `x_query` keyword searches, but both remain T4.
+- **Metadata requirements:** X sources must carry `x_user_id` (for accounts)
+  or `search_query` (for queries) in `metadata_json` to enable auditing.
 
 ---
 
@@ -71,8 +92,9 @@ project announcements, so they are allowed with a reduced severity cap.
 - On-chain data APIs are treated as T1 equivalents for price and volume signals.
 - Exchange announcements via official RSS or webhook are treated as T2.
 
-**v1 scope:** Start with CoinGecko API + CoinDesk RSS + Reuters RSS. Add social
-monitoring in a follow-on iteration once the pipeline is stable.
+**v1 scope:** Start with CoinGecko API + CoinDesk RSS + Reuters RSS. X account
+monitoring (`x_account`) and keyword search (`x_query`) sources are defined
+but disabled (`is_active: 0`) pending X API credential configuration.
 
 ---
 
@@ -103,7 +125,9 @@ useful for tracking researcher commentary but must be treated as T4.
   results.
 
 **v1 scope:** Start with Ars Technica RSS + Hacker News API + OpenAI/Anthropic
-blog RSS. Add research feeds and social in a follow-on iteration.
+blog RSS. X account monitoring (`x_account`) and keyword search (`x_query`)
+sources are defined but disabled (`is_active: 0`) pending X API credential
+configuration.
 
 ---
 
@@ -132,7 +156,8 @@ alerts alone.
 - Earnings, Fed decisions, and regulatory filings are exclusively T1/T2 events.
 
 **v1 scope:** Start with Reuters business RSS + SEC EDGAR RSS + Federal Reserve
-RSS. Expand with additional wires once baseline is running.
+RSS. X keyword search (`x_query`) is defined for watch-only monitoring but
+disabled (`is_active: 0`) pending X API credential configuration.
 
 ---
 
@@ -221,21 +246,22 @@ must be capped.
 - Geopolitical disruption signals sourced from T4 must be held at low severity
   until confirmed by a T2 or T3 wire source.
 
-**v1 scope:** Start with IEA RSS + EIA RSS + Reuters energy RSS. Add commodity
-price APIs in a follow-on iteration.
+**v1 scope:** Start with IEA RSS + EIA RSS + Reuters energy RSS. X account
+monitoring (`x_account`) for official accounts is defined but disabled
+(`is_active: 0`) pending X API credential configuration.
 
 ---
 
 ## Summary Table
 
-| Topic    | Official (T1) | Wire (T2) | Specialist (T3) | Social / Signal (T4) | T4 severity cap |
-|----------|:---:|:---:|:---:|:---:|:---:|
-| crypto   | ✅  | ✅  | ✅  | ✅ (capped)  | 60 |
-| ai       | ✅  | ✅  | ✅  | ✅ (capped)  | 50 |
-| finance  | ✅  | ✅  | ✅  | ⚠️ watch-only | 30 |
-| economy  | ✅  | ✅  | ⚠️ context only | ❌ excluded | — |
-| health   | ✅  | ✅  | ✅  | ❌ excluded | — |
-| energy   | ✅  | ✅  | ✅  | ✅ (capped)  | 50 |
+| Topic    | Official (T1) | Wire (T2) | Specialist (T3) | Social / Signal (T4) | T4 severity cap | X source types |
+|----------|:---:|:---:|:---:|:---:|:---:|:---:|
+| crypto   | ✅  | ✅  | ✅  | ✅ (capped)  | 60 | `x_account`, `x_query` |
+| ai       | ✅  | ✅  | ✅  | ✅ (capped)  | 50 | `x_account`, `x_query` |
+| finance  | ✅  | ✅  | ✅  | ⚠️ watch-only | 30 | `x_query` (watch-only) |
+| economy  | ✅  | ✅  | ⚠️ context only | ❌ excluded | — | ❌ excluded |
+| health   | ✅  | ✅  | ✅  | ❌ excluded | — | ❌ excluded |
+| energy   | ✅  | ✅  | ✅  | ✅ (capped)  | 50 | `x_account` |
 
 Legend: ✅ = may trigger alerts  ⚠️ = restricted use  ❌ = excluded from ingestion
 
@@ -268,14 +294,14 @@ Module 06 currently applies only global thresholds (`ALERT_IMPORTANCE_THRESHOLD`
 or per-tier logic. The topic-specific policy below is **planned** and should be
 implemented in a future workflow update:
 
-| Topic   | T4 allowed | T4 max severity | Minimum importance for T3-only (economy) |
-|---------|:---:|:---:|:---:|
-| crypto  | Yes | 60  | — |
-| ai      | Yes | 50  | — |
-| finance | Watch only | 30  | — |
-| economy | No  | —   | 75 |
-| health  | No  | —   | — |
-| energy  | Yes | 50  | — |
+| Topic   | T4 allowed | T4 max severity | Minimum importance for T3-only (economy) | X source types |
+|---------|:---:|:---:|:---:|:---:|
+| crypto  | Yes | 60  | — | `x_account`, `x_query` |
+| ai      | Yes | 50  | — | `x_account`, `x_query` |
+| finance | Watch only | 30  | — | `x_query` only |
+| economy | No  | —   | 75 | None |
+| health  | No  | —   | — | None |
+| energy  | Yes | 50  | — | `x_account` |
 
 ---
 
@@ -287,11 +313,11 @@ validated.
 
 | Topic   | v1 starter sources |
 |---------|--------------------|
-| crypto  | CoinGecko API, CoinDesk RSS, Reuters crypto RSS |
-| ai      | Ars Technica RSS, Hacker News API, OpenAI blog RSS |
-| finance | Reuters business RSS, SEC EDGAR RSS, Federal Reserve RSS |
+| crypto  | CoinGecko API, CoinDesk RSS, Reuters crypto RSS, Whale Alert X account (disabled), BTC breakout X query (disabled) |
+| ai      | Ars Technica RSS, Hacker News API, OpenAI blog RSS, OpenAI X account (disabled), AI launch X query (disabled) |
+| finance | Reuters business RSS, SEC EDGAR RSS, Federal Reserve RSS, Fed decision X query (disabled) |
 | economy | BLS RSS, Federal Reserve FRED API, Reuters economy RSS |
 | health  | WHO RSS, CDC RSS, Reuters health RSS |
-| energy  | IEA RSS, EIA news RSS, Reuters energy RSS |
+| energy  | IEA RSS, EIA news RSS, Reuters energy RSS, IEA X account (disabled) |
 
 Machine-readable source configs for these starter sets are in `config/sources/`.

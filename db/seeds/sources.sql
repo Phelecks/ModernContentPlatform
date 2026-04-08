@@ -70,3 +70,54 @@ VALUES
   ('iea-news-rss', 'IEA News RSS', 'energy', 'rss', 'T1', 90, 90, 'https://www.iea.org/news.xml', 1, 30, 'poll', NULL),
   ('eia-news-rss', 'EIA News RSS', 'energy', 'rss', 'T1', 90, 90, 'https://www.eia.gov/rss/todayinenergy.xml', 1, 30, 'poll', NULL),
   ('reuters-energy-rss', 'Reuters General News RSS', 'energy', 'rss', 'T2', 75, 70, 'https://feeds.reuters.com/reuters/companyNews', 1, 15, 'poll', '{"notes":"Generic Reuters companyNews feed; replace with a topic-specific energy feed when available"}');
+
+-- ============================================================
+-- X (Twitter) sources — account monitoring
+-- Trust tier T4 (Signal / Social), trust_score 25.
+-- Severity caps per topic are enforced in module 06 (alert decision).
+-- metadata_json carries x_user_id and monitoring type.
+-- ============================================================
+
+-- Crypto X accounts
+INSERT OR IGNORE INTO sources
+  (source_slug, source_name, topic_slug, source_type, trust_tier, trust_score, priority_weight, url, is_active, poll_interval_minutes, ingestion_method, metadata_json)
+VALUES
+  ('x-account-whale-alert', 'Whale Alert (X)', 'crypto', 'x_account', 'T4', 25, 40, 'https://x.com/whale_alert', 0, 5, 'poll', '{"x_user_id":"whale_alert","monitor_type":"account"}'),
+  ('x-account-cz-binance', 'CZ Binance (X)', 'crypto', 'x_account', 'T4', 25, 35, 'https://x.com/caborea', 0, 10, 'poll', '{"x_user_id":"caborea","monitor_type":"account"}');
+
+-- AI X accounts
+INSERT OR IGNORE INTO sources
+  (source_slug, source_name, topic_slug, source_type, trust_tier, trust_score, priority_weight, url, is_active, poll_interval_minutes, ingestion_method, metadata_json)
+VALUES
+  ('x-account-openai', 'OpenAI (X)', 'ai', 'x_account', 'T4', 25, 40, 'https://x.com/OpenAI', 0, 10, 'poll', '{"x_user_id":"OpenAI","monitor_type":"account"}'),
+  ('x-account-anthropic', 'Anthropic (X)', 'ai', 'x_account', 'T4', 25, 35, 'https://x.com/AnthropicAI', 0, 10, 'poll', '{"x_user_id":"AnthropicAI","monitor_type":"account"}');
+
+-- Energy X accounts
+INSERT OR IGNORE INTO sources
+  (source_slug, source_name, topic_slug, source_type, trust_tier, trust_score, priority_weight, url, is_active, poll_interval_minutes, ingestion_method, metadata_json)
+VALUES
+  ('x-account-iaborea', 'IEA (X)', 'energy', 'x_account', 'T4', 25, 30, 'https://x.com/IEA', 0, 15, 'poll', '{"x_user_id":"IEA","monitor_type":"account"}');
+
+-- ============================================================
+-- X (Twitter) sources — keyword/hashtag query monitoring
+-- Uses X recent search API to find posts matching queries.
+-- metadata_json carries search_query and monitor_type.
+-- ============================================================
+
+-- Crypto X queries
+INSERT OR IGNORE INTO sources
+  (source_slug, source_name, topic_slug, source_type, trust_tier, trust_score, priority_weight, url, is_active, poll_interval_minutes, ingestion_method, metadata_json)
+VALUES
+  ('x-query-btc-breakout', 'X Search: BTC Breakout', 'crypto', 'x_query', 'T4', 25, 30, 'https://api.twitter.com/2/tweets/search/recent', 0, 10, 'poll', '{"search_query":"(#Bitcoin OR #BTC) (breakout OR ATH OR crash) -is:retweet lang:en","monitor_type":"query","max_results":20}');
+
+-- AI X queries
+INSERT OR IGNORE INTO sources
+  (source_slug, source_name, topic_slug, source_type, trust_tier, trust_score, priority_weight, url, is_active, poll_interval_minutes, ingestion_method, metadata_json)
+VALUES
+  ('x-query-ai-launch', 'X Search: AI Model Launch', 'ai', 'x_query', 'T4', 25, 30, 'https://api.twitter.com/2/tweets/search/recent', 0, 10, 'poll', '{"search_query":"(#GPT OR #LLM OR #AI) (launched OR released OR announced) -is:retweet lang:en","monitor_type":"query","max_results":20}');
+
+-- Finance X queries
+INSERT OR IGNORE INTO sources
+  (source_slug, source_name, topic_slug, source_type, trust_tier, trust_score, priority_weight, url, is_active, poll_interval_minutes, ingestion_method, metadata_json)
+VALUES
+  ('x-query-fed-decision', 'X Search: Fed Decision', 'finance', 'x_query', 'T4', 25, 20, 'https://api.twitter.com/2/tweets/search/recent', 0, 15, 'poll', '{"search_query":"(Federal Reserve OR #FOMC) (rate OR decision OR cut OR hike) -is:retweet lang:en","monitor_type":"query","max_results":10}');

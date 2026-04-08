@@ -21,7 +21,7 @@ Schedule → Ingestion → Normalization → Deduplication → Clustering
 |------|--------|---------|
 | `00_local_alert_smoke_test.json` | Smoke Test | **Local dev only.** Manual trigger, mock payload, D1 write + read-back verify. No external dependencies. |
 | `orchestrator.json` | Orchestrator | Schedule trigger + module chain |
-| `01_source_ingestion.json` | 01 | Fetch raw items from RSS and API sources |
+| `01_source_ingestion.json` | 01 | Fetch raw items from RSS, API, and X sources |
 | `02_normalization.json` | 02 | Normalize to internal format, compute item_id |
 | `03_deduplication.json` | 03 | Drop items already in D1 (last 24 h) |
 | `04_clustering.json` | 04 | Keyword-based event clustering |
@@ -95,6 +95,31 @@ When empty or omitted, the default public RSS sources are used.
 ]
 ```
 
+### X source configuration
+
+X sources use `type: "x_account"` or `type: "x_query"` and carry source-specific
+metadata in `metadata_json`:
+
+```json
+[
+  {
+    "name": "Whale Alert (X)",
+    "type": "x_account",
+    "url": "https://x.com/whale_alert",
+    "metadata_json": "{\"x_user_id\":\"whale_alert\",\"monitor_type\":\"account\"}"
+  },
+  {
+    "name": "X Search: BTC Breakout",
+    "type": "x_query",
+    "url": "https://api.twitter.com/2/tweets/search/recent",
+    "metadata_json": "{\"search_query\":\"(#Bitcoin OR #BTC) (breakout OR ATH) -is:retweet lang:en\",\"monitor_type\":\"query\",\"max_results\":20}"
+  }
+]
+```
+
+X sources require an n8n HTTP Header Auth credential named "X Bearer Token"
+with a valid X API v2 bearer token. See `config/sources/README.md` for details.
+
 ## Required n8n credentials
 
 | Credential name | Type | Used by |
@@ -102,6 +127,7 @@ When empty or omitted, the default public RSS sources are used.
 | `CloudflareD1Api` | HTTP Header Auth | Modules 03, 07, 08, 09 |
 | `OpenAiApi` | OpenAI API | Module 05 |
 | `TelegramBotApi` | Telegram Bot API | Modules 08, shared notifier |
+| `X Bearer Token` | HTTP Header Auth | Module 01 (X sources only) |
 
 For `CloudflareD1Api` set the header:
 - Header name: `Authorization`
@@ -114,6 +140,7 @@ The API token needs the **D1:Edit** permission for the target database.
 | Failure point | Retries | Back-off |
 |--------------|---------|---------|
 | Source HTTP fetch | 3 | 2 s between attempts |
+| X API fetch | 3 | 5 s between attempts |
 | D1 REST write | 3 | 2 s between attempts |
 | AI API call | 3 | 5 s between attempts |
 | Telegram send | 3 | 3 s between attempts |
