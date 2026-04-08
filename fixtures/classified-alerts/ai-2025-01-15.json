@@ -1,0 +1,50 @@
+[
+  {
+    "item_id": "a9b8c7d6e5f40312837a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5",
+    "topic_slug": "ai",
+    "secondary_topics": ["technology"],
+    "headline": "Major AI lab releases 70B open-weight model under permissive licence",
+    "summary_text": "A prominent AI research organisation released a 70-billion parameter language model under an Apache 2.0 licence, enabling unrestricted commercial use and drawing immediate interest from enterprise developers.",
+    "source_url": "https://example.com/ai/open-weight-70b",
+    "source_name": "AIInsider",
+    "severity_score": 45,
+    "importance_score": 78,
+    "confidence_score": 92,
+    "send_alert": true,
+    "alert_reason": "A major open-weight model release is a significant milestone for the AI audience.",
+    "event_at": "2025-01-15T10:00:00Z",
+    "cluster_label": "Open-Source Model Release"
+  },
+  {
+    "item_id": "b8c7d6e5f4a30211726a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5",
+    "topic_slug": "ai",
+    "secondary_topics": [],
+    "headline": "Community benchmarks show new model rivals GPT-4 on coding tasks",
+    "summary_text": "Within hours of release, community members published benchmark comparisons showing the new open-weight model matching or exceeding proprietary models on HumanEval and MBPP coding benchmarks.",
+    "source_url": "https://example.com/ai/benchmark-results",
+    "source_name": "HuggingFace Blog",
+    "severity_score": 35,
+    "importance_score": 70,
+    "confidence_score": 80,
+    "send_alert": false,
+    "alert_reason": "Follow-on benchmarking is informative but covered by the model release alert.",
+    "event_at": "2025-01-15T13:30:00Z",
+    "cluster_label": "Open-Source Model Release"
+  },
+  {
+    "item_id": "c7d6e5f4a3b20110615a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5",
+    "topic_slug": "ai",
+    "secondary_topics": ["finance"],
+    "headline": "Shares of closed AI model companies dip on open-source competition fears",
+    "summary_text": "Publicly traded companies offering proprietary AI APIs saw their share prices slip 2–4% as investors weighed the competitive implications of a powerful freely available model entering the market.",
+    "source_url": "https://example.com/ai/ai-stocks-open-source",
+    "source_name": "TechCrunch",
+    "severity_score": 50,
+    "importance_score": 65,
+    "confidence_score": 75,
+    "send_alert": false,
+    "alert_reason": "Market reaction is notable but below alert threshold; captured in the broader cluster.",
+    "event_at": "2025-01-15T17:00:00Z",
+    "cluster_label": "Open-Source Model Release"
+  }
+]
