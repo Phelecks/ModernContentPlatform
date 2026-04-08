@@ -258,6 +258,89 @@ export async function createWorkflowLog(db, {
 }
 
 /**
+ * Insert a new source into the source registry.
+ *
+ * @param {D1Database} db
+ * @param {{ source_slug: string, source_name: string, topic_slug: string, source_type: string, trust_tier?: string, trust_score?: number, priority_weight?: number, url?: string|null, is_active?: number, poll_interval_minutes?: number, ingestion_method?: string, metadata_json?: string|null }} params
+ * @returns {Promise<{ id: number }>}
+ */
+export async function createSource(db, {
+  source_slug, source_name, topic_slug, source_type,
+  trust_tier = 'T3', trust_score = 50, priority_weight = 50,
+  url = null, is_active = 1, poll_interval_minutes = 15,
+  ingestion_method = 'poll', metadata_json = null
+}) {
+  const sql = `
+    INSERT INTO sources
+      (source_slug, source_name, topic_slug, source_type,
+       trust_tier, trust_score, priority_weight, url,
+       is_active, poll_interval_minutes, ingestion_method, metadata_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    RETURNING id`
+
+  const row = await db.prepare(sql)
+    .bind(source_slug, source_name, topic_slug, source_type,
+      trust_tier, trust_score, priority_weight, url,
+      is_active, poll_interval_minutes, ingestion_method, metadata_json)
+    .first()
+
+  if (!row || row.id == null) {
+    throw new Error('Failed to create source: no id returned from D1')
+  }
+
+  return { id: row.id }
+}
+
+/**
+ * Update an existing source in the registry.
+ *
+ * Only updates the fields that are explicitly provided (using hasOwnProperty).
+ * This allows callers to set nullable fields (url, metadata_json) to null.
+ * Always refreshes updated_at.
+ *
+ * @param {D1Database} db
+ * @param {{ id: number, source_name?: string, trust_tier?: string, trust_score?: number, priority_weight?: number, url?: string|null, is_active?: number, poll_interval_minutes?: number, ingestion_method?: string, metadata_json?: string|null }} params
+ * @returns {Promise<{ success: boolean }>}
+ */
+export async function updateSource(db, params) {
+  const { id, ...updates } = params
+  const fields = [
+    'source_name',
+    'trust_tier',
+    'trust_score',
+    'priority_weight',
+    'url',
+    'is_active',
+    'poll_interval_minutes',
+    'ingestion_method',
+    'metadata_json'
+  ]
+
+  const setClauses = []
+  const bindValues = []
+
+  for (const field of fields) {
+    if (Object.prototype.hasOwnProperty.call(updates, field)) {
+      setClauses.push(`${field} = ?`)
+      bindValues.push(updates[field])
+    }
+  }
+
+  setClauses.push(`updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')`)
+
+  const sql = `
+    UPDATE sources SET
+      ${setClauses.join(',\n      ')}
+    WHERE id = ?`
+
+  const result = await db.prepare(sql)
+    .bind(...bindValues, id)
+    .run()
+
+  return { success: result.success ?? true }
+}
+
+/**
  * Update an existing publish_jobs row.
  *
  * Sets started_at when transitioning to 'running', and sets

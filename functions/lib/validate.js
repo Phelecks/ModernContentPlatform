@@ -14,6 +14,9 @@ const VALID_TOPICS = ['crypto', 'finance', 'economy', 'health', 'ai', 'energy', 
 const VALID_PAGE_STATES = ['pending', 'ready', 'published', 'error']
 const VALID_JOB_STATUSES = ['pending', 'running', 'success', 'failed', 'retrying']
 const VALID_TRIGGERS = ['schedule', 'manual', 'retry']
+const VALID_SOURCE_TYPES = ['rss', 'api', 'social', 'webhook']
+const VALID_TRUST_TIERS = ['T1', 'T2', 'T3', 'T4']
+const VALID_INGESTION_METHODS = ['poll', 'push', 'manual']
 
 function ok(data) { return { valid: true, data } }
 function fail(error) { return { valid: false, error } }
@@ -335,5 +338,96 @@ export function validatePublishJobPayload(body) {
     triggered_by: triggered_by ?? null,
     workflow_run_id: workflow_run_id ?? null,
     error_message: error_message ?? null
+  })
+}
+
+const SOURCE_ALLOWED_KEYS = [
+  'source_slug', 'source_name', 'topic_slug', 'source_type',
+  'trust_tier', 'trust_score', 'priority_weight', 'url',
+  'is_active', 'poll_interval_minutes', 'ingestion_method', 'metadata_json'
+]
+
+/**
+ * Validate a source slug: 1-100 chars, lowercase letters and digits,
+ * with optional internal hyphens.
+ * @param {string} v
+ * @returns {boolean}
+ */
+function isValidSourceSlug(v) {
+  return typeof v === 'string' && /^(?:[a-z0-9]|[a-z0-9][a-z0-9-]*[a-z0-9])$/.test(v) && v.length <= 100
+}
+
+/**
+ * Validate a source registry write payload.
+ *
+ * Required: source_slug, source_name, topic_slug, source_type
+ * Optional: trust_tier, trust_score, priority_weight, url,
+ *   is_active, poll_interval_minutes, ingestion_method, metadata_json
+ */
+export function validateSourcePayload(body) {
+  if (!body || typeof body !== 'object') return fail('Request body must be a JSON object')
+
+  const unknownError = checkUnknownKeys(body, SOURCE_ALLOWED_KEYS)
+  if (unknownError) return fail(unknownError)
+
+  const {
+    source_slug, source_name, topic_slug, source_type,
+    trust_tier, trust_score, priority_weight, url,
+    is_active, poll_interval_minutes, ingestion_method, metadata_json
+  } = body
+
+  if (!isValidSourceSlug(source_slug)) {
+    return fail('source_slug is required and must contain only lowercase letters, digits, and hyphens (max 100 chars)')
+  }
+  if (!isNonEmptyString(source_name, 200)) {
+    return fail('source_name is required and must be a non-empty string (max 200 chars)')
+  }
+  if (!isValidTopicSlug(topic_slug) || !VALID_TOPICS.includes(topic_slug)) {
+    return fail(`Invalid topic_slug: must be one of ${VALID_TOPICS.join(', ')}`)
+  }
+  if (!VALID_SOURCE_TYPES.includes(source_type)) {
+    return fail(`Invalid source_type: must be one of ${VALID_SOURCE_TYPES.join(', ')}`)
+  }
+  if (trust_tier !== undefined && !VALID_TRUST_TIERS.includes(trust_tier)) {
+    return fail(`Invalid trust_tier: must be one of ${VALID_TRUST_TIERS.join(', ')}`)
+  }
+  if (trust_score !== undefined && !isScore(trust_score)) {
+    return fail('trust_score must be an integer between 0 and 100')
+  }
+  if (priority_weight !== undefined && !isScore(priority_weight)) {
+    return fail('priority_weight must be an integer between 0 and 100')
+  }
+  if (url !== undefined && url !== null) {
+    if (typeof url !== 'string') return fail('url must be a string or null')
+    if (!isValidUrl(url)) return fail('url must be a valid HTTP or HTTPS URL')
+  }
+  if (is_active !== undefined && is_active !== 0 && is_active !== 1) {
+    return fail('is_active must be 0 or 1')
+  }
+  if (poll_interval_minutes !== undefined) {
+    if (!Number.isInteger(poll_interval_minutes) || poll_interval_minutes < 1 || poll_interval_minutes > 1440) {
+      return fail('poll_interval_minutes must be an integer between 1 and 1440')
+    }
+  }
+  if (ingestion_method !== undefined && !VALID_INGESTION_METHODS.includes(ingestion_method)) {
+    return fail(`Invalid ingestion_method: must be one of ${VALID_INGESTION_METHODS.join(', ')}`)
+  }
+  if (!isOptionalString(metadata_json)) {
+    return fail('metadata_json must be a string or null')
+  }
+
+  return ok({
+    source_slug,
+    source_name,
+    topic_slug,
+    source_type,
+    trust_tier: trust_tier ?? 'T3',
+    trust_score: trust_score ?? 50,
+    priority_weight: priority_weight ?? 50,
+    url: url ?? null,
+    is_active: is_active ?? 1,
+    poll_interval_minutes: poll_interval_minutes ?? 15,
+    ingestion_method: ingestion_method ?? 'poll',
+    metadata_json: metadata_json ?? null
   })
 }
