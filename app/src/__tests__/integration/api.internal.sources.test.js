@@ -201,4 +201,26 @@ describe('POST /api/internal/sources', () => {
     const res = await onRequestPost(ctx)
     expect(res.status).toBe(201)
   })
+
+  it('returns 409 when creating a source with a duplicate source_slug', async () => {
+    const payload = validPayload({ source_slug: 'duplicate-slug' })
+    const ctx1 = makeCtx(db, payload, { 'X-Write-Key': WRITE_KEY })
+    const res1 = await onRequestPost(ctx1)
+    expect(res1.status).toBe(201)
+
+    const ctx2 = makeCtx(db, validPayload({ source_slug: 'duplicate-slug', source_name: 'Another Name' }), { 'X-Write-Key': WRITE_KEY })
+    const res2 = await onRequestPost(ctx2)
+    expect(res2.status).toBe(409)
+    const body = await res2.json()
+    expect(body.error).toMatch(/already exists/)
+  })
+
+  it('accepts a single-character source_slug', async () => {
+    const payload = validPayload({ source_slug: 'x' })
+    const ctx = makeCtx(db, payload, { 'X-Write-Key': WRITE_KEY })
+    const res = await onRequestPost(ctx)
+    expect(res.status).toBe(201)
+    const body = await res.json()
+    expect(body.source_slug).toBe('x')
+  })
 })

@@ -250,6 +250,7 @@ class MockStatement {
    * Validates target table against known schema tables, parses column values,
    * inserts the row into in-memory state, auto-increments an ID,
    * and returns it when the SQL contains a RETURNING clause.
+   * Enforces UNIQUE constraints for tables that define them.
    */
   _runInsert() {
     const m = this._sql.match(/\bINTO\s+(\w+)/i)
@@ -272,6 +273,21 @@ class MockStatement {
       for (const col of columns) {
         if (paramIdx < this._params.length) {
           row[col] = this._params[paramIdx++]
+        }
+      }
+    }
+
+    // Enforce UNIQUE constraints per table (skip for ON CONFLICT / upsert patterns)
+    const hasOnConflict = /\bON\s+CONFLICT\b/i.test(this._sql)
+    const uniqueKeys = UNIQUE_CONSTRAINTS[tableName]
+    if (!hasOnConflict && uniqueKeys && Array.isArray(this._tables[tableName])) {
+      for (const uk of uniqueKeys) {
+        const cols = Array.isArray(uk) ? uk : [uk]
+        const duplicate = this._tables[tableName].some(existing =>
+          cols.every(col => existing[col] != null && existing[col] === row[col])
+        )
+        if (duplicate) {
+          throw new Error(`UNIQUE constraint failed: ${tableName}.${cols.join(', ')}`)
         }
       }
     }
@@ -405,6 +421,15 @@ class MockStatement {
 const KNOWN_TABLES = new Set([
   'topics', 'alerts', 'event_clusters', 'daily_status', 'publish_jobs', 'workflow_logs', 'sources'
 ])
+
+// UNIQUE constraints per table (mirrors D1 schema constraints).
+// Each entry is an array of constraint definitions: a single column name string
+// for single-column constraints, or an array of column names for compound constraints.
+const UNIQUE_CONSTRAINTS = {
+  topics: ['topic_slug'],
+  sources: ['source_slug'],
+  daily_status: [['topic_slug', 'date_key']]
+}
 
 export class MockD1Database {
   constructor() {

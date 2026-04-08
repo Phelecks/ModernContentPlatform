@@ -52,6 +52,9 @@ export async function onRequestPost(ctx) {
       topic_slug: data.topic_slug
     }, 201)
   } catch (err) {
+    if (err.message && err.message.includes('UNIQUE constraint failed')) {
+      return errorResponse(`Source with slug '${data.source_slug}' already exists`, 409)
+    }
     console.error('[POST /api/internal/sources] Write failed:', err)
     return errorResponse(`Source write failed: ${err.message}`)
   }

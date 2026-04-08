@@ -294,37 +294,47 @@ export async function createSource(db, {
 /**
  * Update an existing source in the registry.
  *
- * Only updates the fields that are provided. Always refreshes updated_at.
+ * Only updates the fields that are explicitly provided (using hasOwnProperty).
+ * This allows callers to set nullable fields (url, metadata_json) to null.
+ * Always refreshes updated_at.
  *
  * @param {D1Database} db
  * @param {{ id: number, source_name?: string, trust_tier?: string, trust_score?: number, priority_weight?: number, url?: string|null, is_active?: number, poll_interval_minutes?: number, ingestion_method?: string, metadata_json?: string|null }} params
  * @returns {Promise<{ success: boolean }>}
  */
-export async function updateSource(db, {
-  id, source_name, trust_tier, trust_score, priority_weight,
-  url, is_active, poll_interval_minutes, ingestion_method, metadata_json
-}) {
+export async function updateSource(db, params) {
+  const { id, ...updates } = params
+  const fields = [
+    'source_name',
+    'trust_tier',
+    'trust_score',
+    'priority_weight',
+    'url',
+    'is_active',
+    'poll_interval_minutes',
+    'ingestion_method',
+    'metadata_json'
+  ]
+
+  const setClauses = []
+  const bindValues = []
+
+  for (const field of fields) {
+    if (Object.prototype.hasOwnProperty.call(updates, field)) {
+      setClauses.push(`${field} = ?`)
+      bindValues.push(updates[field])
+    }
+  }
+
+  setClauses.push(`updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')`)
+
   const sql = `
     UPDATE sources SET
-      source_name           = COALESCE(?, source_name),
-      trust_tier            = COALESCE(?, trust_tier),
-      trust_score           = COALESCE(?, trust_score),
-      priority_weight       = COALESCE(?, priority_weight),
-      url                   = COALESCE(?, url),
-      is_active             = COALESCE(?, is_active),
-      poll_interval_minutes = COALESCE(?, poll_interval_minutes),
-      ingestion_method      = COALESCE(?, ingestion_method),
-      metadata_json         = COALESCE(?, metadata_json),
-      updated_at            = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+      ${setClauses.join(',\n      ')}
     WHERE id = ?`
 
   const result = await db.prepare(sql)
-    .bind(
-      source_name ?? null, trust_tier ?? null, trust_score ?? null,
-      priority_weight ?? null, url ?? null, is_active ?? null,
-      poll_interval_minutes ?? null, ingestion_method ?? null,
-      metadata_json ?? null, id
-    )
+    .bind(...bindValues, id)
     .run()
 
   return { success: result.success ?? true }

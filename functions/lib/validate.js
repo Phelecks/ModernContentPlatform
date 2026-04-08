@@ -348,12 +348,13 @@ const SOURCE_ALLOWED_KEYS = [
 ]
 
 /**
- * Validate a source slug: lowercase letters, digits, and hyphens only.
+ * Validate a source slug: 1-100 chars, lowercase letters and digits,
+ * with optional internal hyphens.
  * @param {string} v
  * @returns {boolean}
  */
 function isValidSourceSlug(v) {
-  return typeof v === 'string' && /^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(v) && v.length <= 100
+  return typeof v === 'string' && /^(?:[a-z0-9]|[a-z0-9][a-z0-9-]*[a-z0-9])$/.test(v) && v.length <= 100
 }
 
 /**
