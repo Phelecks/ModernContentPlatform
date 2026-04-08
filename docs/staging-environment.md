@@ -185,8 +185,11 @@ isolation and schedule independence require separate instances.
 
 #### Staging n8n configuration
 
-The staging n8n instance should use a hardened deployment (not the local-development
-`docker-compose.yml`). Configure it with staging-specific environment variables:
+The staging n8n instance should use a hardened deployment — not the local-development
+`docker-compose.yml`. A hardened deployment means running n8n behind a reverse proxy
+(e.g. Nginx, Caddy, or Traefik) with TLS enabled via a Cloudflare origin certificate,
+authentication enforced, and access restricted to private networking or VPN.
+Configure it with staging-specific environment variables:
 
 | Variable | Staging value |
 |---|---|
@@ -503,12 +506,10 @@ Before promoting changes from staging to production, verify the following checkl
    - Create a staging Discord channel and webhook.
 
 8. **Deploy a staging n8n instance:**
-   - Use a hardened staging deployment for n8n rather than the local-development
-     `n8n/docker-compose.yml`.
-   - The local compose setup is for local development only and must not be
-     internet-exposed on a staging server. If it is used temporarily for internal
-     testing, keep it behind private networking or VPN access and protect it with
-     a Cloudflare origin SSL certificate and authentication.
+   - Use a hardened staging deployment for n8n: run behind a reverse proxy
+     (e.g. Nginx, Caddy, or Traefik) with TLS, authentication, and restricted
+     network access. Do not use the local-development `n8n/docker-compose.yml`
+     as-is on an internet-facing server.
    - To configure TLS for the staging n8n instance, download a Cloudflare origin
      certificate from the Cloudflare dashboard (SSL/TLS → Origin Server) and use
      it in the n8n reverse proxy or Docker configuration. This provides encrypted
