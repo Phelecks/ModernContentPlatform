@@ -36,7 +36,8 @@ but never loosen this baseline.
 
 ### Global rules for T4 (signal / social) sources
 
-- A T4 item alone **must not** produce a `severity_score` above 6.0.
+- A T4 item alone **must not** produce a `severity_score` above 60 (on the
+  0–100 scale used by the intraday pipeline contracts).
 - A T4 item may raise an alert at lower severity to flag a potential event.
 - If a T4 signal is confirmed by a T1–T3 source within one ingestion cycle
   (≤ 15 minutes), the alert severity can be re-evaluated against the confirming
@@ -66,7 +67,7 @@ project announcements, so they are allowed with a reduced severity cap.
 
 **Trust rules:**
 - T1–T3 sources may trigger alerts at any severity.
-- T4 social sources are **permitted** with a severity cap of **6.0**.
+- T4 social sources are **permitted** with a severity cap of **60**.
 - On-chain data APIs are treated as T1 equivalents for price and volume signals.
 - Exchange announcements via official RSS or webhook are treated as T2.
 
@@ -97,7 +98,7 @@ useful for tracking researcher commentary but must be treated as T4.
 - Official company blog RSS feeds are treated as T2 (not T1) because they are
   promotional; they must be confirmed against a wire source before maximum
   severity is assigned.
-- T4 social sources are **permitted** with a severity cap of **5.0**.
+- T4 social sources are **permitted** with a severity cap of **50**.
 - Research pre-prints (arXiv) are T3; claims must not be amplified as confirmed
   results.
 
@@ -126,7 +127,7 @@ alerts alone.
 **Trust rules:**
 - T1–T3 sources may trigger alerts at any severity.
 - T4 social sources are **not** permitted to trigger alerts independently.
-  They may only be used to raise a low-priority watch flag (severity ≤ 3.0)
+  They may only be used to raise a low-priority watch flag (severity ≤ 30)
   that must be confirmed by a T1–T3 source before escalation.
 - Earnings, Fed decisions, and regulatory filings are exclusively T1/T2 events.
 
@@ -157,7 +158,7 @@ Social sources add no value and high risk for economic alerts.
 - T4 social sources are **excluded** entirely from economy ingestion.
 - AI classification must flag any alert sourced from T3+ with reduced
   confidence; the alert decision module should apply a higher threshold
-  (importance ≥ 7.5) for T3-only economy items.
+  (importance ≥ 75) for T3-only economy items.
 
 **v1 scope:** Start with BLS RSS + Federal Reserve FRED API + Reuters economy
 RSS. Add international data APIs (Eurostat, IMF) in a follow-on iteration.
@@ -180,8 +181,8 @@ established newswires. Social sources are explicitly excluded.
 | 4 | `rss` — specialist news | STAT News, MedPage Today |
 
 **Trust rules:**
-- Only T1 and T2 sources may trigger health alerts at severity ≥ 7.0.
-- T3 wire and T4 specialist news may trigger alerts at severity < 7.0.
+- Only T1 and T2 sources may trigger health alerts at severity ≥ 70.
+- T2 wire and T3 specialist news may trigger alerts at severity < 70.
 - T4 social sources are **excluded** entirely from health ingestion.
 - The AI classification prompt for health must be instructed to cite source
   tier and to flag speculative or unverified claims.
@@ -214,7 +215,7 @@ must be capped.
 **Trust rules:**
 - T1–T3 sources may trigger alerts at any severity.
 - T4 social sources are **permitted** for confirmation only, with a severity
-  cap of **5.0**.
+  cap of **50**.
 - OPEC decisions and IEA reports are T1; the AI classification must assign
   high importance to these events.
 - Geopolitical disruption signals sourced from T4 must be held at low severity
@@ -229,12 +230,12 @@ price APIs in a follow-on iteration.
 
 | Topic    | Official (T1) | Wire (T2) | Specialist (T3) | Social / Signal (T4) | T4 severity cap |
 |----------|:---:|:---:|:---:|:---:|:---:|
-| crypto   | ✅  | ✅  | ✅  | ✅ (capped)  | 6.0 |
-| ai       | ✅  | ✅  | ✅  | ✅ (capped)  | 5.0 |
-| finance  | ✅  | ✅  | ✅  | ⚠️ watch-only | 3.0 |
+| crypto   | ✅  | ✅  | ✅  | ✅ (capped)  | 60 |
+| ai       | ✅  | ✅  | ✅  | ✅ (capped)  | 50 |
+| finance  | ✅  | ✅  | ✅  | ⚠️ watch-only | 30 |
 | economy  | ✅  | ✅  | ⚠️ context only | ❌ excluded | — |
 | health   | ✅  | ✅  | ✅  | ❌ excluded | — |
-| energy   | ✅  | ✅  | ✅  | ✅ (capped)  | 5.0 |
+| energy   | ✅  | ✅  | ✅  | ✅ (capped)  | 50 |
 
 Legend: ✅ = may trigger alerts  ⚠️ = restricted use  ❌ = excluded from ingestion
 
@@ -250,23 +251,31 @@ merged into a single array when configuring the variable.
 
 ### Module 05 — AI Classification
 
-The classification prompt must receive `source_type` and must be instructed to:
-- Note the source tier (T1–T4) in its reasoning.
-- Reduce `confidence_score` for T4 items.
-- Flag health or economy items sourced below T2 for manual review.
+Module 05 currently receives `source_name` for classification, but it does not
+yet receive or use `source_type` or source tier metadata such as `trust_tier`.
+As a result, the classification prompt cannot currently:
+- note the source tier (T1–T4) in its reasoning;
+- reduce `confidence_score` based on tier alone; or
+- flag health or economy items for manual review based on tier alone.
+
+Tier-aware classification should be enabled in a later workflow update by
+propagating `source_type` and `trust_tier` from Modules 01/02 into Module 05.
 
 ### Module 06 — Alert Decision
 
-The alert decision module applies topic-specific severity thresholds:
+Module 06 currently applies only global thresholds (`ALERT_IMPORTANCE_THRESHOLD`,
+`ALERT_SEVERITY_THRESHOLD`, `ALERT_CONFIDENCE_THRESHOLD`) and has no per-topic
+or per-tier logic. The topic-specific policy below is **planned** and should be
+implemented in a future workflow update:
 
 | Topic   | T4 allowed | T4 max severity | Minimum importance for T3-only (economy) |
 |---------|:---:|:---:|:---:|
-| crypto  | Yes | 6.0 | — |
-| ai      | Yes | 5.0 | — |
-| finance | Watch only | 3.0 | — |
-| economy | No  | —   | 7.5 |
+| crypto  | Yes | 60  | — |
+| ai      | Yes | 50  | — |
+| finance | Watch only | 30  | — |
+| economy | No  | —   | 75 |
 | health  | No  | —   | — |
-| energy  | Yes | 5.0 | — |
+| energy  | Yes | 50  | — |
 
 ---
 

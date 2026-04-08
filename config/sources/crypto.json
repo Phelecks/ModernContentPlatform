@@ -1,11 +1,11 @@
 [
   {
     "name": "CoinGecko API",
-    "type": "api",
+    "type": "placeholder",
     "url": "https://api.coingecko.com/api/v3/news",
     "topic_slug": "crypto",
     "trust_tier": "T1",
-    "notes": "Market data — treat as T1 equivalent for price/volume signals"
+    "notes": "Placeholder pending module 01 Parse API Items support for the CoinGecko response shape; do not enable as a live API source until parser mapping is added"
   },
   {
     "name": "CoinDesk RSS",

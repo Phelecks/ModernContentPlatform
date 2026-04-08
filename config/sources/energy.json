@@ -14,10 +14,11 @@
     "trust_tier": "T1"
   },
   {
-    "name": "Reuters Energy RSS",
+    "name": "Reuters General News RSS",
     "type": "rss",
     "url": "https://feeds.reuters.com/reuters/companyNews",
     "topic_slug": "energy",
-    "trust_tier": "T2"
+    "trust_tier": "T2",
+    "notes": "Generic Reuters companyNews feed; replace with a topic-specific energy feed when available"
   }
 ]
