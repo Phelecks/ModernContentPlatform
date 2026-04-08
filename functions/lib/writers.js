@@ -217,6 +217,47 @@ export async function createPublishJob(db, {
 }
 
 /**
+ * Insert a new workflow_logs row.
+ *
+ * Records a single execution event (failure, retry, completion, or info
+ * checkpoint) from any n8n workflow. topic_slug and date_key are optional
+ * and should only be set when the event is scoped to a specific topic/day.
+ *
+ * @param {D1Database} db
+ * @param {{ workflow_name: string, execution_id?: string|null, topic_slug?: string|null, date_key?: string|null, event_type?: string, module_name?: string|null, error_message?: string|null, error_details?: string|null, metadata_json?: string|null }} params
+ * @returns {Promise<{ id: number }>}
+ */
+export async function createWorkflowLog(db, {
+  workflow_name,
+  execution_id = null,
+  topic_slug = null,
+  date_key = null,
+  event_type = 'info',
+  module_name = null,
+  error_message = null,
+  error_details = null,
+  metadata_json = null
+}) {
+  const sql = `
+    INSERT INTO workflow_logs
+      (workflow_name, execution_id, topic_slug, date_key,
+       event_type, module_name, error_message, error_details, metadata_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    RETURNING id`
+
+  const row = await db.prepare(sql)
+    .bind(workflow_name, execution_id, topic_slug, date_key,
+      event_type, module_name, error_message, error_details, metadata_json)
+    .first()
+
+  if (!row || row.id == null) {
+    throw new Error('Failed to create workflow log: no id returned from D1')
+  }
+
+  return { id: row.id }
+}
+
+/**
  * Update an existing publish_jobs row.
  *
  * Sets started_at when transitioning to 'running', and sets

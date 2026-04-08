@@ -92,6 +92,31 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $vars.PAGES_BASE_URL }}/api/internal/workflow-logs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-Write-Key", "value": "={{ $vars.WRITE_API_KEY }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  workflow_name: 'Daily — Orchestrator',\n  execution_id: $execution.id,\n  topic_slug: $json.topic_slug,\n  date_key: $json.date_key,\n  event_type: 'completed',\n  module_name: '10 Update D1 State',\n  metadata_json: JSON.stringify({\n    publish_job_id: $json.publish_job_id,\n    github_commit_sha: $json.github_commit_sha\n  })\n} }}",
+        "options": { "timeout": 10000 }
+      },
+      "id": "d1e2f3a4-0010-0010-0010-000000000006",
+      "name": "Write Completion Log",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1120, 300],
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000
     }
   ],
   "connections": {
@@ -116,6 +141,11 @@
     "Update publish_jobs in D1": {
       "main": [
         [{ "node": "Confirm D1 Writes", "type": "main", "index": 0 }]
+      ]
+    },
+    "Confirm D1 Writes": {
+      "main": [
+        [{ "node": "Write Completion Log", "type": "main", "index": 0 }]
       ]
     }
   },

@@ -207,6 +207,76 @@ export function validateDailyStatusPayload(body) {
   })
 }
 
+const VALID_EVENT_TYPES = ['info', 'warning', 'error', 'retry', 'completed']
+
+const WORKFLOW_LOG_ALLOWED_KEYS = [
+  'workflow_name', 'execution_id', 'topic_slug', 'date_key',
+  'event_type', 'module_name', 'error_message', 'error_details', 'metadata_json'
+]
+
+/**
+ * Validate a workflow_logs write payload.
+ *
+ * Required: workflow_name
+ * Optional: execution_id, topic_slug, date_key, event_type, module_name,
+ *   error_message, error_details, metadata_json
+ */
+export function validateWorkflowLogPayload(body) {
+  if (!body || typeof body !== 'object') return fail('Request body must be a JSON object')
+
+  const unknownError = checkUnknownKeys(body, WORKFLOW_LOG_ALLOWED_KEYS)
+  if (unknownError) return fail(unknownError)
+
+  const {
+    workflow_name, execution_id, topic_slug, date_key,
+    event_type, module_name, error_message, error_details, metadata_json
+  } = body
+
+  if (!isNonEmptyString(workflow_name, 200)) {
+    return fail('workflow_name is required and must be a non-empty string (max 200 chars)')
+  }
+  if (!isOptionalString(execution_id)) {
+    return fail('execution_id must be a string or null')
+  }
+  if (topic_slug !== undefined && topic_slug !== null) {
+    if (!isValidTopicSlug(topic_slug) || !VALID_TOPICS.includes(topic_slug)) {
+      return fail(`Invalid topic_slug: must be one of ${VALID_TOPICS.join(', ')}`)
+    }
+  }
+  if (date_key !== undefined && date_key !== null) {
+    if (!isValidDateKey(date_key)) {
+      return fail('Invalid date_key: expected YYYY-MM-DD format')
+    }
+  }
+  if (event_type !== undefined && !VALID_EVENT_TYPES.includes(event_type)) {
+    return fail(`Invalid event_type: must be one of ${VALID_EVENT_TYPES.join(', ')}`)
+  }
+  if (!isOptionalString(module_name, 200)) {
+    return fail('module_name must be a string (max 200 chars) or null')
+  }
+  if (!isOptionalString(error_message)) {
+    return fail('error_message must be a string or null')
+  }
+  if (!isOptionalString(error_details)) {
+    return fail('error_details must be a string or null')
+  }
+  if (!isOptionalString(metadata_json)) {
+    return fail('metadata_json must be a string or null')
+  }
+
+  return ok({
+    workflow_name,
+    execution_id: execution_id ?? null,
+    topic_slug: topic_slug ?? null,
+    date_key: date_key ?? null,
+    event_type: event_type ?? 'info',
+    module_name: module_name ?? null,
+    error_message: error_message ?? null,
+    error_details: error_details ?? null,
+    metadata_json: metadata_json ?? null
+  })
+}
+
 const PUBLISH_JOB_ALLOWED_KEYS = [
   'topic_slug', 'date_key', 'status', 'attempt', 'triggered_by',
   'workflow_run_id', 'error_message', 'id'
