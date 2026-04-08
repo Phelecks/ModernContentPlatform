@@ -1,0 +1,24 @@
+{
+  "headline": "Fed Minutes Signal No Q1 Rate Cuts, Sending Equities Lower and Dollar Higher",
+  "overview": "Financial markets on January 15 were dominated by the release of December FOMC meeting minutes, which showed Federal Reserve officials broadly agreed there was no urgency to cut interest rates in early 2025. The S&P 500 fell 1.2% in response, with rate-sensitive sectors leading the decline. The US dollar index climbed to a two-month high as traders repriced rate expectations, while EUR/USD dipped briefly below 1.09. Bond yields rose across the curve as the market reassessed the timeline for monetary easing.",
+  "key_events": [
+    {
+      "title": "FOMC Minutes Show No Urgency to Cut Rates",
+      "significance": "Confirmation that the Fed will not rush to cut rates shifts the interest rate outlook and directly affects equity valuations, bond yields, and currency markets.",
+      "importance_score": 90
+    },
+    {
+      "title": "S&P 500 Falls 1.2%",
+      "significance": "A broad-based equity decline driven by a clear macro catalyst reinforces the message that higher-for-longer rates remain a headwind for growth stocks and leveraged balance sheets.",
+      "importance_score": 80
+    },
+    {
+      "title": "US Dollar Index Hits Two-Month High",
+      "significance": "A stronger dollar affects multinational earnings, emerging market debt, and commodity prices, amplifying the downstream impact of the Fed signal across global markets.",
+      "importance_score": 72
+    }
+  ],
+  "market_context": "The Fed minutes triggered a classic risk-off response: equities fell, the dollar strengthened, and yields rose. The move was orderly, suggesting markets were adjusting expectations rather than panicking, but the direction was unambiguous — higher-for-longer rates remain the dominant near-term theme.",
+  "sentiment": "bearish",
+  "topic_score": 85
+}

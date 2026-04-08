@@ -1,0 +1,16 @@
+{
+  "source_id": "https://example.com/ai/open-weight-70b",
+  "source_name": "AIInsider",
+  "source_type": "rss",
+  "source_url": "https://example.com/ai/open-weight-70b",
+  "title": "Major AI lab releases 70B open-weight model under permissive licence",
+  "body": "A prominent AI research organisation released a 70-billion parameter language model under an Apache 2.0 licence, enabling unrestricted commercial use and drawing immediate interest from enterprise developers.",
+  "published_at": "2025-01-15T09:30:00Z",
+  "fetched_at": "2025-01-15T09:45:00Z",
+  "raw_json": {
+    "guid": "https://example.com/ai/open-weight-70b",
+    "link": "https://example.com/ai/open-weight-70b",
+    "pubDate": "Wed, 15 Jan 2025 09:30:00 +0000",
+    "category": ["AI", "Open Source", "LLM"]
+  }
+}
