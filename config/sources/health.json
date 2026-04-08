@@ -1,0 +1,23 @@
+[
+  {
+    "name": "WHO News RSS",
+    "type": "rss",
+    "url": "https://www.who.int/rss-feeds/news-english.xml",
+    "topic_slug": "health",
+    "trust_tier": "T1"
+  },
+  {
+    "name": "CDC Newsroom RSS",
+    "type": "rss",
+    "url": "https://tools.cdc.gov/api/v2/resources/media/403372.rss",
+    "topic_slug": "health",
+    "trust_tier": "T1"
+  },
+  {
+    "name": "Reuters Health RSS",
+    "type": "rss",
+    "url": "https://feeds.reuters.com/reuters/healthNews",
+    "topic_slug": "health",
+    "trust_tier": "T2"
+  }
+]

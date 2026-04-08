@@ -1,0 +1,23 @@
+[
+  {
+    "name": "Reuters Business RSS",
+    "type": "rss",
+    "url": "https://feeds.reuters.com/reuters/businessNews",
+    "topic_slug": "finance",
+    "trust_tier": "T2"
+  },
+  {
+    "name": "SEC EDGAR RSS",
+    "type": "rss",
+    "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&dateb=&owner=include&count=20&search_text=&output=atom",
+    "topic_slug": "finance",
+    "trust_tier": "T1"
+  },
+  {
+    "name": "Federal Reserve News RSS",
+    "type": "rss",
+    "url": "https://www.federalreserve.gov/feeds/press_all.xml",
+    "topic_slug": "finance",
+    "trust_tier": "T1"
+  }
+]

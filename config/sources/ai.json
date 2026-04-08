@@ -1,0 +1,32 @@
+[
+  {
+    "name": "Ars Technica RSS",
+    "type": "rss",
+    "url": "https://feeds.arstechnica.com/arstechnica/index",
+    "topic_slug": "ai",
+    "trust_tier": "T3"
+  },
+  {
+    "name": "Hacker News API",
+    "type": "api",
+    "url": "https://hacker-news.firebaseio.com/v0/topstories.json",
+    "topic_slug": "ai",
+    "trust_tier": "T4",
+    "notes": "Community signal — cap severity at 5.0"
+  },
+  {
+    "name": "OpenAI Blog RSS",
+    "type": "rss",
+    "url": "https://openai.com/blog/rss.xml",
+    "topic_slug": "ai",
+    "trust_tier": "T2",
+    "notes": "Official company blog — treat as T2; confirm high-severity items with wire"
+  },
+  {
+    "name": "MIT Technology Review RSS",
+    "type": "rss",
+    "url": "https://www.technologyreview.com/feed/",
+    "topic_slug": "ai",
+    "trust_tier": "T3"
+  }
+]

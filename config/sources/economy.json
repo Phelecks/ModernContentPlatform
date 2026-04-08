@@ -1,0 +1,25 @@
+[
+  {
+    "name": "BLS News RSS",
+    "type": "rss",
+    "url": "https://www.bls.gov/feed/bls_latest.rss",
+    "topic_slug": "economy",
+    "trust_tier": "T1"
+  },
+  {
+    "name": "Federal Reserve FRED API",
+    "type": "api",
+    "url": "https://api.stlouisfed.org/fred/releases/news?api_key=REPLACE_WITH_FRED_API_KEY&file_type=json",
+    "topic_slug": "economy",
+    "trust_tier": "T1",
+    "notes": "Operators must replace REPLACE_WITH_FRED_API_KEY with a real key before use; prefer workflow-level injection of the key in n8n"
+  },
+  {
+    "name": "Reuters General News RSS",
+    "type": "rss",
+    "url": "https://feeds.reuters.com/reuters/companyNews",
+    "topic_slug": "economy",
+    "trust_tier": "T2",
+    "notes": "Generic Reuters companyNews feed; replace with a topic-specific economy feed when available"
+  }
+]

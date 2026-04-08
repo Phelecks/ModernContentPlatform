@@ -1,0 +1,24 @@
+[
+  {
+    "name": "CoinGecko API",
+    "type": "placeholder",
+    "url": "https://api.coingecko.com/api/v3/news",
+    "topic_slug": "crypto",
+    "trust_tier": "T1",
+    "notes": "Placeholder pending module 01 Parse API Items support for the CoinGecko response shape; do not enable as a live API source until parser mapping is added"
+  },
+  {
+    "name": "CoinDesk RSS",
+    "type": "rss",
+    "url": "https://www.coindesk.com/arc/outboundfeeds/rss/",
+    "topic_slug": "crypto",
+    "trust_tier": "T3"
+  },
+  {
+    "name": "Reuters Crypto RSS",
+    "type": "rss",
+    "url": "https://feeds.reuters.com/reuters/technologyNews",
+    "topic_slug": "crypto",
+    "trust_tier": "T2"
+  }
+]
