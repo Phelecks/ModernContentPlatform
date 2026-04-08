@@ -14,7 +14,27 @@ Integration tests sit one level above unit tests. They verify that the full requ
 | Pages Function | `api.timeline.test.js` | `GET /api/timeline/:topicSlug/:dateKey` — alerts, pagination, cursor, validation |
 | Pages Function | `api.day-status.test.js` | `GET /api/day-status/:topicSlug/:dateKey` — status flags, pending/ready/published states |
 | Pages Function | `api.navigation.test.js` | `GET /api/navigation/:topicSlug/:dateKey` — prev/next date keys |
-| Vue page | `page.TopicDayPage.test.js` | TopicDayPage rendering — placeholder, summary, banner messages, error state, loading |
+| Pages Function (write) | `api.internal.alerts.test.js` | `POST /api/internal/alerts` — auth, payload validation, D1 writes |
+| Pages Function (write) | `api.internal.daily-status.test.js` | `POST /api/internal/daily-status` — auth, payload validation, upsert |
+| Pages Function (write) | `api.internal.publish-jobs.test.js` | `POST /api/internal/publish-jobs` — auth, create, update, lifecycle |
+| Vue page | `page.TopicDayPage.test.js` | TopicDayPage — placeholder, summary, banner messages, error state, loading |
+| Vue page | `page.TopicDayPage.extended.test.js` | TopicDayPage — video embed, navigation, load-more pagination, full published state |
+| Vue page | `page.TopicPage.test.js` | TopicPage — redirect to today's day page, error state |
+| Vue page | `page.HomePage.test.js` | HomePage — topic card list, error state, loading |
+| Vue component | `components/AlertTimeline.test.js` | AlertTimeline — all states: loading, error, empty, populated, load-more |
+| Vue component | `components/AlertTimelineItem.test.js` | AlertTimelineItem — rendering, severity levels, time display, optional fields |
+| Vue component | `components/PageStateBanner.test.js` | PageStateBanner — all types (info/warning/success/error), message, accessibility |
+| Vue component | `components/SummarySection.test.js` | SummarySection — markdown, html, sanitization, slot fallback |
+| Vue component | `components/VideoEmbed.test.js` | VideoEmbed — iframe src, title, lazy loading |
+| Vue component | `components/DateNavigator.test.js` | DateNavigator — date display, prev/next links, disabled state |
+| Vue component | `components/TopicCard.test.js` | TopicCard — display name, description, route link |
+| Vue component | `components/SummaryPlaceholder.test.js` | SummaryPlaceholder — title, guidance text |
+| Utility | `utils/date.test.js` | formatDateKey, todayKey, isToday, formatTime, timeAgo |
+| Utility | `utils/validate.test.js` | validateAlertPayload, validateDailyStatusPayload, validatePublishJobPayload |
+| Service | `services/api.test.js` | fetchTopics, fetchDayStatus, fetchTimeline, fetchNavigation — paths, params, errors |
+| Service | `services/content.test.js` | fetchSummary, fetchArticle, fetchVideoMeta, fetchMetadata — paths, 404 handling, errors |
+| Content files | `content.daily-summary.test.js` | Generated content schema validation and placeholder→final state transition |
+| Fixtures | `fixtures.test.js` | All fixture files — structural validation of page states, alerts, summaries |
 
 ---
 
@@ -92,14 +112,36 @@ app/
     __tests__/
       integration/
         helpers/
-          mockD1.js               ← mock D1 + createSeededDb()
+          mockD1.js                              ← mock D1 + createSeededDb()
+          fixtures.js                            ← canonical fixture re-exports
         api.day-status.test.js
         api.navigation.test.js
         api.timeline.test.js
         api.topics.test.js
+        api.internal.alerts.test.js
+        api.internal.daily-status.test.js
+        api.internal.publish-jobs.test.js
+        content.daily-summary.test.js
+        fixtures.test.js
+        page.HomePage.test.js
         page.TopicDayPage.test.js
-      components/                 ← unit tests (unchanged)
-      utils/                      ← unit tests (unchanged)
+        page.TopicDayPage.extended.test.js      ← video, navigation, load-more
+        page.TopicPage.test.js
+      components/
+        AlertTimeline.test.js
+        AlertTimelineItem.test.js
+        DateNavigator.test.js
+        PageStateBanner.test.js
+        SummaryPlaceholder.test.js
+        SummarySection.test.js
+        TopicCard.test.js
+        VideoEmbed.test.js
+      services/
+        api.test.js
+        content.test.js
+      utils/
+        date.test.js
+        validate.test.js
 ```
 
 The integration tests are included in the default `vitest` run (`src/**/*.test.js`) so they run alongside unit tests in CI.
@@ -180,6 +222,50 @@ If the new handler uses a SQL pattern not yet handled by `MockStatement._run()`,
 - `SELECT 1` for existence-check queries
 
 Any unsupported `WHERE` segment will throw immediately with a descriptive error, so new SQL patterns are caught at test time rather than silently ignored.
+
+---
+
+## What is intentionally not yet covered
+
+The following areas are out of scope for v1 test coverage. This is a deliberate decision, not an oversight.
+
+### n8n workflow logic
+
+n8n workflows (`workflows/n8n/`) are JSON configuration files executed by the n8n runtime. There is no framework to unit-test n8n node execution in isolation. Coverage here relies on:
+- fixture validation tests (`fixtures.test.js`) that verify the expected input/output shapes for each workflow stage
+- contract schemas (`workflows/contracts/`, `schemas/workflow/`) as the authoritative source of truth
+- end-to-end validation in staging before production use
+
+### AI prompt output quality
+
+AI-generated content (classification scores, summaries, cluster labels) cannot be deterministically tested. Coverage for AI output relies on:
+- structured JSON schema validation in `content.daily-summary.test.js`
+- classified alert fixture validation in `fixtures.test.js`
+- schema files in `schemas/ai/` as contracts
+
+### Live Cloudflare D1 / Cloudflare Pages Functions
+
+Tests run against the in-memory `MockD1Database`. Real D1 round-trips (network latency, transactional rollback under load, R2 binding edge cases) are not exercised in the unit/integration suite. These require a staging deployment.
+
+### DefaultLayout and top-level router wiring
+
+`src/layouts/DefaultLayout.vue` and `src/router/index.js` are not directly tested. The router structure is exercised indirectly through every page integration test that uses `createMemoryHistory()`. Top-level layout styling and slot composition is considered stable enough to defer to visual review.
+
+### TopicGrid component
+
+`src/components/TopicGrid.vue` (a thin wrapper over a list of `TopicCard` components) is exercised indirectly through the `page.HomePage.test.js` integration tests. A dedicated unit test would add little value beyond confirming slot rendering.
+
+### TopicDayHeader component in isolation
+
+`TopicDayHeader` composes `DateNavigator` (which is independently tested) and a router-link. It is exercised in every `TopicDayPage` integration test. A standalone unit test for the header is deferred as low priority.
+
+### Write-path transactional guarantees in D1
+
+`db.batch()` atomic semantics (all-or-nothing) cannot be verified with `MockD1Database` because the mock processes statements sequentially without a real transaction engine. The correctness of the batch pattern is validated at the SQL level by reading the `writeAlertBatch` implementation and the migration that adds the required UNIQUE constraint.
+
+### Telegram / Discord delivery
+
+Alert delivery integrations are out of scope for this test suite. They are n8n HTTP node configurations and should be validated with a staging n8n instance.
 
 ---
 
