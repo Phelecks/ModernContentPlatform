@@ -68,7 +68,7 @@ Configure the Pages project in the Cloudflare dashboard:
 |---|---|
 | Production branch | `main` |
 | Preview branches | `staging` |
-| Build command | `cd app && npm install && npm run build` |
+| Build command | `cd app && npm ci --legacy-peer-deps && npm run build` |
 | Build output directory | `app/dist` |
 
 ### D1 database binding per environment
@@ -146,7 +146,7 @@ database without any code changes.
 | URL | Stable preview URL (e.g. `staging.modern-content-platform.pages.dev`) |
 | D1 binding | Points to staging D1 database |
 | Secrets | Staging-specific secrets set in Pages project settings for preview |
-| Build | Same build command as production (`cd app && npm install && npm run build`) |
+| Build | Same build command as production (`cd app && npm ci --legacy-peer-deps && npm run build`) |
 
 ### GitHub content publishing
 
@@ -185,8 +185,8 @@ isolation and schedule independence require separate instances.
 
 #### Staging n8n configuration
 
-The staging n8n instance uses the same `docker-compose.yml` template but with
-staging-specific environment variables:
+The staging n8n instance should use a hardened deployment (not the local-development
+`docker-compose.yml`). Configure it with staging-specific environment variables:
 
 | Variable | Staging value |
 |---|---|
@@ -224,19 +224,44 @@ step should be disabled or skipped in the staging n8n workflows.
 | Metadata | `video.json` is still generated and committed for testing |
 | Risk | Avoids accidental public video uploads from staging content |
 
+### TLS / SSL
+
+Cloudflare Pages provides SSL by default for all frontend deployments — both
+production and staging preview URLs use HTTPS with no additional configuration.
+
+For backend services (staging n8n instance), use a **Cloudflare origin SSL
+certificate** to encrypt traffic between Cloudflare and the backend server:
+
+1. In the Cloudflare dashboard, go to **SSL/TLS → Origin Server**.
+2. Create an origin certificate for the staging n8n domain.
+3. Download the certificate and private key.
+4. Configure the staging n8n reverse proxy (e.g. Nginx, Caddy, or Traefik) to use
+   the origin certificate for TLS termination.
+5. Set Cloudflare SSL/TLS mode to **Full (strict)** for the staging domain.
+
+This avoids purchasing separate TLS certificates and ensures encrypted
+communication between Cloudflare's edge and the staging backend.
+
 ---
 
 ## Secret management
 
 ### Principles
 
-1. **Never share secrets between environments.** Each environment has its own set of
-   credentials.
+1. **Use separate secrets per environment by default.** Local, staging, and
+   production should have distinct credentials whenever the provider supports it.
+   If a secret must be reused temporarily across environments, document the
+   exception, keep the scope least-privilege, limit it to non-production actions
+   where possible, label it clearly in n8n/Cloudflare, and add compensating
+   controls such as read-only access, restricted repository or channel targets,
+   and an explicit plan to replace it with environment-specific credentials.
 2. **Never commit secrets to source control.** Use `.env` files locally, Cloudflare
    dashboard settings for Pages, and n8n credential storage for workflow secrets.
 3. **Use least-privilege scoping.** API tokens should be scoped to the minimum
    permissions needed for each environment.
-4. **Rotate staging secrets independently** of production secrets.
+4. **Rotate staging secrets independently** of production secrets wherever secrets
+   are environment-specific, and preserve separate rotation plans when replacing
+   any temporary shared credential.
 
 ### Secret and configuration classes
 
@@ -317,7 +342,7 @@ with the recommended source per environment.
 | GitHub branch | Feature branches | `staging` | `main` |
 | Content publishing | Not applicable (local testing only) | Publishes to `staging` branch | Publishes to `main` branch |
 | Telegram delivery | Developer's test channel (optional) | Staging channel | Production channel |
-| Discord delivery | Developer's test webhook (optional) | Staging channel | Production channel |
+| Discord delivery | Developer's test webhook (optional) | Staging webhook | Production webhook |
 | YouTube upload | Disabled | Disabled | Enabled (when ready) |
 | Schema migrations | `--local` flag | Applied to staging D1 | Applied to production D1 |
 | Seed data | Full sample data (`sample_alerts.sql`) | Topics seed + workflow-generated data | Topics seed + live data |
@@ -478,11 +503,22 @@ Before promoting changes from staging to production, verify the following checkl
    - Create a staging Discord channel and webhook.
 
 8. **Deploy a staging n8n instance:**
-   - Use the same `n8n/docker-compose.yml` on a staging server.
+   - Use a hardened staging deployment for n8n rather than the local-development
+     `n8n/docker-compose.yml`.
+   - The local compose setup is for local development only and must not be
+     internet-exposed on a staging server. If it is used temporarily for internal
+     testing, keep it behind private networking or VPN access and protect it with
+     a Cloudflare origin SSL certificate and authentication.
+   - To configure TLS for the staging n8n instance, download a Cloudflare origin
+     certificate from the Cloudflare dashboard (SSL/TLS → Origin Server) and use
+     it in the n8n reverse proxy or Docker configuration. This provides encrypted
+     communication between Cloudflare and the staging backend without purchasing
+     a separate certificate.
    - Configure staging-specific environment variables (staging D1 ID, staging
      delivery channels, `GITHUB_CONTENT_BRANCH=staging`).
    - Import all workflow JSON files from `workflows/n8n/`.
-   - Configure staging n8n credentials.
+   - Configure staging n8n credentials using least-privilege staging-only tokens
+     and secrets.
 
 9. **Test the staging deployment:**
    - Push a commit to the `staging` branch.
