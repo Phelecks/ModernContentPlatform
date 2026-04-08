@@ -71,6 +71,7 @@ describe('TopicPage — redirect to today', () => {
   afterEach(() => {
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
+    vi.useRealTimers()
   })
 
   it('shows the loading spinner before the API responds', async () => {
@@ -87,14 +88,12 @@ describe('TopicPage — redirect to today', () => {
 
     vi.stubGlobal('fetch', vi.fn(() => jsonRes(CRYPTO_STATUS)))
     const router = await createTestRouter()
-    const wrapper = mount(TopicPage, { global: { plugins: [router] } })
+    mount(TopicPage, { global: { plugins: [router] } })
     await flushPromises()
 
     expect(router.currentRoute.value.name).toBe('topic-day')
     expect(router.currentRoute.value.params.topicSlug).toBe('crypto')
     expect(router.currentRoute.value.params.dateKey).toBe('2025-01-15')
-
-    vi.useRealTimers()
   })
 
   it('shows the error state when the API call fails', async () => {

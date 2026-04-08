@@ -9,7 +9,7 @@
  *   - has-more / load-more button behavior
  *   - count badge visibility
  */
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import AlertTimeline from '@/components/AlertTimeline.vue'
 
