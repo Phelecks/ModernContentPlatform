@@ -43,6 +43,32 @@
             "minimum": 15,
             "maximum": 120,
             "description": "Estimated spoken duration of this segment in seconds."
+          },
+          "sources": {
+            "type": ["array", "null"],
+            "items": {
+              "type": "object",
+              "required": ["source_name"],
+              "properties": {
+                "source_name": {
+                  "type": "string",
+                  "description": "Human-readable name of the source."
+                },
+                "source_url": {
+                  "type": ["string", "null"],
+                  "format": "uri",
+                  "description": "URL of the source. Null when not available."
+                },
+                "source_role": {
+                  "type": ["string", "null"],
+                  "maxLength": 100,
+                  "description": "Role of this source for this segment, e.g. 'primary', 'data', 'commentary'."
+                }
+              },
+              "additionalProperties": false
+            },
+            "maxItems": 5,
+            "description": "Sources referenced or used for this segment's content. Null when not available."
           }
         },
         "additionalProperties": false
@@ -74,12 +100,31 @@
         {
           "title": "Bitcoin All-Time High",
           "script": "So let's start with the headline event. Bitcoin crossed $120,000 today, setting a new all-time high. The move was driven by two things: record ETF inflows — over $1.5 billion in a single day — and a surprise announcement from a major sovereign wealth fund that disclosed a $2 billion Bitcoin position. That institutional validation is exactly the kind of catalyst that can sustain a rally beyond just short-term speculation.",
-          "duration_seconds": 45
+          "duration_seconds": 45,
+          "sources": [
+            {
+              "source_name": "CoinDesk RSS",
+              "source_url": "https://www.coindesk.com/markets/2025/01/15/bitcoin-hits-new-ath/",
+              "source_role": "primary"
+            },
+            {
+              "source_name": "CoinGecko API",
+              "source_url": null,
+              "source_role": "data"
+            }
+          ]
         },
         {
           "title": "ETF Flows and Institutional Demand",
           "script": "Let's talk about those ETF flows because they're becoming the dominant force in this market. $1.5 billion in a single day is more than double the previous record. It tells us that traditional finance is not just observing Bitcoin — they're actively allocating. And as more institutions move off the sidelines, the supply-demand dynamic continues to tighten.",
-          "duration_seconds": 40
+          "duration_seconds": 40,
+          "sources": [
+            {
+              "source_name": "Bloomberg",
+              "source_url": "https://www.bloomberg.com/news/articles/2025-01-15/bitcoin-etf-inflows",
+              "source_role": "primary"
+            }
+          ]
         }
       ],
       "outro": "So where does this leave us? Bitcoin is at all-time highs, institutional demand is accelerating, and tomorrow we have FOMC minutes that could add or remove volatility. Stay close to your risk management, watch the $120K support level, and I'll see you tomorrow with the full breakdown.",

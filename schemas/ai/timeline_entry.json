@@ -38,6 +38,16 @@
       "type": ["string", "null"],
       "enum": ["red", "orange", "yellow", "green", "blue", "purple", "gray", null],
       "description": "Optional semantic color hint for the label badge. Null lets the frontend apply its default. Use 'red' for regulatory/risk events, 'green' for positive market events, 'gray' for neutral/routine."
+    },
+    "source_attribution": {
+      "type": ["string", "null"],
+      "maxLength": 100,
+      "description": "Short display-ready attribution string for the timeline entry (e.g. 'via CoinDesk', 'Source: BLS'). Null when attribution is not available or not needed."
+    },
+    "source_url": {
+      "type": ["string", "null"],
+      "format": "uri",
+      "description": "URL of the primary source for this timeline entry. Used for link-through on the frontend. Null when not available."
     }
   },
   "additionalProperties": false,
@@ -47,21 +57,27 @@
       "summary_text": "Bitcoin surged past $120,000 for the first time, driven by record institutional ETF inflows exceeding $1.5 billion in a single session.",
       "severity_level": "high",
       "label": "Price Action",
-      "label_color": "green"
+      "label_color": "green",
+      "source_attribution": "via CoinDesk",
+      "source_url": "https://www.coindesk.com/markets/2025/01/15/bitcoin-hits-new-ath/"
     },
     {
       "headline": "SEC Issues Warning on Unregistered Crypto Exchanges",
       "summary_text": "The SEC released a formal warning targeting unregistered cryptocurrency exchanges operating in the US, signalling increased enforcement pressure.",
       "severity_level": "medium",
       "label": "Regulatory",
-      "label_color": "red"
+      "label_color": "red",
+      "source_attribution": "Source: SEC.gov",
+      "source_url": "https://www.sec.gov/news/press-release/2025-12"
     },
     {
       "headline": "US 10-Year Treasury Yield Edges Up to 4.32%",
       "summary_text": "The 10-year US Treasury yield rose 2 basis points to 4.32% ahead of tomorrow's CPI print, with no significant market reaction.",
       "severity_level": "low",
       "label": "Macro",
-      "label_color": "gray"
+      "label_color": "gray",
+      "source_attribution": "via Reuters",
+      "source_url": null
     }
   ]
 }

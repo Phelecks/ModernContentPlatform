@@ -72,6 +72,64 @@
       "type": ["string", "null"],
       "maxLength": 100,
       "description": "Short label for the event cluster (e.g. 'Bitcoin price rally', 'Fed rate decision'). Null if this event does not fit an obvious cluster."
+    },
+    "primary_source": {
+      "type": ["object", "null"],
+      "description": "Structured reference to the primary source used for this classification. Populated from the input item context. Null when source information is unavailable.",
+      "required": ["source_name"],
+      "properties": {
+        "source_name": {
+          "type": "string",
+          "description": "Human-readable name of the primary source (e.g. 'CoinDesk RSS', 'BLS News RSS')."
+        },
+        "source_url": {
+          "type": ["string", "null"],
+          "format": "uri",
+          "description": "URL of the primary source item. Null when not available."
+        },
+        "source_type": {
+          "type": ["string", "null"],
+          "enum": ["rss", "api", "social", "webhook", "x_account", "x_query", null],
+          "description": "Technical source category. Null when unknown."
+        }
+      },
+      "additionalProperties": false
+    },
+    "supporting_sources": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "object",
+        "required": ["source_name"],
+        "properties": {
+          "source_name": {
+            "type": "string",
+            "description": "Human-readable name of the supporting source."
+          },
+          "source_url": {
+            "type": ["string", "null"],
+            "format": "uri",
+            "description": "URL of the supporting source item. Null when not available."
+          },
+          "source_type": {
+            "type": ["string", "null"],
+            "enum": ["rss", "api", "social", "webhook", "x_account", "x_query", null],
+            "description": "Technical source category. Null when unknown."
+          },
+          "source_role": {
+            "type": ["string", "null"],
+            "maxLength": 100,
+            "description": "Role of this source relative to the primary, e.g. 'confirmation', 'data', 'commentary', 'official'."
+          }
+        },
+        "additionalProperties": false
+      },
+      "maxItems": 5,
+      "description": "Optional supporting sources that corroborate or add context to the primary source. Null or empty when none apply."
+    },
+    "source_confidence_note": {
+      "type": ["string", "null"],
+      "maxLength": 300,
+      "description": "Brief explanation of how source quality, trust tier, or corroboration level influenced the confidence_score. Null when not applicable."
     }
   },
   "additionalProperties": false,
@@ -86,7 +144,21 @@
       "confidence_score": 95,
       "send_alert": true,
       "alert_reason": "New all-time high is a high-importance milestone for the crypto audience.",
-      "cluster_label": "Bitcoin price rally"
+      "cluster_label": "Bitcoin price rally",
+      "primary_source": {
+        "source_name": "CoinDesk RSS",
+        "source_url": "https://www.coindesk.com/markets/2025/01/15/bitcoin-hits-new-ath/",
+        "source_type": "rss"
+      },
+      "supporting_sources": [
+        {
+          "source_name": "CoinGecko API",
+          "source_url": "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",
+          "source_type": "api",
+          "source_role": "data"
+        }
+      ],
+      "source_confidence_note": "High confidence: specialist outlet corroborated by real-time market data API."
     },
     {
       "topic_slug": "finance",
@@ -98,7 +170,14 @@
       "confidence_score": 90,
       "send_alert": false,
       "alert_reason": "Minor yield movement; below the significance threshold for an intraday alert.",
-      "cluster_label": null
+      "cluster_label": null,
+      "primary_source": {
+        "source_name": "Reuters",
+        "source_url": "https://www.reuters.com/markets/bonds/us-10y-yield-2025-01-15/",
+        "source_type": "rss"
+      },
+      "supporting_sources": null,
+      "source_confidence_note": "High confidence: wire service with direct market data."
     }
   ]
 }

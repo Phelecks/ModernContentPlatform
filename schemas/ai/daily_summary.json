@@ -50,6 +50,32 @@
             "minimum": 0,
             "maximum": 100,
             "description": "Estimated importance to the topic audience (0–100)."
+          },
+          "sources": {
+            "type": ["array", "null"],
+            "items": {
+              "type": "object",
+              "required": ["source_name"],
+              "properties": {
+                "source_name": {
+                  "type": "string",
+                  "description": "Human-readable name of the source."
+                },
+                "source_url": {
+                  "type": ["string", "null"],
+                  "format": "uri",
+                  "description": "URL of the source item. Null when not available."
+                },
+                "source_role": {
+                  "type": ["string", "null"],
+                  "maxLength": 100,
+                  "description": "Role of this source for this event, e.g. 'primary', 'data', 'confirmation', 'commentary'."
+                }
+              },
+              "additionalProperties": false
+            },
+            "maxItems": 5,
+            "description": "Sources that support or substantiate this key event. Null or empty when source attribution is not available."
           }
         },
         "additionalProperties": false
@@ -70,6 +96,37 @@
       "minimum": 0,
       "maximum": 100,
       "description": "Overall activity and significance score for this topic on this day (0=quiet, 100=extremely active)."
+    },
+    "sources": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "object",
+        "required": ["source_name"],
+        "properties": {
+          "source_name": {
+            "type": "string",
+            "description": "Human-readable name of the source."
+          },
+          "source_url": {
+            "type": ["string", "null"],
+            "format": "uri",
+            "description": "URL of the source. Null when not available."
+          },
+          "source_role": {
+            "type": ["string", "null"],
+            "maxLength": 100,
+            "description": "Role of this source in the summary, e.g. 'primary', 'data', 'confirmation', 'commentary'."
+          }
+        },
+        "additionalProperties": false
+      },
+      "maxItems": 10,
+      "description": "Aggregated list of sources used across the entire daily summary. Null when source tracking is not available."
+    },
+    "source_confidence_note": {
+      "type": ["string", "null"],
+      "maxLength": 400,
+      "description": "Brief note on overall source quality, diversity, and how it affects confidence in the summary. Null when not applicable."
     }
   },
   "additionalProperties": false,
@@ -81,17 +138,54 @@
         {
           "title": "Bitcoin New All-Time High Above $120K",
           "significance": "A new all-time high reinforces the ongoing bull market and is likely to attract additional retail and institutional flows.",
-          "importance_score": 95
+          "importance_score": 95,
+          "sources": [
+            {
+              "source_name": "CoinDesk RSS",
+              "source_url": "https://www.coindesk.com/markets/2025/01/15/bitcoin-hits-new-ath/",
+              "source_role": "primary"
+            },
+            {
+              "source_name": "CoinGecko API",
+              "source_url": "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",
+              "source_role": "data"
+            }
+          ]
         },
         {
           "title": "Spot Bitcoin ETF Daily Inflow Exceeds $1.5B",
           "significance": "Record daily ETF inflows indicate sustained institutional demand and further legitimisation of Bitcoin as an asset class.",
-          "importance_score": 88
+          "importance_score": 88,
+          "sources": [
+            {
+              "source_name": "Bloomberg",
+              "source_url": "https://www.bloomberg.com/news/articles/2025-01-15/bitcoin-etf-inflows",
+              "source_role": "primary"
+            }
+          ]
         }
       ],
       "market_context": "US equities closed higher on the day, supporting broad risk appetite. The DXY softened slightly, providing additional tailwind for crypto assets.",
       "sentiment": "bullish",
-      "topic_score": 92
+      "topic_score": 92,
+      "sources": [
+        {
+          "source_name": "CoinDesk RSS",
+          "source_url": "https://www.coindesk.com/markets/2025/01/15/bitcoin-hits-new-ath/",
+          "source_role": "primary"
+        },
+        {
+          "source_name": "CoinGecko API",
+          "source_url": "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",
+          "source_role": "data"
+        },
+        {
+          "source_name": "Bloomberg",
+          "source_url": "https://www.bloomberg.com/news/articles/2025-01-15/bitcoin-etf-inflows",
+          "source_role": "primary"
+        }
+      ],
+      "source_confidence_note": "High confidence: summary draws from a mix of specialist outlets and real-time market data APIs, with institutional flow data confirmed by a wire service."
     }
   ]
 }
