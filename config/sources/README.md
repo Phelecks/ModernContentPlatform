@@ -50,8 +50,11 @@ module 01:
 The X-specific fields (`poll_interval_minutes`, `severity_cap`,
 `confirmation_required`, `can_trigger_alert`) are operational metadata defined
 in `docs/x-source-rules.md`. They are not consumed directly by module 01 but
-serve as operator reference and should be mapped to D1 `metadata_json` when
-seeding the source registry.
+serve as operator reference when seeding the source registry. Map
+`poll_interval_minutes` to the first-class `sources.poll_interval_minutes`
+column, and only store fields without dedicated columns (for example
+`severity_cap`, `confirmation_required`, and `can_trigger_alert`) in D1
+`metadata_json` if you want to persist them.
 
 The `topic_slug` and `trust_tier` fields are extensions beyond the base module 01
 contract. Module 01 only requires `name`, `type`, and `url`. Treat these

@@ -33,7 +33,7 @@ These rules apply to all X sources across every topic.
 | Confidence reduction | When X is the sole source for an event, AI classification (module 05) must reduce `confidence_score` by ≥ 20 points vs. the same event from a T1–T3 source |
 | Severity cap | T4 items alone must not produce `severity_score` above the per-topic cap (see per-topic tables below) |
 | Confirmation upgrade | If a T4 signal is confirmed by a T1–T3 source within one ingestion cycle (≤ 15 min), alert severity may be re-evaluated using the confirming source tier |
-| Metadata requirements | `x_account` sources must carry `x_user_id` in `metadata_json`; `x_query` sources must carry `search_query` in `metadata_json` |
+| Metadata requirements | `x_account` sources may provide `x_user_id` as a top-level field or inside `metadata_json`; `x_username` is also supported. Treat `x_user_id` as the numeric X user ID, and `x_username` as the handle/username string. `x_query` sources may provide `search_query` as a top-level field or inside `metadata_json`. |
 | Account vs. query trust | `x_account` monitoring known official accounts (e.g. `@OpenAI`, `@IEA`) may be treated with slightly higher confidence than `x_query` keyword searches, but both remain T4 |
 
 ---
@@ -183,8 +183,14 @@ entirely from health ingestion.
 
 ### What to enable first
 
-All X sources are disabled (`is_active: 0`) pending X API credential
-configuration. When credentials are available, enable sources in this order:
+All X sources are disabled in the D1 source registry seed data
+(`is_active: 0` in `db/seeds/sources.sql`). Note that the static-config path
+(`INTRADAY_SOURCES_JSON`) does not use an `is_active` flag — any X source
+included in that variable will be passed to module 01 regardless. Operators
+must omit X sources from `INTRADAY_SOURCES_JSON` until X API credentials are
+configured, or add explicit filtering in the workflow.
+
+When credentials are available, enable sources in this order:
 
 1. **Crypto `x_account` — Whale Alert** — highest signal-to-noise ratio;
    on-chain transfer data is objectively verifiable.
@@ -270,9 +276,12 @@ X sources are fetched using the X API v2 endpoints:
 - `x_account`: `GET /2/users/:id/tweets` (user timeline)
 - `x_query`: `GET /2/tweets/search/recent` (recent search)
 
-The `metadata_json` field on each source provides the `x_user_id` or
-`search_query` needed to construct the API request. Module 01 routes to the
-correct parser based on `source_type`.
+For source configs, Module 01 routes to the correct parser based on the
+source `type` (for example, `x_account` or `x_query`). The API request
+parameters required for that source — `x_user_id` for `x_account` and
+`search_query` for `x_query` — may be provided either in `metadata_json`
+or as top-level source fields. Do not use emitted-item `source_type` as the
+routing field for source configuration.
 
 ### Module 05 — AI Classification
 
