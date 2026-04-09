@@ -67,7 +67,8 @@ function isValidUrl(value) {
 const ALERT_ALLOWED_KEYS = [
   'topic_slug', 'date_key', 'headline', 'summary_text', 'source_name',
   'severity_score', 'importance_score', 'confidence_score',
-  'event_at', 'source_url', 'cluster_label', 'alert_reason',
+  'event_at', 'source_url', 'source_type', 'source_domain',
+  'supporting_sources', 'cluster_label', 'alert_reason',
   'secondary_topics', 'item_id'
 ]
 
@@ -87,7 +88,8 @@ export function validateAlertPayload(body) {
   const {
     topic_slug, date_key, headline, summary_text, source_name,
     severity_score, importance_score, confidence_score,
-    event_at, source_url, cluster_label, alert_reason,
+    event_at, source_url, source_type, source_domain,
+    supporting_sources, cluster_label, alert_reason,
     secondary_topics, item_id
   } = body
 
@@ -122,6 +124,37 @@ export function validateAlertPayload(body) {
     if (typeof source_url !== 'string') return fail('source_url must be a string or null')
     if (!isValidUrl(source_url)) return fail('source_url must be a valid HTTP or HTTPS URL')
   }
+  if (source_type !== undefined && source_type !== null) {
+    if (!VALID_SOURCE_TYPES.includes(source_type)) {
+      return fail(`Invalid source_type: must be one of ${VALID_SOURCE_TYPES.join(', ')}`)
+    }
+  }
+  if (!isOptionalString(source_domain, 200)) {
+    return fail('source_domain must be a string (max 200 chars) or null')
+  }
+  if (supporting_sources !== undefined && supporting_sources !== null) {
+    if (!Array.isArray(supporting_sources)) return fail('supporting_sources must be an array')
+    if (supporting_sources.length > 5) return fail('supporting_sources allows at most 5 items')
+    for (let i = 0; i < supporting_sources.length; i++) {
+      const ss = supporting_sources[i]
+      if (!ss || typeof ss !== 'object') return fail(`supporting_sources[${i}] must be an object`)
+      if (!isNonEmptyString(ss.source_name)) {
+        return fail(`supporting_sources[${i}].source_name is required and must be a non-empty string`)
+      }
+      if (ss.source_url !== undefined && ss.source_url !== null) {
+        if (typeof ss.source_url !== 'string') return fail(`supporting_sources[${i}].source_url must be a string or null`)
+        if (!isValidUrl(ss.source_url)) return fail(`supporting_sources[${i}].source_url must be a valid HTTP or HTTPS URL`)
+      }
+      if (ss.source_type !== undefined && ss.source_type !== null) {
+        if (!VALID_SOURCE_TYPES.includes(ss.source_type)) {
+          return fail(`supporting_sources[${i}].source_type must be one of ${VALID_SOURCE_TYPES.join(', ')}`)
+        }
+      }
+      if (!isOptionalString(ss.source_role, 100)) {
+        return fail(`supporting_sources[${i}].source_role must be a string (max 100 chars) or null`)
+      }
+    }
+  }
   if (!isOptionalString(cluster_label, 100)) {
     return fail('cluster_label must be a string (max 100 chars) or null')
   }
@@ -145,6 +178,9 @@ export function validateAlertPayload(body) {
     topic_slug, date_key, headline, summary_text, source_name,
     severity_score, importance_score, confidence_score, event_at,
     source_url: source_url ?? null,
+    source_type: source_type ?? null,
+    source_domain: source_domain ?? null,
+    supporting_sources: supporting_sources ?? null,
     cluster_label: cluster_label ?? null,
     alert_reason: alert_reason ?? null,
     secondary_topics: secondary_topics ?? [],

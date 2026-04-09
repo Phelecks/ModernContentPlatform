@@ -53,6 +53,31 @@
     "source_name": {
       "type": "string"
     },
+    "source_type": {
+      "type": ["string", "null"],
+      "enum": ["rss", "api", "social", "webhook", "x_account", "x_query", null],
+      "description": "Technical source category from the source registry. Null when unknown."
+    },
+    "source_domain": {
+      "type": ["string", "null"],
+      "description": "Domain extracted from source_url (e.g. 'coindesk.com'). Null when source_url is absent."
+    },
+    "supporting_sources": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "object",
+        "required": ["source_name"],
+        "properties": {
+          "source_name": { "type": "string" },
+          "source_url": { "type": ["string", "null"], "format": "uri" },
+          "source_type": { "type": ["string", "null"] },
+          "source_role": { "type": ["string", "null"], "description": "Role of this source, e.g. 'confirmation', 'data', 'commentary'." }
+        },
+        "additionalProperties": false
+      },
+      "maxItems": 5,
+      "description": "Optional supporting sources that corroborate or add context to the primary source."
+    },
     "severity_score": {
       "type": "integer",
       "minimum": 0,
@@ -100,6 +125,16 @@
       "summary_text": "Bitcoin surged past $120,000, setting a new all-time high driven by strong institutional inflows and ETF demand.",
       "source_url": "https://www.coindesk.com/markets/2025/01/15/bitcoin-hits-new-ath/",
       "source_name": "CoinDesk RSS",
+      "source_type": "rss",
+      "source_domain": "coindesk.com",
+      "supporting_sources": [
+        {
+          "source_name": "CoinGecko API",
+          "source_url": "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",
+          "source_type": "api",
+          "source_role": "data"
+        }
+      ],
       "severity_score": 72,
       "importance_score": 88,
       "confidence_score": 95,

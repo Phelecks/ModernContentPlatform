@@ -10,6 +10,7 @@
  * Response shape:
  *   {
  *     alerts: Array<{ id, headline, summary_text, source_name, source_url,
+ *                     source_type, source_domain, source_metadata_json,
  *                     severity_score, importance_score, event_at }>,
  *     total: number,
  *     has_more: boolean
@@ -56,6 +57,7 @@ export async function onRequestGet({ params, request, env }) {
 
     if (before) {
       sql = `SELECT id, headline, summary_text, source_name, source_url,
+                    source_type, source_domain, source_metadata_json,
                     severity_score, importance_score, confidence_score, event_at
              FROM alerts
              WHERE topic_slug = ? AND date_key = ? AND status = 'active' AND event_at < ?
@@ -64,6 +66,7 @@ export async function onRequestGet({ params, request, env }) {
       bindParams = [topicSlug, dateKey, before, limit + 1]
     } else {
       sql = `SELECT id, headline, summary_text, source_name, source_url,
+                    source_type, source_domain, source_metadata_json,
                     severity_score, importance_score, confidence_score, event_at
              FROM alerts
              WHERE topic_slug = ? AND date_key = ? AND status = 'active'

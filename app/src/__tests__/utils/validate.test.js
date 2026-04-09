@@ -282,6 +282,121 @@ describe('validateAlertPayload', () => {
     expect(result.valid).toBe(false)
     expect(result.error).toMatch(/cluster_label/i)
   })
+
+  // ---- Source attribution fields ----
+
+  it('accepts valid source_type', () => {
+    const types = ['rss', 'api', 'social', 'webhook', 'x_account', 'x_query']
+    for (const st of types) {
+      const result = validateAlertPayload(validAlert({ source_type: st }))
+      expect(result.valid, `source_type=${st} should be valid`).toBe(true)
+    }
+  })
+
+  it('accepts null source_type', () => {
+    const result = validateAlertPayload(validAlert({ source_type: null }))
+    expect(result.valid).toBe(true)
+    expect(result.data.source_type).toBeNull()
+  })
+
+  it('defaults source_type to null when omitted', () => {
+    const result = validateAlertPayload(validAlert())
+    expect(result.data.source_type).toBeNull()
+  })
+
+  it('returns valid=false when source_type is not a valid enum value', () => {
+    const result = validateAlertPayload(validAlert({ source_type: 'newspaper' }))
+    expect(result.valid).toBe(false)
+    expect(result.error).toMatch(/source_type/i)
+  })
+
+  it('accepts valid source_domain', () => {
+    const result = validateAlertPayload(validAlert({ source_domain: 'coindesk.com' }))
+    expect(result.valid).toBe(true)
+    expect(result.data.source_domain).toBe('coindesk.com')
+  })
+
+  it('accepts null source_domain', () => {
+    const result = validateAlertPayload(validAlert({ source_domain: null }))
+    expect(result.valid).toBe(true)
+    expect(result.data.source_domain).toBeNull()
+  })
+
+  it('defaults source_domain to null when omitted', () => {
+    const result = validateAlertPayload(validAlert())
+    expect(result.data.source_domain).toBeNull()
+  })
+
+  it('returns valid=false when source_domain exceeds 200 characters', () => {
+    const result = validateAlertPayload(validAlert({ source_domain: 'a'.repeat(201) }))
+    expect(result.valid).toBe(false)
+    expect(result.error).toMatch(/source_domain/i)
+  })
+
+  it('accepts valid supporting_sources array', () => {
+    const result = validateAlertPayload(validAlert({
+      supporting_sources: [
+        { source_name: 'CoinGecko API', source_url: 'https://api.coingecko.com/api/v3/simple/price', source_type: 'api', source_role: 'data' },
+        { source_name: 'Bloomberg' }
+      ]
+    }))
+    expect(result.valid).toBe(true)
+    expect(result.data.supporting_sources).toHaveLength(2)
+  })
+
+  it('accepts null supporting_sources', () => {
+    const result = validateAlertPayload(validAlert({ supporting_sources: null }))
+    expect(result.valid).toBe(true)
+    expect(result.data.supporting_sources).toBeNull()
+  })
+
+  it('defaults supporting_sources to null when omitted', () => {
+    const result = validateAlertPayload(validAlert())
+    expect(result.data.supporting_sources).toBeNull()
+  })
+
+  it('accepts empty supporting_sources array', () => {
+    const result = validateAlertPayload(validAlert({ supporting_sources: [] }))
+    expect(result.valid).toBe(true)
+    expect(result.data.supporting_sources).toEqual([])
+  })
+
+  it('returns valid=false when supporting_sources exceeds 5 items', () => {
+    const sources = Array.from({ length: 6 }, (_, i) => ({ source_name: `Source ${i}` }))
+    const result = validateAlertPayload(validAlert({ supporting_sources: sources }))
+    expect(result.valid).toBe(false)
+    expect(result.error).toMatch(/supporting_sources/i)
+  })
+
+  it('returns valid=false when supporting_sources is not an array', () => {
+    const result = validateAlertPayload(validAlert({ supporting_sources: 'not-array' }))
+    expect(result.valid).toBe(false)
+    expect(result.error).toMatch(/supporting_sources/i)
+  })
+
+  it('returns valid=false when supporting_sources item is missing source_name', () => {
+    const result = validateAlertPayload(validAlert({
+      supporting_sources: [{ source_url: 'https://example.com' }]
+    }))
+    expect(result.valid).toBe(false)
+    expect(result.error).toMatch(/source_name/i)
+  })
+
+  it('returns valid=false when supporting_sources item has invalid source_url', () => {
+    const result = validateAlertPayload(validAlert({
+      supporting_sources: [{ source_name: 'Test', source_url: 'not-a-url' }]
+    }))
+    expect(result.valid).toBe(false)
+    expect(result.error).toMatch(/source_url/i)
+  })
+
+  it('returns valid=false when supporting_sources item has invalid source_type', () => {
+    const result = validateAlertPayload(validAlert({
+      supporting_sources: [{ source_name: 'Test', source_type: 'invalid' }]
+    }))
+    expect(result.valid).toBe(false)
+    expect(result.error).toMatch(/source_type/i)
+  })
 })
 
 // ---------------------------------------------------------------------------

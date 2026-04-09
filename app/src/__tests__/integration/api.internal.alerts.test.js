@@ -182,6 +182,32 @@ describe('POST /api/internal/alerts', () => {
     expect(body.date_key).toBe('2025-01-15')
   })
 
+  it('returns 201 when source attribution fields are provided', async () => {
+    const payload = validPayload({
+      source_type: 'rss',
+      source_domain: 'example.com',
+      supporting_sources: [
+        { source_name: 'Bloomberg', source_url: 'https://bloomberg.com/article', source_type: 'api', source_role: 'confirmation' }
+      ]
+    })
+    const ctx = makeCtx(db, payload, { 'X-Write-Key': WRITE_KEY })
+    const res = await onRequestPost(ctx)
+    expect(res.status).toBe(201)
+    const body = await res.json()
+    expect(body.alert_id).toBeTruthy()
+  })
+
+  it('returns 201 when source attribution fields are null', async () => {
+    const payload = validPayload({
+      source_type: null,
+      source_domain: null,
+      supporting_sources: null
+    })
+    const ctx = makeCtx(db, payload, { 'X-Write-Key': WRITE_KEY })
+    const res = await onRequestPost(ctx)
+    expect(res.status).toBe(201)
+  })
+
   it('returns 201 when optional fields are omitted', async () => {
     const payload = {
       topic_slug: 'ai',
