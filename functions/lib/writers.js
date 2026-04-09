@@ -27,6 +27,7 @@ const INSERT_ALERT_WITH_SUBQUERY_SQL = `
   INSERT INTO alerts (
     topic_slug, date_key, cluster_id,
     headline, summary_text, source_url, source_name,
+    source_type, source_domain, source_metadata_json,
     severity_score, importance_score, confidence_score,
     status, delivered_telegram, delivered_discord,
     event_at, metadata_json
@@ -34,6 +35,7 @@ const INSERT_ALERT_WITH_SUBQUERY_SQL = `
     (SELECT id FROM event_clusters
      WHERE topic_slug = ? AND date_key = ? AND cluster_label = ?),
     ?, ?, ?, ?,
+    ?, ?, ?,
     ?, ?, ?, 'active', 0, 0, ?,
     json_object(
       'item_id',          ?,
@@ -75,12 +77,18 @@ const UPSERT_DAILY_STATUS_FOR_ALERT_SQL = `
 export async function writeAlertBatch(db, {
   topic_slug, date_key, cluster_label,
   headline, summary_text, source_url, source_name,
+  source_type, source_domain, supporting_sources,
   severity_score, importance_score, confidence_score,
   event_at, item_id, secondary_topics, alert_reason
 }) {
   // Statement 1: Upsert event cluster
   const clusterStmt = db.prepare(UPSERT_EVENT_CLUSTER_SQL)
     .bind(topic_slug, date_key, cluster_label, importance_score)
+
+  // Build source_metadata_json from supporting_sources
+  const sourceMetadata = supporting_sources
+    ? JSON.stringify({ supporting_sources })
+    : null
 
   // Statement 2: Insert alert (uses subquery to resolve cluster_id from the
   // event_clusters row upserted in statement 1, since batch statements
@@ -90,6 +98,7 @@ export async function writeAlertBatch(db, {
       topic_slug, date_key,
       topic_slug, date_key, cluster_label,
       headline, summary_text, source_url, source_name,
+      source_type, source_domain, sourceMetadata,
       severity_score, importance_score, confidence_score,
       event_at,
       item_id,

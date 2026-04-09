@@ -7,6 +7,16 @@
     "summary_text": "US-listed spot Bitcoin ETFs attracted more than $500 million in net inflows on January 15, the largest single-day figure since the products launched, according to multiple tracking services.",
     "source_url": "https://example.com/crypto/btc-etf-inflows",
     "source_name": "CryptoNews",
+    "source_type": "rss",
+    "source_domain": "example.com",
+    "supporting_sources": [
+      {
+        "source_name": "CoinGecko API",
+        "source_url": "https://api.coingecko.com/api/v3/simple/price",
+        "source_type": "api",
+        "source_role": "data"
+      }
+    ],
     "severity_score": 60,
     "importance_score": 82,
     "confidence_score": 90,
@@ -23,6 +33,9 @@
     "summary_text": "Bitcoin touched $50,000 briefly during the Asian session before pulling back to $49,400. Analysts attributed the move to anticipation of continued institutional inflows via spot ETF products.",
     "source_url": "https://example.com/crypto/btc-50k",
     "source_name": "BlockDesk",
+    "source_type": "rss",
+    "source_domain": "example.com",
+    "supporting_sources": null,
     "severity_score": 50,
     "importance_score": 74,
     "confidence_score": 88,
@@ -39,6 +52,9 @@
     "summary_text": "Ethereum spot ETFs mirrored Bitcoin ETF activity, recording their second-highest day of inflows since approval, suggesting broad institutional appetite for crypto exposure.",
     "source_url": "https://example.com/crypto/eth-etf-inflows",
     "source_name": "CoinWire",
+    "source_type": "rss",
+    "source_domain": "example.com",
+    "supporting_sources": null,
     "severity_score": 40,
     "importance_score": 68,
     "confidence_score": 85,

@@ -63,6 +63,9 @@ describe('GET /api/timeline/:topicSlug/:dateKey', () => {
       expect(alert).toHaveProperty('summary_text')
       expect(alert).toHaveProperty('source_name')
       expect(alert).toHaveProperty('source_url')
+      expect(alert).toHaveProperty('source_type')
+      expect(alert).toHaveProperty('source_domain')
+      expect(alert).toHaveProperty('source_metadata_json')
       expect(alert).toHaveProperty('severity_score')
       expect(alert).toHaveProperty('importance_score')
       expect(alert).toHaveProperty('event_at')
@@ -73,6 +76,18 @@ describe('GET /api/timeline/:topicSlug/:dateKey', () => {
     const res = await onRequestGet(makeCtx(db, 'crypto', '2025-01-15'))
     const { total } = await res.json()
     expect(total).toBe(3)
+  })
+
+  it('returns source attribution data for seeded alerts', async () => {
+    const res = await onRequestGet(makeCtx(db, 'crypto', '2025-01-15'))
+    const { alerts } = await res.json()
+    const etfAlert = alerts.find(a => a.id === 1)
+    expect(etfAlert.source_type).toBe('rss')
+    expect(etfAlert.source_domain).toBe('example.com')
+    expect(etfAlert.source_metadata_json).toBeTruthy()
+    const metadata = JSON.parse(etfAlert.source_metadata_json)
+    expect(metadata.supporting_sources).toHaveLength(1)
+    expect(metadata.supporting_sources[0].source_name).toBe('CoinGecko API')
   })
 
   it('returns has_more false when all alerts fit within the limit', async () => {
