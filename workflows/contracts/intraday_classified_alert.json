@@ -60,6 +60,8 @@
     },
     "source_domain": {
       "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 200,
       "description": "Domain extracted from source_url (e.g. 'coindesk.com'). Null when source_url is absent."
     },
     "supporting_sources": {
@@ -70,8 +72,16 @@
         "properties": {
           "source_name": { "type": "string" },
           "source_url": { "type": ["string", "null"], "format": "uri" },
-          "source_type": { "type": ["string", "null"] },
-          "source_role": { "type": ["string", "null"], "description": "Role of this source, e.g. 'confirmation', 'data', 'commentary'." }
+          "source_type": {
+            "type": ["string", "null"],
+            "enum": ["rss", "api", "social", "webhook", "x_account", "x_query", null],
+            "description": "Technical source category from the source registry. Null when unknown."
+          },
+          "source_role": {
+            "type": ["string", "null"],
+            "maxLength": 100,
+            "description": "Role of this source, e.g. 'confirmation', 'data', 'commentary'."
+          }
         },
         "additionalProperties": false
       },

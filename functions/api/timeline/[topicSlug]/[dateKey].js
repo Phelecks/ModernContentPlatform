@@ -11,7 +11,7 @@
  *   {
  *     alerts: Array<{ id, headline, summary_text, source_name, source_url,
  *                     source_type, source_domain, source_metadata_json,
- *                     severity_score, importance_score, event_at }>,
+ *                     severity_score, importance_score, confidence_score, event_at }>,
  *     total: number,
  *     has_more: boolean
  *   }

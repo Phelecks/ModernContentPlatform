@@ -333,6 +333,12 @@ describe('validateAlertPayload', () => {
     expect(result.error).toMatch(/source_domain/i)
   })
 
+  it('returns valid=false when source_domain is an empty string', () => {
+    const result = validateAlertPayload(validAlert({ source_domain: '' }))
+    expect(result.valid).toBe(false)
+    expect(result.error).toMatch(/source_domain/i)
+  })
+
   it('accepts valid supporting_sources array', () => {
     const result = validateAlertPayload(validAlert({
       supporting_sources: [
@@ -396,6 +402,14 @@ describe('validateAlertPayload', () => {
     }))
     expect(result.valid).toBe(false)
     expect(result.error).toMatch(/source_type/i)
+  })
+
+  it('returns valid=false when supporting_sources item has unknown fields', () => {
+    const result = validateAlertPayload(validAlert({
+      supporting_sources: [{ source_name: 'Test', extra_field: 'value' }]
+    }))
+    expect(result.valid).toBe(false)
+    expect(result.error).toMatch(/unknown/i)
   })
 })
 

@@ -129,8 +129,10 @@ export function validateAlertPayload(body) {
       return fail(`Invalid source_type: must be one of ${VALID_SOURCE_TYPES.join(', ')}`)
     }
   }
-  if (!isOptionalString(source_domain, 200)) {
-    return fail('source_domain must be a string (max 200 chars) or null')
+  if (source_domain !== undefined && source_domain !== null) {
+    if (typeof source_domain !== 'string' || source_domain.length === 0 || source_domain.length > 200) {
+      return fail('source_domain must be a non-empty string (max 200 chars) or null')
+    }
   }
   if (supporting_sources !== undefined && supporting_sources !== null) {
     if (!Array.isArray(supporting_sources)) return fail('supporting_sources must be an array')
@@ -138,6 +140,11 @@ export function validateAlertPayload(body) {
     for (let i = 0; i < supporting_sources.length; i++) {
       const ss = supporting_sources[i]
       if (!ss || typeof ss !== 'object') return fail(`supporting_sources[${i}] must be an object`)
+      const ssAllowed = ['source_name', 'source_url', 'source_type', 'source_role']
+      const ssUnknown = Object.keys(ss).filter(k => !ssAllowed.includes(k))
+      if (ssUnknown.length > 0) {
+        return fail(`supporting_sources[${i}] contains unknown fields: ${ssUnknown.join(', ')}`)
+      }
       if (!isNonEmptyString(ss.source_name)) {
         return fail(`supporting_sources[${i}].source_name is required and must be a non-empty string`)
       }
