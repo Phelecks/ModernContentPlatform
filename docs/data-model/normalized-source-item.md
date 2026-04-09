@@ -267,7 +267,17 @@ Module 05 — AI Classification
 ### Module 01 — Source Ingestion
 
 Each source parser (RSS, API, X) must emit `source_item` objects that include
-the new fields. When reading sources from the D1 `sources` registry:
+the new fields. In the current implementation, module 01 builds its source list
+from `$vars.INTRADAY_SOURCES_JSON`, not from the D1 `sources` registry.
+
+When source configurations include `trust_tier`, `trust_score`, and
+`source_slug` fields, the parser nodes stamp them onto each emitted item.
+These fields are optional in the `intraday_source_item` contract — when the
+source configuration does not include them, emitted items will have `null`
+values and downstream stages treat them as unregistered sources.
+
+If module 01 is later migrated to read from the D1 `sources` registry, it
+should query:
 
 ```sql
 SELECT source_slug, source_name, source_type, trust_tier,
@@ -277,9 +287,6 @@ FROM sources
 WHERE topic_slug = ? AND is_active = 1
 ORDER BY priority_weight DESC
 ```
-
-Pass `source_slug`, `trust_tier`, and `trust_score` in the source config so the
-parser nodes can stamp them onto each emitted item.
 
 For RSS feeds, attempt to extract author from `dc:creator` or `<author>` tags
 and include it in `author`. For X items, derive the author from the configured

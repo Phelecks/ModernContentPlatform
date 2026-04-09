@@ -56,6 +56,17 @@
       "format": "date-time",
       "description": "UTC timestamp when the item was fetched by the ingestion step (ISO-8601)."
     },
+    "trust_tier": {
+      "type": ["string", "null"],
+      "enum": ["T1", "T2", "T3", "T4", null],
+      "description": "Trust classification from the source registry, passed through module boundaries when available. T1=Official, T2=Wire, T3=Specialist, T4=Signal/Social. Null for unconfigured sources."
+    },
+    "trust_score": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Numeric trust score (0–100) from the source registry, passed through module boundaries when available. Higher is more trusted. Null for unconfigured sources."
+    },
     "raw_json": {
       "type": ["object", "null"],
       "description": "Original source payload preserved for debugging and re-processing."
@@ -75,6 +86,8 @@
       "author": "Omkar Godbole",
       "published_at": "2025-01-15T14:32:00Z",
       "fetched_at": "2025-01-15T14:45:00Z",
+      "trust_tier": "T3",
+      "trust_score": 50,
       "raw_json": {
         "guid": "https://www.coindesk.com/markets/2025/01/15/bitcoin-hits-new-ath/",
         "link": "https://www.coindesk.com/markets/2025/01/15/bitcoin-hits-new-ath/",
@@ -94,6 +107,8 @@
       "author": null,
       "published_at": "2025-01-15T13:30:00Z",
       "fetched_at": "2025-01-15T13:32:00Z",
+      "trust_tier": "T1",
+      "trust_score": 90,
       "raw_json": {
         "guid": "https://www.bls.gov/news.release/cpi.nr0.htm",
         "pubDate": "Wed, 15 Jan 2025 13:30:00 +0000"
@@ -111,6 +126,8 @@
       "author": null,
       "published_at": "2025-01-15T14:00:00Z",
       "fetched_at": "2025-01-15T14:01:05Z",
+      "trust_tier": "T1",
+      "trust_score": 90,
       "raw_json": {
         "bitcoin": { "usd": 120432, "usd_24h_change": 8.2, "usd_market_cap": 2380000000000 }
       }
@@ -127,6 +144,8 @@
       "author": "Jane Smith, John Doe, et al.",
       "published_at": "2025-01-14T00:00:00Z",
       "fetched_at": "2025-01-15T06:00:00Z",
+      "trust_tier": "T3",
+      "trust_score": 50,
       "raw_json": {
         "guid": "https://arxiv.org/abs/2501.12345",
         "category": "cs.AI",
@@ -145,6 +164,8 @@
       "author": "@whale_alert",
       "published_at": "2025-01-15T14:28:00Z",
       "fetched_at": "2025-01-15T14:30:00Z",
+      "trust_tier": "T4",
+      "trust_score": 25,
       "raw_json": {
         "id": "1879012345678901234",
         "author_id": "979004436",
