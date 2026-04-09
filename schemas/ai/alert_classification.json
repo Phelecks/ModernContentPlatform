@@ -117,8 +117,8 @@
           },
           "source_role": {
             "type": ["string", "null"],
-            "maxLength": 100,
-            "description": "Role of this source relative to the primary, e.g. 'confirmation', 'data', 'commentary', 'official'."
+            "enum": ["confirmation", "data", "commentary", "official", null],
+            "description": "Role of this source relative to the primary. Allowed values: 'confirmation', 'data', 'commentary', 'official', or null when not applicable."
           }
         },
         "additionalProperties": false

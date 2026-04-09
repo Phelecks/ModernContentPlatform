@@ -2,9 +2,9 @@
 
 ## Overview
 
-All AI output schemas in `schemas/ai/` support structured source references. This ensures the AI layer always works with explicit source attribution instead of generating unsupported claims.
+AI output schemas in `schemas/ai/` support structured source references where source attribution is part of the output contract. This helps the AI layer work with explicit source attribution instead of generating unsupported claims.
 
-Source references are part of the AI output contract. Downstream consumers (n8n workflows, D1 persistence, frontend rendering) can rely on a consistent source reference structure across all output types.
+For schemas that include sources, downstream consumers (n8n workflows, D1 persistence, frontend rendering) can rely on a consistent source reference structure. `youtube_metadata.json` is an explicit exception and intentionally does not include source fields because it represents publishing metadata rather than source-backed factual extraction.
 
 ## Source Reference Structure
 
@@ -116,9 +116,9 @@ All new source fields are optional (nullable or have no `required` constraint at
 
 ### Intraday flow (n8n modules 05–09)
 
-- Module 05 (AI classification): Should populate `primary_source` from the input normalized item's `source_name`, `source_url`, and `source_type`. Should populate `supporting_sources` when the AI identifies corroborating sources. Should populate `source_confidence_note` explaining trust-tier influence on confidence.
-- Module 06 (timeline formatting): Should populate `source_attribution` from the classified alert's `source_name` and `source_url` from its `primary_source` or the item's existing source fields.
-- Module 07 (D1 persistence): Source fields are stored in `metadata_json` alongside existing fields.
+- Module 05 (AI classification): Current intraday output emits top-level `source_name`, `source_url`, and any existing source metadata carried through classification. Population of structured `primary_source`, `supporting_sources`, and `source_confidence_note` is planned but not yet implemented in the current Module 05 workflow shape.
+- Module 06 (timeline formatting): Current behavior should derive `source_attribution` from the classified alert's top-level `source_name` and `source_url`. Once Module 05 emits `primary_source`, Module 06 can prefer that structured field and fall back to the existing top-level source fields for backward compatibility.
+- Module 07 (D1 persistence): Current intraday persistence stores available source fields in `metadata_json` alongside existing fields. When `primary_source`, `supporting_sources`, and related structured source fields are added to Module 05, they should also be stored in `metadata_json`.
 
 ### Daily flow (n8n modules 01–10)
 

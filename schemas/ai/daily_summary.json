@@ -68,8 +68,8 @@
                 },
                 "source_role": {
                   "type": ["string", "null"],
-                  "maxLength": 100,
-                  "description": "Role of this source for this event, e.g. 'primary', 'data', 'confirmation', 'commentary'."
+                  "enum": ["primary", "confirmation", "data", "commentary", "official", null],
+                  "description": "Role of this source for this event. Allowed values: 'primary', 'confirmation', 'data', 'commentary', 'official', or null when not available."
                 }
               },
               "additionalProperties": false
@@ -114,8 +114,8 @@
           },
           "source_role": {
             "type": ["string", "null"],
-            "maxLength": 100,
-            "description": "Role of this source in the summary, e.g. 'primary', 'data', 'confirmation', 'commentary'."
+            "enum": ["primary", "confirmation", "data", "commentary", "official", null],
+            "description": "Role of this source in the summary. Allowed values: 'primary', 'confirmation', 'data', 'commentary', 'official', or null when not available."
           }
         },
         "additionalProperties": false

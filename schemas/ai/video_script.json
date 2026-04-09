@@ -61,8 +61,8 @@
                 },
                 "source_role": {
                   "type": ["string", "null"],
-                  "maxLength": 100,
-                  "description": "Role of this source for this segment, e.g. 'primary', 'data', 'commentary'."
+                  "enum": ["primary", "data", "commentary", null],
+                  "description": "Role of this source for this segment. Allowed values: 'primary', 'data', 'commentary', or null when not available."
                 }
               },
               "additionalProperties": false

@@ -46,8 +46,8 @@
     },
     "source_url": {
       "type": ["string", "null"],
-      "format": "uri",
-      "description": "URL of the primary source for this timeline entry. Used for link-through on the frontend. Null when not available."
+      "pattern": "^https?://",
+      "description": "HTTP(S) URL of the primary source for this timeline entry. Used for link-through on the frontend. Null when not available."
     }
   },
   "additionalProperties": false,
