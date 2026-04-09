@@ -78,5 +78,5 @@ Paste the output into the `INTRADAY_SOURCES_JSON` n8n variable.
 | Source | Credential type | Notes |
 |--------|----------------|-------|
 | Federal Reserve FRED API | Query param `api_key` | Module 01 uses the URL verbatim; operators must replace `REPLACE_WITH_FRED_API_KEY` in `economy.json` with a real key, or update the workflow to inject the key from an n8n credential |
-| X sources (`x_account`, `x_query`) | Bearer token (`Authorization: Bearer`) | Requires an X API v2 bearer token configured as an n8n HTTP Header Auth credential named "X Bearer Token". All X sources are disabled (`is_active: 0`) by default and must be enabled after credentials are configured |
+| X sources (`x_account`, `x_query`) | Bearer token (`Authorization: Bearer`) | Requires an X API v2 bearer token configured as an n8n HTTP Header Auth credential named "X Bearer Token". These source configs do not include an `is_active` flag, so any X sources included in `INTRADAY_SOURCES_JSON` will be passed to module 01. Omit X sources from `INTRADAY_SOURCES_JSON` until credentials are configured, or add explicit filtering in the workflow before enabling them. The D1 seed data (`db/seeds/sources.sql`) does set `is_active: 0` for X sources |
 | All others | None (public) | — |

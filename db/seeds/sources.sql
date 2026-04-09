@@ -96,7 +96,7 @@ VALUES
 INSERT OR IGNORE INTO sources
   (source_slug, source_name, topic_slug, source_type, trust_tier, trust_score, priority_weight, url, is_active, poll_interval_minutes, ingestion_method, metadata_json)
 VALUES
-  ('x-account-iaborea', 'IEA (X)', 'energy', 'x_account', 'T4', 25, 30, 'https://x.com/IEA', 0, 15, 'poll', '{"x_user_id":"IEA","monitor_type":"account"}');
+  ('x-account-iea', 'IEA (X)', 'energy', 'x_account', 'T4', 25, 30, 'https://x.com/IEA', 0, 15, 'poll', '{"x_user_id":"IEA","monitor_type":"account"}');
 
 -- ============================================================
 -- X (Twitter) sources — keyword/hashtag query monitoring
