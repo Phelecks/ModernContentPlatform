@@ -131,6 +131,7 @@ function textRes(text, status = 200) {
 function buildFetch(statusData, {
   articleContent = null,
   videoMeta = null,
+  summaryData = null,
   navData = NAV_NO_DATES,
   timelineResponses = [TIMELINE_RESPONSE]
 } = {}) {
@@ -151,6 +152,11 @@ function buildFetch(statusData, {
     if (url.endsWith('/video.json')) {
       return videoMeta
         ? jsonRes(videoMeta)
+        : Promise.resolve(new Response('', { status: 404 }))
+    }
+    if (url.endsWith('/summary.json')) {
+      return summaryData
+        ? jsonRes(summaryData)
         : Promise.resolve(new Response('', { status: 404 }))
     }
     return Promise.resolve(new Response('Not Found', { status: 404 }))
@@ -351,5 +357,65 @@ describe('TopicDayPage — published state with full content', () => {
     const wrapper = mount(TopicDayPage, { global: { plugins: [router] } })
     await flushPromises()
     expect(wrapper.find('.page-state-banner--success').exists()).toBe(true)
+  })
+})
+
+describe('TopicDayPage — source attribution', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
+  const SUMMARY_WITH_SOURCES = {
+    headline: 'Test Summary',
+    sources: [
+      { source_name: 'CoinDesk', source_url: 'https://example.com/coindesk', source_role: 'primary' },
+      { source_name: 'Bloomberg', source_url: 'https://example.com/bloomberg', source_role: 'confirmation' }
+    ],
+    source_confidence_note: 'High confidence: multiple sources.'
+  }
+
+  it('renders SourceList when summary data includes sources', async () => {
+    vi.stubGlobal('fetch', buildFetch(PUBLISHED_STATUS, {
+      articleContent: ARTICLE_MARKDOWN,
+      videoMeta: VIDEO_META,
+      summaryData: SUMMARY_WITH_SOURCES
+    }))
+    const router = await createTestRouter()
+    const wrapper = mount(TopicDayPage, { global: { plugins: [router] } })
+    await flushPromises()
+    expect(wrapper.find('.source-list').exists()).toBe(true)
+    expect(wrapper.text()).toContain('CoinDesk')
+    expect(wrapper.text()).toContain('Bloomberg')
+  })
+
+  it('renders the confidence note from summary data', async () => {
+    vi.stubGlobal('fetch', buildFetch(PUBLISHED_STATUS, {
+      articleContent: ARTICLE_MARKDOWN,
+      summaryData: SUMMARY_WITH_SOURCES
+    }))
+    const router = await createTestRouter()
+    const wrapper = mount(TopicDayPage, { global: { plugins: [router] } })
+    await flushPromises()
+    expect(wrapper.text()).toContain('High confidence: multiple sources.')
+  })
+
+  it('does not render SourceList when summary data has no sources', async () => {
+    vi.stubGlobal('fetch', buildFetch(PUBLISHED_STATUS, {
+      articleContent: ARTICLE_MARKDOWN,
+      summaryData: { headline: 'Test', sources: null }
+    }))
+    const router = await createTestRouter()
+    const wrapper = mount(TopicDayPage, { global: { plugins: [router] } })
+    await flushPromises()
+    expect(wrapper.find('.source-list').exists()).toBe(false)
+  })
+
+  it('does not render SourceList when summary.json is not available', async () => {
+    vi.stubGlobal('fetch', buildFetch(PENDING_STATUS))
+    const router = await createTestRouter()
+    const wrapper = mount(TopicDayPage, { global: { plugins: [router] } })
+    await flushPromises()
+    expect(wrapper.find('.source-list').exists()).toBe(false)
   })
 })
