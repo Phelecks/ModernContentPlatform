@@ -35,8 +35,25 @@
     "url": "https://x.com/OpenAI",
     "topic_slug": "ai",
     "trust_tier": "T4",
-    "notes": "X account monitoring — disabled by default; enable after X API credentials are configured. Severity capped at 50 per AI T4 rules.",
-    "x_user_id": "OpenAI"
+    "notes": "X account monitoring — disabled by default; enable after X API credentials are configured. Severity capped at 50 per AI T4 rules. See docs/x-source-rules.md.",
+    "x_user_id": "OpenAI",
+    "poll_interval_minutes": 10,
+    "severity_cap": 50,
+    "confirmation_required": false,
+    "can_trigger_alert": true
+  },
+  {
+    "name": "Anthropic (X)",
+    "type": "x_account",
+    "url": "https://x.com/AnthropicAI",
+    "topic_slug": "ai",
+    "trust_tier": "T4",
+    "notes": "X account monitoring — disabled by default; enable after X API credentials are configured. Severity capped at 50 per AI T4 rules. See docs/x-source-rules.md.",
+    "x_user_id": "AnthropicAI",
+    "poll_interval_minutes": 10,
+    "severity_cap": 50,
+    "confirmation_required": false,
+    "can_trigger_alert": true
   },
   {
     "name": "X Search: AI Model Launch",
@@ -44,7 +61,11 @@
     "url": "https://api.twitter.com/2/tweets/search/recent",
     "topic_slug": "ai",
     "trust_tier": "T4",
-    "notes": "X keyword search — disabled by default; enable after X API credentials are configured. Severity capped at 50 per AI T4 rules.",
-    "search_query": "(#GPT OR #LLM OR #AI) (launched OR released OR announced) -is:retweet lang:en"
+    "notes": "X keyword search — disabled by default; enable after X API credentials are configured. Severity capped at 50 per AI T4 rules. See docs/x-source-rules.md.",
+    "search_query": "(#GPT OR #LLM OR #AI) (launched OR released OR announced) -is:retweet lang:en",
+    "poll_interval_minutes": 10,
+    "severity_cap": 50,
+    "confirmation_required": false,
+    "can_trigger_alert": true
   }
 ]
