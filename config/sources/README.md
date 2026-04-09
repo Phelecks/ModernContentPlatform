@@ -16,11 +16,11 @@ source strategy, trust model, and per-topic usage rules.
 
 | File | Topic | Sources |
 |------|-------|---------|
-| `ai.json` | AI | Ars Technica, Hacker News API, OpenAI blog, MIT Technology Review |
-| `crypto.json` | Crypto | CoinGecko API (placeholder), CoinDesk RSS, Reuters crypto RSS |
+| `ai.json` | AI | Ars Technica, Hacker News API, OpenAI blog, MIT Technology Review, OpenAI X account, AI launch X query |
+| `crypto.json` | Crypto | CoinGecko API (placeholder), CoinDesk RSS, Reuters crypto RSS, Whale Alert X account, BTC breakout X query |
 | `economy.json` | Economy | BLS RSS, Federal Reserve FRED API, Reuters general news RSS |
-| `energy.json` | Energy | IEA RSS, EIA RSS, Reuters general news RSS |
-| `finance.json` | Finance | Reuters business RSS, SEC EDGAR RSS, Federal Reserve RSS |
+| `energy.json` | Energy | IEA RSS, EIA RSS, Reuters general news RSS, IEA X account |
+| `finance.json` | Finance | Reuters business RSS, SEC EDGAR RSS, Federal Reserve RSS, Fed decision X query |
 | `health.json` | Health | WHO RSS, CDC RSS, Reuters health RSS |
 
 ---
@@ -33,11 +33,13 @@ module 01:
 ```json
 {
   "name":       "Human-readable source label",
-  "type":       "rss | api | social | webhook | placeholder",
+  "type":       "rss | api | social | webhook | x_account | x_query | placeholder",
   "url":        "https://...",
   "topic_slug": "crypto | ai | finance | economy | health | energy",
   "trust_tier": "T1 | T2 | T3 | T4",
-  "notes":      "(optional) operator notes"
+  "notes":      "(optional) operator notes",
+  "x_user_id":  "(optional, x_account only) X username",
+  "search_query": "(optional, x_query only) X search query string"
 }
 ```
 
@@ -76,4 +78,5 @@ Paste the output into the `INTRADAY_SOURCES_JSON` n8n variable.
 | Source | Credential type | Notes |
 |--------|----------------|-------|
 | Federal Reserve FRED API | Query param `api_key` | Module 01 uses the URL verbatim; operators must replace `REPLACE_WITH_FRED_API_KEY` in `economy.json` with a real key, or update the workflow to inject the key from an n8n credential |
+| X sources (`x_account`, `x_query`) | Bearer token (`Authorization: Bearer`) | Requires an X API v2 bearer token configured as an n8n HTTP Header Auth credential named "X Bearer Token". These source configs do not include an `is_active` flag, so any X sources included in `INTRADAY_SOURCES_JSON` will be passed to module 01. Omit X sources from `INTRADAY_SOURCES_JSON` until credentials are configured, or add explicit filtering in the workflow before enabling them. The D1 seed data (`db/seeds/sources.sql`) does set `is_active: 0` for X sources |
 | All others | None (public) | — |

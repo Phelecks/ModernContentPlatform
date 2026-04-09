@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS sources (
   source_slug           TEXT    NOT NULL UNIQUE,       -- stable identifier, e.g. 'coindesk-rss'
   source_name           TEXT    NOT NULL,              -- human-readable, e.g. 'CoinDesk RSS'
   topic_slug            TEXT    NOT NULL,              -- primary topic association
-  source_type           TEXT    NOT NULL,              -- 'rss' | 'api' | 'social' | 'webhook'
+  source_type           TEXT    NOT NULL,              -- 'rss' | 'api' | 'social' | 'webhook' | 'x_account' | 'x_query'
   trust_tier            TEXT    NOT NULL DEFAULT 'T3', -- 'T1' | 'T2' | 'T3' | 'T4'
   trust_score           INTEGER NOT NULL DEFAULT 50,   -- 0–100 numeric trust score
   priority_weight       INTEGER NOT NULL DEFAULT 50,   -- 0–100, higher = polled/used first

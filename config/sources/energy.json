@@ -20,5 +20,14 @@
     "topic_slug": "energy",
     "trust_tier": "T2",
     "notes": "Generic Reuters companyNews feed; replace with a topic-specific energy feed when available"
+  },
+  {
+    "name": "IEA (X)",
+    "type": "x_account",
+    "url": "https://x.com/IEA",
+    "topic_slug": "energy",
+    "trust_tier": "T4",
+    "notes": "X account monitoring — disabled by default; enable after X API credentials are configured. Severity capped at 50 per energy T4 rules.",
+    "x_user_id": "IEA"
   }
 ]

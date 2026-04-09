@@ -24,16 +24,18 @@ import {
   CRYPTO_SOURCE_EVENT_BTC_ETF,
   FINANCE_SOURCE_EVENT_FED_MINUTES,
   AI_SOURCE_EVENT_OPEN_WEIGHT_MODEL,
+  CRYPTO_SOURCE_EVENT_X_WHALE_ALERT,
   CRYPTO_NORMALIZED_ITEM_BTC_ETF,
   FINANCE_NORMALIZED_ITEM_FED_MINUTES,
-  AI_NORMALIZED_ITEM_OPEN_WEIGHT_MODEL
+  AI_NORMALIZED_ITEM_OPEN_WEIGHT_MODEL,
+  CRYPTO_NORMALIZED_ITEM_X_WHALE_ALERT
 } from './helpers/fixtures.js'
 
 // ---- Helpers ----
 
 const PAGE_STATE_VALUES = ['pending', 'ready', 'published', 'error']
 const TOPIC_SLUGS = ['crypto', 'finance', 'economy', 'health', 'ai', 'energy', 'technology']
-const SOURCE_TYPES = ['rss', 'api', 'social', 'webhook']
+const SOURCE_TYPES = ['rss', 'api', 'social', 'webhook', 'x_account', 'x_query']
 
 function assertPageState(fixture, label) {
   expect(fixture, `${label}: must be an object`).toBeTypeOf('object')
@@ -221,6 +223,12 @@ describe('fixtures/source-events', () => {
     assertSourceEvent(AI_SOURCE_EVENT_OPEN_WEIGHT_MODEL, 'ai-source-event')
     expect(AI_SOURCE_EVENT_OPEN_WEIGHT_MODEL.source_type).toBe('rss')
   })
+
+  it('crypto-2025-01-15-x-whale-alert has required source-event fields for x_account type', () => {
+    assertSourceEvent(CRYPTO_SOURCE_EVENT_X_WHALE_ALERT, 'crypto-x-source-event')
+    expect(CRYPTO_SOURCE_EVENT_X_WHALE_ALERT.source_type).toBe('x_account')
+    expect(CRYPTO_SOURCE_EVENT_X_WHALE_ALERT.source_url).toMatch(/x\.com/)
+  })
 })
 
 // ---- Normalized item fixture tests ----
@@ -244,9 +252,17 @@ describe('fixtures/normalized-items', () => {
     expect(AI_NORMALIZED_ITEM_OPEN_WEIGHT_MODEL.topic_candidates).toContain('ai')
   })
 
+  it('crypto-2025-01-15-x-whale-alert has required normalized-item fields for x_account type', () => {
+    assertNormalizedItem(CRYPTO_NORMALIZED_ITEM_X_WHALE_ALERT, 'crypto-x-normalized')
+    expect(CRYPTO_NORMALIZED_ITEM_X_WHALE_ALERT.is_duplicate).toBe(false)
+    expect(CRYPTO_NORMALIZED_ITEM_X_WHALE_ALERT.source_type).toBe('x_account')
+    expect(CRYPTO_NORMALIZED_ITEM_X_WHALE_ALERT.topic_candidates).toContain('crypto')
+  })
+
   it('source_id in normalized item matches the corresponding source event', () => {
     expect(CRYPTO_NORMALIZED_ITEM_BTC_ETF.source_id).toBe(CRYPTO_SOURCE_EVENT_BTC_ETF.source_id)
     expect(FINANCE_NORMALIZED_ITEM_FED_MINUTES.source_id).toBe(FINANCE_SOURCE_EVENT_FED_MINUTES.source_id)
     expect(AI_NORMALIZED_ITEM_OPEN_WEIGHT_MODEL.source_id).toBe(AI_SOURCE_EVENT_OPEN_WEIGHT_MODEL.source_id)
+    expect(CRYPTO_NORMALIZED_ITEM_X_WHALE_ALERT.source_id).toBe(CRYPTO_SOURCE_EVENT_X_WHALE_ALERT.source_id)
   })
 })

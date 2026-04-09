@@ -1,0 +1,13 @@
+{
+  "item_id": "e7a1b2c3d4f5061728394a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d",
+  "source_id": "x-1879012345678901234",
+  "source_name": "Whale Alert (X)",
+  "source_type": "x_account",
+  "source_url": "https://x.com/whale_alert/status/1879012345678901234",
+  "headline": "500 BTC (52,000,000 USD) transferred from unknown wallet to Coinbase",
+  "body": null,
+  "topic_candidates": ["crypto"],
+  "published_at": "2025-01-15T16:05:00Z",
+  "fetched_at": "2025-01-15T16:10:00Z",
+  "is_duplicate": false
+}

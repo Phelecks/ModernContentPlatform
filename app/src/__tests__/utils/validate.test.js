@@ -17,7 +17,8 @@ import { describe, it, expect } from 'vitest'
 import {
   validateAlertPayload,
   validateDailyStatusPayload,
-  validatePublishJobPayload
+  validatePublishJobPayload,
+  validateSourcePayload
 } from '@functions/lib/validate.js'
 
 // ---------------------------------------------------------------------------
@@ -533,5 +534,110 @@ describe('validatePublishJobPayload', () => {
     const result = validatePublishJobPayload(validPublishJob({ extra: 'field' }))
     expect(result.valid).toBe(false)
     expect(result.error).toMatch(/unknown/i)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// validateSourcePayload
+// ---------------------------------------------------------------------------
+
+function validSource(overrides = {}) {
+  return {
+    source_slug: 'test-source',
+    source_name: 'Test Source',
+    topic_slug: 'crypto',
+    source_type: 'rss',
+    trust_tier: 'T2',
+    trust_score: 75,
+    priority_weight: 80,
+    url: 'https://example.com/rss',
+    is_active: 1,
+    poll_interval_minutes: 15,
+    ingestion_method: 'poll',
+    ...overrides
+  }
+}
+
+describe('validateSourcePayload', () => {
+  // ---- Valid inputs ----
+
+  it('returns valid=true for a complete valid payload', () => {
+    const result = validateSourcePayload(validSource())
+    expect(result.valid).toBe(true)
+  })
+
+  it('accepts all valid source_type values including x_account and x_query', () => {
+    const types = ['rss', 'api', 'social', 'webhook', 'x_account', 'x_query']
+    for (const type of types) {
+      const result = validateSourcePayload(validSource({ source_type: type }))
+      expect(result.valid, `source_type=${type} should be valid`).toBe(true)
+    }
+  })
+
+  it('accepts x_account source with metadata', () => {
+    const result = validateSourcePayload(validSource({
+      source_slug: 'x-crypto-whale',
+      source_name: 'Crypto Whale X Account',
+      source_type: 'x_account',
+      trust_tier: 'T4',
+      trust_score: 25,
+      url: 'https://x.com/crypto_whale',
+      metadata_json: '{"x_user_id":"crypto_whale","monitor_type":"account"}'
+    }))
+    expect(result.valid).toBe(true)
+    expect(result.data.source_type).toBe('x_account')
+    expect(result.data.trust_tier).toBe('T4')
+  })
+
+  it('accepts x_query source with search metadata', () => {
+    const result = validateSourcePayload(validSource({
+      source_slug: 'x-query-btc',
+      source_name: 'X Search: BTC',
+      source_type: 'x_query',
+      trust_tier: 'T4',
+      trust_score: 25,
+      url: 'https://api.twitter.com/2/tweets/search/recent',
+      metadata_json: '{"search_query":"#BTC breakout","monitor_type":"query","max_results":20}'
+    }))
+    expect(result.valid).toBe(true)
+    expect(result.data.source_type).toBe('x_query')
+  })
+
+  it('accepts only required fields with defaults', () => {
+    const result = validateSourcePayload({
+      source_slug: 'minimal',
+      source_name: 'Minimal',
+      topic_slug: 'ai',
+      source_type: 'x_account'
+    })
+    expect(result.valid).toBe(true)
+    expect(result.data.trust_tier).toBe('T3')
+    expect(result.data.trust_score).toBe(50)
+    expect(result.data.priority_weight).toBe(50)
+    expect(result.data.is_active).toBe(1)
+    expect(result.data.poll_interval_minutes).toBe(15)
+    expect(result.data.ingestion_method).toBe('poll')
+  })
+
+  // ---- Invalid inputs ----
+
+  it('returns valid=false for invalid source_type', () => {
+    const result = validateSourcePayload(validSource({ source_type: 'ftp' }))
+    expect(result.valid).toBe(false)
+    expect(result.error).toMatch(/source_type/)
+  })
+
+  it('returns valid=false for missing source_slug', () => {
+    const payload = validSource()
+    delete payload.source_slug
+    const result = validateSourcePayload(payload)
+    expect(result.valid).toBe(false)
+    expect(result.error).toMatch(/source_slug/)
+  })
+
+  it('returns valid=false for unknown fields', () => {
+    const result = validateSourcePayload(validSource({ extra_field: 'value' }))
+    expect(result.valid).toBe(false)
+    expect(result.error).toMatch(/Unknown/)
   })
 })

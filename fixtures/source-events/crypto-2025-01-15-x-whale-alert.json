@@ -1,0 +1,23 @@
+{
+  "source_id": "x-1879012345678901234",
+  "source_name": "Whale Alert (X)",
+  "source_type": "x_account",
+  "source_url": "https://x.com/whale_alert/status/1879012345678901234",
+  "title": "🚨 500 #BTC (52,000,000 USD) transferred from unknown wallet to #Coinbase",
+  "body": null,
+  "published_at": "2025-01-15T16:05:00Z",
+  "fetched_at": "2025-01-15T16:10:00Z",
+  "raw_json": {
+    "id": "1879012345678901234",
+    "author_id": "123456789",
+    "author_username": "whale_alert",
+    "text": "🚨 500 #BTC (52,000,000 USD) transferred from unknown wallet to #Coinbase",
+    "created_at": "2025-01-15T16:05:00.000Z",
+    "public_metrics": {
+      "retweet_count": 342,
+      "reply_count": 87,
+      "like_count": 1205,
+      "quote_count": 56
+    }
+  }
+}

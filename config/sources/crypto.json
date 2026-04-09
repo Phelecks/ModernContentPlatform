@@ -20,5 +20,23 @@
     "url": "https://feeds.reuters.com/reuters/technologyNews",
     "topic_slug": "crypto",
     "trust_tier": "T2"
+  },
+  {
+    "name": "Whale Alert (X)",
+    "type": "x_account",
+    "url": "https://x.com/whale_alert",
+    "topic_slug": "crypto",
+    "trust_tier": "T4",
+    "notes": "X account monitoring — disabled by default; enable after X API credentials are configured. Severity capped at 60 per crypto T4 rules.",
+    "x_user_id": "whale_alert"
+  },
+  {
+    "name": "X Search: BTC Breakout",
+    "type": "x_query",
+    "url": "https://api.twitter.com/2/tweets/search/recent",
+    "topic_slug": "crypto",
+    "trust_tier": "T4",
+    "notes": "X keyword search — disabled by default; enable after X API credentials are configured. Severity capped at 60 per crypto T4 rules.",
+    "search_query": "(#Bitcoin OR #BTC) (breakout OR ATH OR crash) -is:retweet lang:en"
   }
 ]

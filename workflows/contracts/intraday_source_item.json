@@ -22,8 +22,8 @@
     },
     "source_type": {
       "type": "string",
-      "enum": ["rss", "api", "social", "webhook"],
-      "description": "Category of the source."
+      "enum": ["rss", "api", "social", "webhook", "x_account", "x_query"],
+      "description": "Category of the source. x_account and x_query are first-class types for X (Twitter) account monitoring and keyword/hashtag search respectively."
     },
     "source_url": {
       "type": ["string", "null"],

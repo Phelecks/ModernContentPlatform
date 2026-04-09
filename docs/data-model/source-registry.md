@@ -43,8 +43,10 @@ bootstrap/seed data and operator reference.
 |------|-------------|---------|
 | `rss` | RSS/Atom feed | CoinDesk, Reuters, WHO, CDC, SEC EDGAR |
 | `api` | Structured data API | CoinGecko, FRED, Hacker News Firebase |
-| `social` | Social/signal account | X (Twitter) accounts, Telegram channels, Reddit |
+| `social` | Social/signal account (generic) | Telegram channels, Reddit |
 | `webhook` | Push-based event feed | Exchange announcement webhooks |
+| `x_account` | X (Twitter) account monitoring | Whale Alert, OpenAI, IEA official accounts |
+| `x_query` | X (Twitter) keyword/hashtag search | BTC breakout search, AI model launch search |
 
 ---
 
@@ -175,28 +177,65 @@ Returns all active sources, optionally filtered by topic.
 
 ---
 
-## Representing X Accounts and Social Sources
+## Representing X Sources
 
-X (Twitter) accounts and other social sources use `source_type: 'social'` and
-`trust_tier: 'T4'`. The URL field holds the profile or feed URL:
+X (Twitter) sources use dedicated source types (`x_account` or `x_query`)
+and `trust_tier: 'T4'`. This replaces the generic `social` type for X sources,
+giving the ingestion pipeline first-class routing.
+
+### X Account Monitoring (`x_account`)
+
+Monitors recent posts from a specific X user:
 
 ```json
 {
-  "source_slug": "x-crypto-whale",
-  "source_name": "Crypto Whale X Account",
+  "source_slug": "x-account-whale-alert",
+  "source_name": "Whale Alert (X)",
   "topic_slug": "crypto",
-  "source_type": "social",
+  "source_type": "x_account",
   "trust_tier": "T4",
   "trust_score": 25,
-  "priority_weight": 30,
-  "url": "https://x.com/crypto_whale",
+  "priority_weight": 40,
+  "url": "https://x.com/whale_alert",
   "ingestion_method": "poll",
-  "metadata_json": "{\"x_user_id\": \"123456\", \"search_terms\": [\"bitcoin\", \"btc\"]}"
+  "metadata_json": "{\"x_user_id\": \"whale_alert\", \"monitor_type\": \"account\"}"
 }
 ```
 
-The `metadata_json` field can carry platform-specific identifiers (X user ID),
-search terms, or other configuration needed by the ingestion module.
+### X Keyword/Hashtag Search (`x_query`)
+
+Searches recent posts matching a query string:
+
+```json
+{
+  "source_slug": "x-query-btc-breakout",
+  "source_name": "X Search: BTC Breakout",
+  "topic_slug": "crypto",
+  "source_type": "x_query",
+  "trust_tier": "T4",
+  "trust_score": 25,
+  "priority_weight": 30,
+  "url": "https://api.twitter.com/2/tweets/search/recent",
+  "ingestion_method": "poll",
+  "metadata_json": "{\"search_query\": \"(#Bitcoin OR #BTC) (breakout OR ATH OR crash) -is:retweet lang:en\", \"monitor_type\": \"query\", \"max_results\": 20}"
+}
+```
+
+### Metadata fields for X sources
+
+| Field | Type | Required for | Description |
+|-------|------|-------------|-------------|
+| `x_user_id` | string | `x_account` | X username (without @) |
+| `search_query` | string | `x_query` | X recent search query string |
+| `monitor_type` | string | both | `"account"` or `"query"` |
+| `max_results` | integer | `x_query` | Max tweets per fetch (default: 10, max: 100) |
+
+### Trust and confidence rules for X sources
+
+- All X sources default to `trust_tier: 'T4'` and `trust_score: 25`
+- Per-topic severity caps apply (see `docs/source-strategy.md`)
+- When X is the sole source, `confidence_score` should be reduced by ≥20 points
+- Topics that exclude T4 sources (economy, health) must not have active X sources
 
 ---
 
