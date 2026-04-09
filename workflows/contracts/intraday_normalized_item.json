@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "intraday_normalized_item",
   "title": "Intraday Normalized Item",
-  "description": "Source item after normalization. Canonical internal format used by all downstream stages.",
+  "description": "Source item after normalization. Canonical internal format used by all downstream stages: deduplication, clustering, AI classification, alert creation, and summary generation. Every source type (RSS news, official RSS, data API, research RSS, X/social) maps into this structure.",
   "type": "object",
   "required": [
     "item_id",
@@ -23,13 +23,18 @@
       "type": "string",
       "description": "Original source identifier, preserved from the source item."
     },
+    "source_slug": {
+      "type": ["string", "null"],
+      "description": "Stable registry identifier for the source (e.g. 'coindesk-rss'). Propagated from the source item. Null when the source is not registered in the D1 sources table."
+    },
     "source_name": {
       "type": "string",
       "description": "Human-readable source label."
     },
     "source_type": {
       "type": "string",
-      "enum": ["rss", "api", "social", "webhook", "x_account", "x_query"]
+      "enum": ["rss", "api", "social", "webhook", "x_account", "x_query"],
+      "description": "Technical source category. Determines parser path in module 01 and informs trust-tier logic in module 05/06."
     },
     "source_url": {
       "type": ["string", "null"],
@@ -46,6 +51,11 @@
       "maxLength": 2000,
       "description": "Cleaned body text. HTML stripped. Max 2000 characters. Null when not available."
     },
+    "author": {
+      "type": ["string", "null"],
+      "maxLength": 200,
+      "description": "Author name, journalist byline, or X account handle (@username) when available from the source. Null when not provided. Passed to AI classification for attribution and trust context."
+    },
     "topic_candidates": {
       "type": "array",
       "items": {
@@ -54,7 +64,7 @@
       },
       "minItems": 0,
       "maxItems": 3,
-      "description": "Topic slugs identified by lightweight keyword matching before the AI step."
+      "description": "Topic slugs identified by lightweight keyword matching before the AI step. Empty array when no keyword match is found; the AI classifier will still assign a topic."
     },
     "published_at": {
       "type": "string",
@@ -66,24 +76,112 @@
       "format": "date-time",
       "description": "UTC timestamp when the item was fetched."
     },
+    "trust_tier": {
+      "type": ["string", "null"],
+      "enum": ["T1", "T2", "T3", "T4", null],
+      "description": "Trust classification propagated from the D1 sources registry. T1=Official, T2=Wire, T3=Specialist, T4=Signal/Social. Null when the source is not registered. Used by module 05 (AI classification) to adjust confidence_score and by module 06 (alert decision) to enforce per-topic severity caps."
+    },
+    "trust_score": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Numeric trust score (0–100) from the D1 sources registry. Higher is more trusted. Null when the source is not registered. Passed to AI classification for confidence calibration."
+    },
     "is_duplicate": {
       "type": "boolean",
-      "description": "Set to true by the deduplication stage. Items where is_duplicate=true are dropped before AI classification."
+      "description": "Set to true by the deduplication stage (module 03). Items where is_duplicate=true are dropped before AI classification."
     }
   },
   "additionalProperties": false,
   "examples": [
     {
+      "_comment": "news — RSS specialist outlet (crypto)",
       "item_id": "a3f8c2d14e7b9f01234567890abcdef1234567890abcdef1234567890abcdef12",
       "source_id": "https://www.coindesk.com/markets/2025/01/15/bitcoin-hits-new-ath/",
+      "source_slug": "coindesk-rss",
       "source_name": "CoinDesk RSS",
       "source_type": "rss",
       "source_url": "https://www.coindesk.com/markets/2025/01/15/bitcoin-hits-new-ath/",
       "headline": "Bitcoin Hits New All-Time High Above $120K",
       "body": "Bitcoin surged past $120,000 on Wednesday, setting a new all-time high as institutional demand continued to rise.",
+      "author": "Omkar Godbole",
       "topic_candidates": ["crypto", "finance"],
       "published_at": "2025-01-15T14:32:00Z",
       "fetched_at": "2025-01-15T14:45:00Z",
+      "trust_tier": "T3",
+      "trust_score": 50,
+      "is_duplicate": false
+    },
+    {
+      "_comment": "official — government data release (economy)",
+      "item_id": "b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2",
+      "source_id": "https://www.bls.gov/news.release/cpi.nr0.htm",
+      "source_slug": "bls-rss",
+      "source_name": "BLS News RSS",
+      "source_type": "rss",
+      "source_url": "https://www.bls.gov/news.release/cpi.nr0.htm",
+      "headline": "Consumer Price Index — December 2024",
+      "body": "The Consumer Price Index for All Urban Consumers rose 0.3 percent in December on a seasonally adjusted basis.",
+      "author": null,
+      "topic_candidates": ["economy", "finance"],
+      "published_at": "2025-01-15T13:30:00Z",
+      "fetched_at": "2025-01-15T13:32:00Z",
+      "trust_tier": "T1",
+      "trust_score": 90,
+      "is_duplicate": false
+    },
+    {
+      "_comment": "data — structured market data API (crypto)",
+      "item_id": "c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5",
+      "source_id": "coingecko-btc-2025-01-15T14:00:00Z",
+      "source_slug": "coingecko-api",
+      "source_name": "CoinGecko API",
+      "source_type": "api",
+      "source_url": "https://www.coingecko.com/en/coins/bitcoin",
+      "headline": "Bitcoin price alert: $120,432 (+8.2% 24h)",
+      "body": null,
+      "author": null,
+      "topic_candidates": ["crypto"],
+      "published_at": "2025-01-15T14:00:00Z",
+      "fetched_at": "2025-01-15T14:01:05Z",
+      "trust_tier": "T1",
+      "trust_score": 90,
+      "is_duplicate": false
+    },
+    {
+      "_comment": "research — academic pre-print RSS (ai)",
+      "item_id": "d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8",
+      "source_id": "https://arxiv.org/abs/2501.12345",
+      "source_slug": "arxiv-cs-ai-rss",
+      "source_name": "arXiv cs.AI RSS",
+      "source_type": "rss",
+      "source_url": "https://arxiv.org/abs/2501.12345",
+      "headline": "Scaling Laws for Next-Token Prediction Beyond 1T Parameters",
+      "body": "We present empirical scaling laws for autoregressive language models trained at scales beyond 1 trillion parameters.",
+      "author": "Jane Smith, John Doe, et al.",
+      "topic_candidates": ["ai", "technology"],
+      "published_at": "2025-01-14T00:00:00Z",
+      "fetched_at": "2025-01-15T06:00:00Z",
+      "trust_tier": "T3",
+      "trust_score": 50,
+      "is_duplicate": false
+    },
+    {
+      "_comment": "X/social — account monitoring (crypto)",
+      "item_id": "e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1",
+      "source_id": "x-1879012345678901234",
+      "source_slug": "x-account-whale-alert",
+      "source_name": "Whale Alert (X)",
+      "source_type": "x_account",
+      "source_url": "https://x.com/i/status/1879012345678901234",
+      "headline": "🚨 1,500 #BTC (183,200,000 USD) transferred from unknown wallet to #Binance",
+      "body": null,
+      "author": "@whale_alert",
+      "topic_candidates": ["crypto"],
+      "published_at": "2025-01-15T14:28:00Z",
+      "fetched_at": "2025-01-15T14:30:00Z",
+      "trust_tier": "T4",
+      "trust_score": 25,
       "is_duplicate": false
     }
   ]
