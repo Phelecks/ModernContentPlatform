@@ -27,8 +27,25 @@
     "url": "https://x.com/whale_alert",
     "topic_slug": "crypto",
     "trust_tier": "T4",
-    "notes": "X account monitoring — disabled by default; enable after X API credentials are configured. Severity capped at 60 per crypto T4 rules.",
-    "x_user_id": "whale_alert"
+    "notes": "X account monitoring — disabled by default; enable after X API credentials are configured. Severity capped at 60 per crypto T4 rules. See docs/x-source-rules.md.",
+    "x_user_id": "whale_alert",
+    "poll_interval_minutes": 5,
+    "severity_cap": 60,
+    "confirmation_required": false,
+    "can_trigger_alert": true
+  },
+  {
+    "name": "CZ Binance (X)",
+    "type": "x_account",
+    "url": "https://x.com/caborea",
+    "topic_slug": "crypto",
+    "trust_tier": "T4",
+    "notes": "X account monitoring — disabled by default; enable after X API credentials are configured. Severity capped at 60 per crypto T4 rules. See docs/x-source-rules.md.",
+    "x_user_id": "caborea",
+    "poll_interval_minutes": 10,
+    "severity_cap": 60,
+    "confirmation_required": false,
+    "can_trigger_alert": true
   },
   {
     "name": "X Search: BTC Breakout",
@@ -36,7 +53,11 @@
     "url": "https://api.twitter.com/2/tweets/search/recent",
     "topic_slug": "crypto",
     "trust_tier": "T4",
-    "notes": "X keyword search — disabled by default; enable after X API credentials are configured. Severity capped at 60 per crypto T4 rules.",
-    "search_query": "(#Bitcoin OR #BTC) (breakout OR ATH OR crash) -is:retweet lang:en"
+    "notes": "X keyword search — disabled by default; enable after X API credentials are configured. Severity capped at 60 per crypto T4 rules. See docs/x-source-rules.md.",
+    "search_query": "(#Bitcoin OR #BTC) (breakout OR ATH OR crash) -is:retweet lang:en",
+    "poll_interval_minutes": 10,
+    "severity_cap": 60,
+    "confirmation_required": false,
+    "can_trigger_alert": true
   }
 ]

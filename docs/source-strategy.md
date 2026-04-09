@@ -313,11 +313,15 @@ validated.
 
 | Topic   | v1 starter sources |
 |---------|--------------------|
-| crypto  | CoinGecko API, CoinDesk RSS, Reuters crypto RSS, Whale Alert X account (disabled), BTC breakout X query (disabled) |
-| ai      | Ars Technica RSS, Hacker News API, OpenAI blog RSS, OpenAI X account (disabled), AI launch X query (disabled) |
+| crypto  | CoinGecko API, CoinDesk RSS, Reuters crypto RSS, Whale Alert X account (disabled), CZ Binance X account (disabled), BTC breakout X query (disabled) |
+| ai      | Ars Technica RSS, Hacker News API, OpenAI blog RSS, OpenAI X account (disabled), Anthropic X account (disabled), AI launch X query (disabled) |
 | finance | Reuters business RSS, SEC EDGAR RSS, Federal Reserve RSS, Fed decision X query (disabled) |
 | economy | BLS RSS, Federal Reserve FRED API, Reuters economy RSS |
 | health  | WHO RSS, CDC RSS, Reuters health RSS |
 | energy  | IEA RSS, EIA news RSS, Reuters energy RSS, IEA X account (disabled) |
 
 Machine-readable source configs for these starter sets are in `config/sources/`.
+
+For the detailed X source lists, trust rules, severity caps, confirmation
+requirements, and operational polling guidance, see
+[`docs/x-source-rules.md`](x-source-rules.md).

@@ -16,8 +16,8 @@ source strategy, trust model, and per-topic usage rules.
 
 | File | Topic | Sources |
 |------|-------|---------|
-| `ai.json` | AI | Ars Technica, Hacker News API, OpenAI blog, MIT Technology Review, OpenAI X account, AI launch X query |
-| `crypto.json` | Crypto | CoinGecko API (placeholder), CoinDesk RSS, Reuters crypto RSS, Whale Alert X account, BTC breakout X query |
+| `ai.json` | AI | Ars Technica, Hacker News API, OpenAI blog, MIT Technology Review, OpenAI X account, Anthropic X account, AI launch X query |
+| `crypto.json` | Crypto | CoinGecko API (placeholder), CoinDesk RSS, Reuters crypto RSS, Whale Alert X account, CZ Binance X account, BTC breakout X query |
 | `economy.json` | Economy | BLS RSS, Federal Reserve FRED API, Reuters general news RSS |
 | `energy.json` | Energy | IEA RSS, EIA RSS, Reuters general news RSS, IEA X account |
 | `finance.json` | Finance | Reuters business RSS, SEC EDGAR RSS, Federal Reserve RSS, Fed decision X query |
@@ -39,9 +39,22 @@ module 01:
   "trust_tier": "T1 | T2 | T3 | T4",
   "notes":      "(optional) operator notes",
   "x_user_id":  "(optional, x_account only) X username",
-  "search_query": "(optional, x_query only) X search query string"
+  "search_query": "(optional, x_query only) X search query string",
+  "poll_interval_minutes": "(optional, X sources) recommended poll interval",
+  "severity_cap": "(optional, X sources) maximum severity_score for this source",
+  "confirmation_required": "(optional, X sources) whether T1–T3 confirmation is required",
+  "can_trigger_alert": "(optional, X sources) whether posts can trigger alerts directly"
 }
 ```
+
+The X-specific fields (`poll_interval_minutes`, `severity_cap`,
+`confirmation_required`, `can_trigger_alert`) are operational metadata defined
+in `docs/x-source-rules.md`. They are not consumed directly by module 01 but
+serve as operator reference when seeding the source registry. Map
+`poll_interval_minutes` to the first-class `sources.poll_interval_minutes`
+column, and only store fields without dedicated columns (for example
+`severity_cap`, `confirmation_required`, and `can_trigger_alert`) in D1
+`metadata_json` if you want to persist them.
 
 The `topic_slug` and `trust_tier` fields are extensions beyond the base module 01
 contract. Module 01 only requires `name`, `type`, and `url`. Treat these

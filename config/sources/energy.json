@@ -27,7 +27,11 @@
     "url": "https://x.com/IEA",
     "topic_slug": "energy",
     "trust_tier": "T4",
-    "notes": "X account monitoring — disabled by default; enable after X API credentials are configured. Severity capped at 50 per energy T4 rules.",
-    "x_user_id": "IEA"
+    "notes": "X account monitoring — disabled by default; enable after X API credentials are configured. Severity capped at 50 per energy T4 rules. See docs/x-source-rules.md.",
+    "x_user_id": "IEA",
+    "poll_interval_minutes": 15,
+    "severity_cap": 50,
+    "confirmation_required": true,
+    "can_trigger_alert": true
   }
 ]

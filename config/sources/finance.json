@@ -26,7 +26,11 @@
     "url": "https://api.twitter.com/2/tweets/search/recent",
     "topic_slug": "finance",
     "trust_tier": "T4",
-    "notes": "X keyword search — watch-only; severity capped at 30 per finance T4 rules. Must be confirmed by T1–T3 before escalation.",
-    "search_query": "(Federal Reserve OR #FOMC) (rate OR decision OR cut OR hike) -is:retweet lang:en"
+    "notes": "X keyword search — watch-only; severity capped at 30 per finance T4 rules. Must be confirmed by T1–T3 before escalation. See docs/x-source-rules.md.",
+    "search_query": "(Federal Reserve OR #FOMC) (rate OR decision OR cut OR hike) -is:retweet lang:en",
+    "poll_interval_minutes": 15,
+    "severity_cap": 30,
+    "confirmation_required": true,
+    "can_trigger_alert": false
   }
 ]
