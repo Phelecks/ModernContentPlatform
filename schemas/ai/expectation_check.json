@@ -34,6 +34,23 @@
             "type": ["string", "null"],
             "maxLength": 300,
             "description": "Brief explanation of the outcome. Null when no note is needed."
+          },
+          "source": {
+            "type": ["object", "null"],
+            "description": "Source that substantiates the outcome assessment. Null when no specific source applies.",
+            "required": ["source_name"],
+            "properties": {
+              "source_name": {
+                "type": "string",
+                "description": "Human-readable name of the source."
+              },
+              "source_url": {
+                "type": ["string", "null"],
+                "format": "uri",
+                "description": "URL of the source item. Null when not available."
+              }
+            },
+            "additionalProperties": false
           }
         },
         "additionalProperties": false
@@ -68,12 +85,20 @@
         {
           "expectation": "Bitcoin would test resistance near $115K before moving higher",
           "outcome": "missed",
-          "note": "Bitcoin broke through $115K with minimal resistance, suggesting stronger buying pressure than anticipated."
+          "note": "Bitcoin broke through $115K with minimal resistance, suggesting stronger buying pressure than anticipated.",
+          "source": {
+            "source_name": "CoinGecko API",
+            "source_url": "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
+          }
         },
         {
           "expectation": "Spot ETF inflows to remain steady above $800M",
           "outcome": "met",
-          "note": "Inflows reached $1.5B, exceeding the expectation by a wide margin."
+          "note": "Inflows reached $1.5B, exceeding the expectation by a wide margin.",
+          "source": {
+            "source_name": "Bloomberg",
+            "source_url": "https://www.bloomberg.com/news/articles/2025-01-15/bitcoin-etf-inflows"
+          }
         }
       ],
       "surprise_events": [

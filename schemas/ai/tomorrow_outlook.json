@@ -31,6 +31,23 @@
             "minLength": 20,
             "maxLength": 300,
             "description": "Why this watchpoint matters and what to look for."
+          },
+          "source": {
+            "type": ["object", "null"],
+            "description": "Source that supports this watchpoint. Null when the watchpoint is derived from general context.",
+            "required": ["source_name"],
+            "properties": {
+              "source_name": {
+                "type": "string",
+                "description": "Human-readable name of the source."
+              },
+              "source_url": {
+                "type": ["string", "null"],
+                "format": "uri",
+                "description": "URL of the source item. Null when not available."
+              }
+            },
+            "additionalProperties": false
           }
         },
         "additionalProperties": false
@@ -59,6 +76,23 @@
             "type": "string",
             "enum": ["high", "medium", "low"],
             "description": "Expected market impact level."
+          },
+          "source": {
+            "type": ["object", "null"],
+            "description": "Source for the scheduled event information. Null when the event is from general knowledge.",
+            "required": ["source_name"],
+            "properties": {
+              "source_name": {
+                "type": "string",
+                "description": "Human-readable name of the source."
+              },
+              "source_url": {
+                "type": ["string", "null"],
+                "format": "uri",
+                "description": "URL of the source item. Null when not available."
+              }
+            },
+            "additionalProperties": false
           }
         },
         "additionalProperties": false
@@ -82,23 +116,39 @@
       "key_watchpoints": [
         {
           "title": "Bitcoin $120K Support Hold",
-          "description": "After breaking above $120K, holding this level as support is critical for continued momentum. A failure to hold could trigger a pullback to $115K."
+          "description": "After breaking above $120K, holding this level as support is critical for continued momentum. A failure to hold could trigger a pullback to $115K.",
+          "source": {
+            "source_name": "CoinDesk RSS",
+            "source_url": "https://www.coindesk.com/markets/2025/01/15/bitcoin-hits-new-ath/"
+          }
         },
         {
           "title": "Spot ETF Flow Continuation",
-          "description": "Sustained inflows above $1B would confirm institutional conviction. A reversal below $500M could dampen sentiment."
+          "description": "Sustained inflows above $1B would confirm institutional conviction. A reversal below $500M could dampen sentiment.",
+          "source": {
+            "source_name": "Bloomberg",
+            "source_url": "https://www.bloomberg.com/news/articles/2025-01-15/bitcoin-etf-inflows"
+          }
         }
       ],
       "scheduled_events": [
         {
           "title": "US Initial Jobless Claims",
           "time_hint": "08:30 ET",
-          "impact": "medium"
+          "impact": "medium",
+          "source": {
+            "source_name": "US Economic Calendar",
+            "source_url": null
+          }
         },
         {
           "title": "FOMC Meeting Minutes Release",
           "time_hint": "14:00 ET",
-          "impact": "high"
+          "impact": "high",
+          "source": {
+            "source_name": "Federal Reserve",
+            "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+          }
         }
       ],
       "outlook_summary": "Bitcoin enters Friday's session at all-time highs with strong momentum. The key risk tomorrow is macro: the FOMC minutes could introduce volatility if language around rate cuts shifts. ETF flows will be closely watched for any sign of profit-taking by institutional players.",
