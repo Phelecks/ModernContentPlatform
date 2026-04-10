@@ -54,13 +54,13 @@ export function getDefaultTrustTierForSourceType(sourceType) {
 // ---------------------------------------------------------------------------
 
 /**
- * Strips HTML tags from a string and collapses whitespace.
+ * Strips HTML-like markup delimiters from a string and collapses whitespace.
  *
  * @param {string|null|undefined} str
  * @returns {string}
  */
 export function stripHtml(str) {
-  return (str || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
+  return (str || '').replace(/[<>]/g, '').replace(/\s+/g, ' ').trim()
 }
 
 // ---------------------------------------------------------------------------
