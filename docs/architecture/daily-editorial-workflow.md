@@ -110,11 +110,11 @@ through the validation gate.
 |---|--------|---------|-----------|-----------|
 | Orch | Orchestrator | Schedule (23:30 UTC) | — | topic/date dispatch |
 | 01 | Aggregate Alerts | Execute Workflow | `{ topic_slug, date_key, publish_job_id }` | `daily_aggregate_context` |
-| 02 | Generate Summary | Execute Workflow | aggregate context | + `summary{}` |
+| 02 | Generate Summary | Execute Workflow | aggregate context (with `source_name` per alert) | + `summary{}` (with `key_events[].sources`, `sources`, `source_confidence_note`) |
 | 03 | Generate Article | Execute Workflow | context + summary | + `article_md` |
 | 04 | Expectation Check | Execute Workflow | context + summary | + `expectation_check{}` |
 | 05 | Tomorrow Outlook | Execute Workflow | context + summary | + `tomorrow_outlook{}` |
-| 06 | Video Script | Execute Workflow | context + summary + tomorrow_outlook | + `video_script{}` |
+| 06 | Video Script | Execute Workflow | context + summary (source-aware) + tomorrow_outlook | + `video_script{}` (with `segments[].sources`) |
 | 07 | YouTube Metadata | Execute Workflow | context + summary + video_script | + `youtube_metadata{}` |
 | 08 | Validate Outputs | Execute Workflow | full generation payload | `daily_generation_output` (validated=true) |
 | 09 | Publish to GitHub | Execute Workflow | validated generation output | + `github_commit_sha` |
@@ -294,11 +294,12 @@ All AI modules:
 |------|---------|
 | `workflows/contracts/daily_aggregate_context.json` | Output of module 01; base input for all generation modules |
 | `workflows/contracts/daily_generation_output.json` | Full validated package output by module 08; input to modules 09–10 |
-| `schemas/ai/daily_summary.json` | Validated AI output schema for module 02 |
+| `schemas/ai/daily_summary.json` | Validated AI output schema for module 02 (includes `key_events[].sources`, `sources`, `source_confidence_note`) |
 | `schemas/ai/expectation_check.json` | Validated AI output schema for module 04 |
 | `schemas/ai/tomorrow_outlook.json` | Validated AI output schema for module 05 |
-| `schemas/ai/video_script.json` | Validated AI output schema for module 06 |
+| `schemas/ai/video_script.json` | Validated AI output schema for module 06 (includes `segments[].sources`) |
 | `schemas/ai/youtube_metadata.json` | Validated AI output schema for module 07 |
+| `docs/video-script-source-attribution.md` | Source attribution rules for the video/script pipeline |
 
 ---
 
