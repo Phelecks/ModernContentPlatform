@@ -1,0 +1,17 @@
+{
+  "item_id": "af7babc811689f6a18fc5c399d148b8bf988901a53d1a5501c87dd2ddf79ebdb",
+  "source_id": "https://www.bls.gov/news.release/cpi.nr0.htm",
+  "source_slug": "bls-rss",
+  "source_name": "BLS News RSS",
+  "source_type": "rss",
+  "source_url": "https://www.bls.gov/news.release/cpi.nr0.htm",
+  "headline": "Consumer Price Index — December 2024",
+  "body": "The Consumer Price Index for All Urban Consumers rose 0.3 percent in December on a seasonally adjusted basis, after increasing 0.3 percent in November. Over the last 12 months, the all items index increased 2.9 percent before seasonal adjustment, reflecting continued inflation pressures tracked by the Federal Reserve.",
+  "author": null,
+  "topic_candidates": ["economy"],
+  "published_at": "2025-01-15T13:30:00Z",
+  "fetched_at": "2025-01-15T13:32:00Z",
+  "trust_tier": "T1",
+  "trust_score": 90,
+  "is_duplicate": false
+}

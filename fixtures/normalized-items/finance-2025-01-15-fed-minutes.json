@@ -5,7 +5,7 @@
   "source_type": "rss",
   "source_url": "https://example.com/finance/fed-minutes",
   "headline": "Fed minutes reveal no urgency to cut rates in Q1 2025",
-  "body": "Minutes from the December FOMC meeting showed officials broadly agreed that there was no reason to lower the federal funds rate until inflation data showed sustained progress toward the 2% target.",
+  "body": "Minutes from the December FOMC meeting showed officials broadly agreed that there was no reason to lower the interest rate until inflation data showed sustained progress toward the 2% target.",
   "topic_candidates": ["finance", "economy"],
   "published_at": "2025-01-15T18:30:00Z",
   "fetched_at": "2025-01-15T18:45:00Z",

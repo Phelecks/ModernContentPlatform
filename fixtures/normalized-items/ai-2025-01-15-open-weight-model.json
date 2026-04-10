@@ -5,7 +5,7 @@
   "source_type": "rss",
   "source_url": "https://example.com/ai/open-weight-70b",
   "headline": "Major AI lab releases 70B open-weight model under permissive licence",
-  "body": "A prominent AI research organisation released a 70-billion parameter language model under an Apache 2.0 licence, enabling unrestricted commercial use.",
+  "body": "A prominent AI research organisation released a 70-billion parameter foundation model under an Apache 2.0 licence, enabling unrestricted commercial use.",
   "topic_candidates": ["ai", "technology"],
   "published_at": "2025-01-15T09:30:00Z",
   "fetched_at": "2025-01-15T09:45:00Z",

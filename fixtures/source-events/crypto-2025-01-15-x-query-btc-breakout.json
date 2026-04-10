@@ -1,0 +1,25 @@
+{
+  "source_id": "x-search-btc-breakout-20250115",
+  "source_slug": "x-search-btc-breakout",
+  "source_name": "X Search: BTC Breakout",
+  "source_type": "x_query",
+  "source_url": "https://x.com/i/status/1879099900001234567",
+  "title": "#Bitcoin hits new ATH above $107K as institutional buying accelerates",
+  "body": null,
+  "author": null,
+  "published_at": "2025-01-15T15:00:00Z",
+  "fetched_at": "2025-01-15T15:05:00Z",
+  "trust_tier": "T4",
+  "trust_score": 25,
+  "raw_json": {
+    "id": "1879099900001234567",
+    "text": "#Bitcoin hits new ATH above $107K as institutional buying accelerates",
+    "created_at": "2025-01-15T15:00:00Z",
+    "public_metrics": {
+      "retweet_count": 512,
+      "reply_count": 143,
+      "like_count": 2340,
+      "quote_count": 88
+    }
+  }
+}
