@@ -48,6 +48,12 @@
       "severity_cap": 50,
       "can_trigger_alert": true,
       "confirmation_required": true
+    },
+    "technology": {
+      "t4_allowed": true,
+      "severity_cap": 50,
+      "can_trigger_alert": true,
+      "confirmation_required": false
     }
   },
   "confirmation_boosts": {

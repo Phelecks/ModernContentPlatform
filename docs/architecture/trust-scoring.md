@@ -215,14 +215,18 @@ When rendering alerts on the frontend timeline:
 1. **13:00 UTC** — X Search: Fed Decision (T4) detects chatter about FOMC rate hint
    - AI classification: severity 50, importance 70, confidence 35
    - Module 06: finance T4 severity cap is 30, confirmation required
-   - Severity capped to 30, alert held with `status: 'pending_confirmation'`
+   - Severity capped to 30 (below the default global severity threshold of 50),
+     but the pending_confirmation path evaluates eligibility using raw severity
+     (50), so the item enters the `pending_confirmation` queue
+   - Alert persisted with `status: 'pending_confirmation'`
 
 2. **13:12 UTC** — Federal Reserve RSS (T1) publishes official statement
    - Clustering matches same event
    - Confirmation detected: T4 → T1 confirmation
    - Confidence boosted by +30 → confidence 65
    - Severity re-evaluated at T1 level → severity 75
-   - Alert published with factual wording: "The Federal Reserve has signaled a potential rate adjustment"
+   - Alert promoted to `status: 'active'` and published with factual wording:
+     "The Federal Reserve has signaled a potential rate adjustment"
 
 ### Example 3: T4 excluded (health)
 

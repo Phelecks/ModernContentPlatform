@@ -9,6 +9,8 @@
     "source_name": "Whale Alert (X)",
     "source_type": "x_account",
     "source_domain": "x.com",
+    "trust_tier": "T4",
+    "trust_score": 25,
     "supporting_sources": null,
     "severity_score": 45,
     "importance_score": 55,
@@ -29,6 +31,8 @@
     "source_name": "X Search: BTC Breakout",
     "source_type": "x_query",
     "source_domain": null,
+    "trust_tier": "T4",
+    "trust_score": 25,
     "supporting_sources": null,
     "severity_score": 30,
     "importance_score": 40,
@@ -49,6 +53,8 @@
     "source_name": "Reuters Crypto RSS",
     "source_type": "rss",
     "source_domain": "reuters.com",
+    "trust_tier": "T2",
+    "trust_score": 75,
     "supporting_sources": [
       {
         "source_name": "Whale Alert (X)",
