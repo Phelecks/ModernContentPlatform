@@ -1,5 +1,5 @@
 {
-  "name": "Daily — 06 Generate Video Script",
+  "name": "Daily \u2014 06 Generate Video Script",
   "nodes": [
     {
       "parameters": {},
@@ -7,7 +7,10 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
@@ -18,11 +21,11 @@
           "values": [
             {
               "role": "system",
-              "content": "You are a professional video scriptwriter for a financial and technology news channel. Write an engaging spoken-word video script for the daily briefing. Return ONLY a valid JSON object that exactly matches the schema below. Do not include markdown, code fences, or any text outside the JSON object.\n\nSchema:\n{\n  \"intro\": \"<opening hook, 30-500 chars spoken text>\",\n  \"segments\": [\n    {\n      \"title\": \"<segment title for internal use, 3-100 chars>\",\n      \"script\": \"<spoken script for this segment, 50-1500 chars>\",\n      \"duration_seconds\": <integer 15-120>,\n      \"sources\": [\n        { \"source_name\": \"<name>\", \"source_url\": \"<url or null>\", \"source_role\": \"primary|data|commentary or null\" }\n      ]\n    }\n  ],\n  \"outro\": \"<closing segment, 30-400 chars spoken text>\",\n  \"total_duration_seconds\": <integer 60-600>,\n  \"call_to_action\": \"<optional CTA text, max 200 chars, or null>\"\n}\n\nGuidelines:\n- intro: start with the most compelling development of the day; 15-30 seconds\n- segments: 2-5 segments covering the most important events; conversational and clear; map each segment to its corresponding key event sources when available\n- segments[].sources: include the sources that substantiate each segment's spoken content, drawn from the key event sources provided in the input; null when no source data is available\n- outro: summarise the day and tease tomorrow's key watchpoints\n- total_duration_seconds: sum of intro + segments + outro (estimate 130 words per minute for spoken pace)\n- call_to_action: subscribe/engagement prompt; null to omit\n- Style: conversational, direct, no jargon without explanation, no HTML\n- Do NOT read out source URLs or source names verbatim in the spoken script — sources are for editorial grounding only"
+              "content": "You are a professional video scriptwriter for a financial and technology news channel. Write an engaging spoken-word video script for the daily briefing. Return ONLY a valid JSON object that exactly matches the schema below. Do not include markdown, code fences, or any text outside the JSON object.\n\nSchema:\n{\n  \"intro\": \"<opening hook, 30-500 chars spoken text>\",\n  \"segments\": [\n    {\n      \"title\": \"<segment title for internal use, 3-100 chars>\",\n      \"script\": \"<spoken script for this segment, 50-1500 chars>\",\n      \"duration_seconds\": <integer 15-120>,\n      \"sources\": [\n        { \"source_name\": \"<name>\", \"source_url\": \"<url or null>\", \"source_role\": \"primary|data|commentary or null\" }\n      ] or null\n    }\n  ],\n  \"outro\": \"<closing segment, 30-400 chars spoken text>\",\n  \"total_duration_seconds\": <integer 60-600>,\n  \"call_to_action\": \"<optional CTA text, max 200 chars, or null>\"\n}\n\nNotes:\n- segments[].sources may be an array of source objects, null, or omitted when no source data is available\n\nGuidelines:\n- intro: start with the most compelling development of the day; 15-30 seconds\n- segments: 2-5 segments covering the most important events; conversational and clear; map each segment to its corresponding key event sources when available\n- segments[].sources: include the sources that substantiate each segment's spoken content, drawn from the key event sources provided in the input; null when no source data is available\n- outro: summarise the day and tease tomorrow's key watchpoints\n- total_duration_seconds: sum of intro + segments + outro (estimate 130 words per minute for spoken pace)\n- call_to_action: subscribe/engagement prompt; null to omit\n- Style: conversational, direct, no jargon without explanation, no HTML\n- Do NOT read out source URLs or source names verbatim in the spoken script \u2014 sources are for editorial grounding only"
             },
             {
               "role": "user",
-              "content": "=Write a video script for the {{ $json.topic_slug }} daily briefing on {{ $json.date_key }}.\n\nHeadline: {{ $json.summary.headline }}\nOverview: {{ $json.summary.overview }}\n\nKey events:\n{{ $json.summary.key_events.map((e, i) => { const sourceNote = Array.isArray(e.sources) && e.sources.length > 0 ? ' [sources: ' + e.sources.map(s => s.source_name).join(', ') + ']' : ''; return `${i+1}. ${e.title} — ${e.significance}${sourceNote}`; }).join('\\n') }}\n\nTomorrow's top watchpoint: {{ $json.tomorrow_outlook.key_watchpoints[0]?.title }} — {{ $json.tomorrow_outlook.key_watchpoints[0]?.description }}\nTomorrow's risk level: {{ $json.tomorrow_outlook.risk_level }}"
+              "content": "=Write a video script for the {{ $json.topic_slug }} daily briefing on {{ $json.date_key }}.\n\nHeadline: {{ $json.summary.headline }}\nOverview: {{ $json.summary.overview }}\n\nKey events:\n{{ $json.summary.key_events.map((e, i) => { const sourceNote = Array.isArray(e.sources) && e.sources.length > 0 ? ' [sources: ' + e.sources.map(s => s.source_name).join(', ') + ']' : ''; return `${i+1}. ${e.title} \u2014 ${e.significance}${sourceNote}`; }).join('\\n') }}\n\nTomorrow's top watchpoint: {{ $json.tomorrow_outlook.key_watchpoints[0]?.title }} \u2014 {{ $json.tomorrow_outlook.key_watchpoints[0]?.description }}\nTomorrow's risk level: {{ $json.tomorrow_outlook.risk_level }}"
             }
           ]
         },
@@ -35,7 +38,10 @@
       "name": "Generate Video Script with AI",
       "type": "n8n-nodes-base.openAi",
       "typeVersion": 1,
-      "position": [460, 300],
+      "position": [
+        460,
+        300
+      ],
       "credentials": {
         "openAiApi": {
           "id": "openai-api-credentials",
@@ -55,18 +61,33 @@
       "name": "Parse and Validate Video Script",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [680, 300]
+      "position": [
+        680,
+        300
+      ]
     }
   ],
   "connections": {
     "Execute Workflow Trigger": {
       "main": [
-        [{ "node": "Generate Video Script with AI", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Generate Video Script with AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Generate Video Script with AI": {
       "main": [
-        [{ "node": "Parse and Validate Video Script", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Parse and Validate Video Script",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -79,5 +100,11 @@
     "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
   },
   "id": "daily-06-generate-video-script-v1",
-  "tags": ["daily", "editorial", "ai", "video-script", "v1"]
+  "tags": [
+    "daily",
+    "editorial",
+    "ai",
+    "video-script",
+    "v1"
+  ]
 }
