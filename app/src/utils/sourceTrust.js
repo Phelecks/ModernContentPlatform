@@ -60,15 +60,18 @@ export function getDefaultTrustTierForSourceType(sourceType) {
  * @returns {string}
  */
 export function stripHtml(str) {
-  // Two-stage approach: the first pass uses `>?` to match both complete tags
-  // (`<b>`) and incomplete ones (`<script` with no closing `>`), satisfying
-  // CodeQL's js/incomplete-multi-character-sanitization rule. The second pass
-  // removes any residual stray angle-bracket characters as defense-in-depth.
-  return (str || '')
-    .replace(/<[^>]*>?/g, '')
-    .replace(/[<>]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
+  // Loop until the output is stable: satisfies CodeQL's
+  // js/incomplete-multi-character-sanitization rule, which requires that tag
+  // removal is applied repeatedly so nested/overlapping patterns (e.g.
+  // `<scr<script>ipt>`) cannot survive a single-pass replacement.
+  let s = (str || '')
+  let prev
+  do {
+    prev = s
+    s = s.replace(/<[^>]+>/g, '')
+  } while (s !== prev)
+  // Remove any residual stray angle-bracket characters and normalise whitespace.
+  return s.replace(/[<>]/g, '').replace(/\s+/g, ' ').trim()
 }
 
 // ---------------------------------------------------------------------------
