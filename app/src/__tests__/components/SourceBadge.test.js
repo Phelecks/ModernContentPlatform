@@ -20,6 +20,16 @@ describe('SourceBadge', () => {
     expect(wrapper.exists()).toBe(true)
   })
 
+  it('does not render the badge element when type and label are both absent', () => {
+    const wrapper = mount(SourceBadge)
+    expect(wrapper.find('.source-badge').exists()).toBe(false)
+  })
+
+  it('does not render the badge element when type is null and label is absent', () => {
+    const wrapper = mount(SourceBadge, { props: { type: null } })
+    expect(wrapper.find('.source-badge').exists()).toBe(false)
+  })
+
   it('has the source-badge root class', () => {
     const wrapper = mount(SourceBadge, { props: { type: 'rss' } })
     expect(wrapper.find('.source-badge').exists()).toBe(true)
@@ -126,9 +136,9 @@ describe('SourceBadge', () => {
     expect(wrapper.find('.source-badge--research').exists()).toBe(true)
   })
 
-  it('applies source-badge--default for null type', () => {
+  it('does not render the badge for null type (no empty artifact)', () => {
     const wrapper = mount(SourceBadge, { props: { type: null } })
-    expect(wrapper.find('.source-badge--default').exists()).toBe(true)
+    expect(wrapper.find('.source-badge').exists()).toBe(false)
   })
 
   it('applies source-badge--default for unmapped type', () => {
@@ -150,7 +160,7 @@ describe('SourceBadge', () => {
 
   // ---- Fallback for unknown types ----
 
-  it('title-cases an unknown type as fallback label', () => {
+  it('capitalises first character of an unknown type as fallback label', () => {
     const wrapper = mount(SourceBadge, { props: { type: 'podcast' } })
     expect(wrapper.text()).toBe('Podcast')
   })

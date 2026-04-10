@@ -31,8 +31,8 @@
       class="alert-timeline-item__supporting"
     >
       <span
-        v-for="(ss, idx) in alert.supporting_sources"
-        :key="idx"
+        v-for="ss in alert.supporting_sources"
+        :key="`${ss.source_name || ''}|${ss.source_url || ''}|${ss.source_type || ''}`"
         class="alert-timeline-item__supporting-source"
       >
         <SourceBadge
@@ -64,6 +64,7 @@
 <script setup>
 import { computed } from 'vue'
 import { timeAgo } from '@/utils/date.js'
+import { isSafeUrl } from '@/utils/url.js'
 import SourceBadge from './SourceBadge.vue'
 
 const props = defineProps({
@@ -85,21 +86,6 @@ const severityLevel = computed(() => {
 const hasSupportingSources = computed(() =>
   Array.isArray(props.alert.supporting_sources) && props.alert.supporting_sources.length > 0
 )
-
-/**
- * Only allow http: and https: URLs to be rendered as links.
- * @param {string|null} url
- * @returns {boolean}
- */
-function isSafeUrl(url) {
-  if (!url || typeof url !== 'string') return false
-  try {
-    const parsed = new URL(url)
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
-  } catch {
-    return false
-  }
-}
 </script>
 
 <style scoped>

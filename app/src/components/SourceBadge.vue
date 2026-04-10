@@ -1,5 +1,6 @@
 <template>
   <span
+    v-if="displayLabel"
     class="source-badge"
     :class="`source-badge--${normalizedType}`"
   >{{ displayLabel }}</span>
@@ -10,7 +11,8 @@ import { computed } from 'vue'
 
 /**
  * Maps internal DB source_type values to user-friendly display labels.
- * Falls back to title-casing the raw value when no mapping exists.
+ * Falls back to capitalising the first character of the raw value when
+ * no mapping exists.
  */
 const TYPE_MAP = {
   rss: 'News',
@@ -87,45 +89,45 @@ const normalizedType = computed(() => {
   white-space: nowrap;
 }
 
-/* ---- Type-specific colours ---- */
+/* ---- Type-specific colours (use design tokens + color-mix) ---- */
 
 .source-badge--news {
-  background: rgba(91, 141, 238, 0.15);
-  color: #5b8dee;
+  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
+  color: var(--color-accent);
 }
 
 .source-badge--official {
-  background: rgba(62, 207, 142, 0.15);
-  color: #3ecf8e;
+  background: color-mix(in srgb, var(--color-success) 15%, transparent);
+  color: var(--color-success);
 }
 
 .source-badge--data {
-  background: rgba(168, 131, 243, 0.15);
-  color: #a883f3;
+  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
+  color: var(--color-accent);
 }
 
 .source-badge--research {
-  background: rgba(245, 166, 35, 0.15);
-  color: #f5a623;
+  background: color-mix(in srgb, var(--color-warning) 15%, transparent);
+  color: var(--color-warning);
 }
 
 .source-badge--x {
-  background: rgba(232, 234, 240, 0.12);
-  color: #e8eaf0;
+  background: color-mix(in srgb, var(--color-text-muted) 12%, transparent);
+  color: var(--color-text-muted);
 }
 
 .source-badge--signal {
-  background: rgba(229, 83, 83, 0.15);
-  color: #e55353;
+  background: color-mix(in srgb, var(--color-danger) 15%, transparent);
+  color: var(--color-danger);
 }
 
 .source-badge--social {
-  background: rgba(91, 141, 238, 0.10);
-  color: #7a9fea;
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  color: var(--color-accent);
 }
 
 .source-badge--default {
-  background: rgba(122, 127, 147, 0.15);
-  color: #7a7f93;
+  background: color-mix(in srgb, var(--color-text-muted) 15%, transparent);
+  color: var(--color-text-muted);
 }
 </style>
