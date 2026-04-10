@@ -90,6 +90,17 @@ function assertDailySummary(summary, label) {
     expect(event.significance, `${label}: key_event.significance`).toBeTypeOf('string')
     expect(event.importance_score, `${label}: key_event.importance_score`).toBeTypeOf('number')
   }
+  // Source attribution fields (optional but validated when present)
+  if (summary.sources !== undefined && summary.sources !== null) {
+    expect(Array.isArray(summary.sources), `${label}: sources is array`).toBe(true)
+    for (const src of summary.sources) {
+      expect(src.source_name, `${label}: source.source_name`).toBeTypeOf('string')
+      expect(src.source_name.length, `${label}: source.source_name non-empty`).toBeGreaterThan(0)
+    }
+  }
+  if (summary.source_confidence_note !== undefined && summary.source_confidence_note !== null) {
+    expect(summary.source_confidence_note, `${label}: source_confidence_note`).toBeTypeOf('string')
+  }
 }
 
 function assertSourceEvent(item, label) {
@@ -200,9 +211,45 @@ describe('fixtures/daily-summaries', () => {
     expect(CRYPTO_DAILY_SUMMARY.sentiment).toBe('bullish')
   })
 
+  it('crypto-2025-01-15 has article-level sources', () => {
+    expect(Array.isArray(CRYPTO_DAILY_SUMMARY.sources)).toBe(true)
+    expect(CRYPTO_DAILY_SUMMARY.sources.length).toBeGreaterThan(0)
+    for (const src of CRYPTO_DAILY_SUMMARY.sources) {
+      expect(src.source_name).toBeTypeOf('string')
+    }
+  })
+
+  it('crypto-2025-01-15 key_events have section-level sources', () => {
+    for (const event of CRYPTO_DAILY_SUMMARY.key_events) {
+      expect(Array.isArray(event.sources)).toBe(true)
+      expect(event.sources.length).toBeGreaterThan(0)
+      for (const src of event.sources) {
+        expect(src.source_name).toBeTypeOf('string')
+      }
+    }
+  })
+
   it('finance-2025-01-15 has required daily summary fields', () => {
     assertDailySummary(FINANCE_DAILY_SUMMARY, 'finance-daily-summary')
     expect(FINANCE_DAILY_SUMMARY.sentiment).toBe('bearish')
+  })
+
+  it('finance-2025-01-15 has article-level sources', () => {
+    expect(Array.isArray(FINANCE_DAILY_SUMMARY.sources)).toBe(true)
+    expect(FINANCE_DAILY_SUMMARY.sources.length).toBeGreaterThan(0)
+  })
+
+  it('daily summaries have valid source_role values when present', () => {
+    const validRoles = ['primary', 'confirmation', 'data', 'commentary', 'official', null]
+    for (const summary of [CRYPTO_DAILY_SUMMARY, FINANCE_DAILY_SUMMARY]) {
+      if (summary.sources) {
+        for (const src of summary.sources) {
+          if (src.source_role !== undefined) {
+            expect(validRoles, `source_role "${src.source_role}" must be valid`).toContain(src.source_role)
+          }
+        }
+      }
+    }
   })
 })
 

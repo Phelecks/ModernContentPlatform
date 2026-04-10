@@ -67,6 +67,17 @@
             />
             <SummaryPlaceholder v-else />
           </section>
+
+          <!-- Source attribution -->
+          <section
+            v-if="summaryData && Array.isArray(summaryData.sources) && summaryData.sources.length > 0"
+            class="topic-day-page__section"
+          >
+            <SourceList
+              :sources="summaryData.sources"
+              :confidence-note="summaryData.source_confidence_note"
+            />
+          </section>
         </div>
 
         <!-- Timeline side panel -->
@@ -90,9 +101,10 @@ import PageStateBanner from '@/components/PageStateBanner.vue'
 import VideoEmbed from '@/components/VideoEmbed.vue'
 import SummarySection from '@/components/SummarySection.vue'
 import SummaryPlaceholder from '@/components/SummaryPlaceholder.vue'
+import SourceList from '@/components/SourceList.vue'
 import AlertTimeline from '@/components/AlertTimeline.vue'
 import { fetchDayStatus, fetchNavigation, fetchTimeline } from '@/services/api.js'
-import { fetchArticle, fetchVideoMeta } from '@/services/content.js'
+import { fetchArticle, fetchVideoMeta, fetchSummary } from '@/services/content.js'
 
 const route = useRoute()
 
@@ -116,6 +128,7 @@ const nav = ref({ prev_date_key: null, next_date_key: null })
 
 const videoMeta = ref(null)
 const articleMarkdown = ref(null)
+const summaryData = ref(null)
 
 const alerts = ref([])
 const timelineLoading = ref(false)
@@ -152,6 +165,7 @@ async function loadPage() {
   // Reset content from any previous route immediately
   videoMeta.value = null
   articleMarkdown.value = null
+  summaryData.value = null
   pageError.value = false
   pageLoading.value = true
 
@@ -178,6 +192,11 @@ async function loadPage() {
     if (dayStatus.article_available) {
       contentLoads.push(
         fetchArticle(topicSlug.value, dateKey.value).then((a) => { articleMarkdown.value = a })
+      )
+    }
+    if (dayStatus.summary_available) {
+      contentLoads.push(
+        fetchSummary(topicSlug.value, dateKey.value).then((s) => { summaryData.value = s })
       )
     }
     await Promise.all(contentLoads)

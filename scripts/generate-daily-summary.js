@@ -214,7 +214,10 @@ function generateSummary(topicSlug, dateKey, displayName, alerts, clusters) {
   const key_events = alerts.slice(0, 7).map((a) => ({
     title: a.headline,
     significance: a.summary_text ?? `Reported by ${a.source_name ?? 'an external source'}.`,
-    importance_score: a.importance_score ?? 50
+    importance_score: a.importance_score ?? 50,
+    sources: a.source_name
+      ? [{ source_name: a.source_name, source_url: a.source_url ?? null, source_role: 'primary' }]
+      : null
   }))
 
   // Scores.
@@ -222,6 +225,27 @@ function generateSummary(topicSlug, dateKey, displayName, alerts, clusters) {
     ? Math.round(alerts.reduce((s, a) => s + (a.importance_score ?? 0), 0) / alerts.length)
     : 0
   const sentiment = deriveSentiment(avgImportance, alerts)
+
+  // Article-level sources — deduplicated from alert sources, capped at 10
+  // (schemas/ai/daily_summary.json maxItems: 10).
+  const seenSourceNames = new Set()
+  const sources = alerts
+    .filter((a) => a.source_name)
+    .reduce((acc, a) => {
+      if (!seenSourceNames.has(a.source_name) && acc.length < 10) {
+        seenSourceNames.add(a.source_name)
+        acc.push({ source_name: a.source_name, source_url: a.source_url ?? null, source_role: 'primary' })
+      }
+      return acc
+    }, [])
+
+  // Source confidence note.
+  const sourceCount = sources.length
+  const source_confidence_note = sourceCount === 0
+    ? null
+    : sourceCount === 1
+      ? 'Limited confidence: summary based on a single source.'
+      : `Moderate confidence: summary draws from ${sourceCount} sources.`
 
   return {
     topic_slug: topicSlug,
@@ -232,6 +256,8 @@ function generateSummary(topicSlug, dateKey, displayName, alerts, clusters) {
     market_context: null,
     sentiment,
     topic_score: avgImportance,
+    sources: sources.length > 0 ? sources : null,
+    source_confidence_note,
     generated_at: new Date().toISOString()
   }
 }

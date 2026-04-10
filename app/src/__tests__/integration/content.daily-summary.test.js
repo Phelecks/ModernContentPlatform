@@ -192,6 +192,34 @@ describe('Generated content — ai/2025-01-15 schema validation', () => {
     expect(AI_SUMMARY.topic_score).toBeLessThanOrEqual(100)
   })
 
+  it('summary.json has an article-level sources array', () => {
+    expect(Array.isArray(AI_SUMMARY.sources)).toBe(true)
+    expect(AI_SUMMARY.sources.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('summary.json sources contain valid source objects', () => {
+    for (const src of AI_SUMMARY.sources) {
+      expect(typeof src.source_name).toBe('string')
+      expect(src.source_name.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('summary.json has a source_confidence_note', () => {
+    expect(typeof AI_SUMMARY.source_confidence_note).toBe('string')
+    expect(AI_SUMMARY.source_confidence_note.length).toBeGreaterThan(0)
+  })
+
+  it('summary.json key_events have section-level sources', () => {
+    for (const event of AI_SUMMARY.key_events) {
+      expect(Array.isArray(event.sources)).toBe(true)
+      expect(event.sources.length).toBeGreaterThanOrEqual(1)
+      for (const src of event.sources) {
+        expect(typeof src.source_name).toBe('string')
+        expect(src.source_name.length).toBeGreaterThan(0)
+      }
+    }
+  })
+
   it('article.md is a non-empty string', () => {
     expect(typeof AI_ARTICLE).toBe('string')
     expect(AI_ARTICLE.trim().length).toBeGreaterThan(0)
