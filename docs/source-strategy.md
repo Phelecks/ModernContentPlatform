@@ -325,3 +325,7 @@ Machine-readable source configs for these starter sets are in `config/sources/`.
 For the detailed X source lists, trust rules, severity caps, confirmation
 requirements, and operational polling guidance, see
 [`docs/x-source-rules.md`](x-source-rules.md).
+
+For the complete trust scoring model, confidence adjustment rules,
+confirmation workflow, and implementation guidance, see
+[`docs/architecture/trust-scoring.md`](architecture/trust-scoring.md).

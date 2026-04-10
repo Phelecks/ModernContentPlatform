@@ -1,0 +1,86 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "trust_rules",
+  "title": "Trust Scoring Rules",
+  "description": "Machine-readable trust scoring configuration for use by n8n workflows, AI prompts, and validation logic. See docs/architecture/trust-scoring.md for the full specification.",
+  "base_trust_scores": {
+    "T1": { "label": "Official", "score": 90, "confidence_adjustment": 0 },
+    "T2": { "label": "Wire / Newswire", "score": 75, "confidence_adjustment": 0 },
+    "T3": { "label": "Specialist news", "score": 50, "confidence_adjustment": -10 },
+    "T4": { "label": "Signal / Social", "score": 25, "confidence_adjustment": -20 },
+    "unknown": { "label": "Unknown", "score": 0, "confidence_adjustment": -25 }
+  },
+  "topic_t4_policy": {
+    "crypto": {
+      "t4_allowed": true,
+      "severity_cap": 60,
+      "can_trigger_alert": true,
+      "confirmation_required": false
+    },
+    "ai": {
+      "t4_allowed": true,
+      "severity_cap": 50,
+      "can_trigger_alert": true,
+      "confirmation_required": false,
+      "confirmation_recommended_above_severity": 40
+    },
+    "finance": {
+      "t4_allowed": true,
+      "severity_cap": 30,
+      "can_trigger_alert": false,
+      "confirmation_required": true
+    },
+    "economy": {
+      "t4_allowed": false,
+      "severity_cap": null,
+      "can_trigger_alert": false,
+      "confirmation_required": false,
+      "t3_minimum_importance": 75
+    },
+    "health": {
+      "t4_allowed": false,
+      "severity_cap": null,
+      "can_trigger_alert": false,
+      "confirmation_required": false
+    },
+    "energy": {
+      "t4_allowed": true,
+      "severity_cap": 50,
+      "can_trigger_alert": true,
+      "confirmation_required": true
+    },
+    "technology": {
+      "t4_allowed": true,
+      "severity_cap": 50,
+      "can_trigger_alert": true,
+      "confirmation_required": false
+    }
+  },
+  "confirmation_boosts": {
+    "T4_confirmed_by_T1": { "confidence_boost": 30, "max_confidence": 95 },
+    "T4_confirmed_by_T2": { "confidence_boost": 25, "max_confidence": 90 },
+    "T4_confirmed_by_T3": { "confidence_boost": 15, "max_confidence": 80 },
+    "T3_confirmed_by_T1": { "confidence_boost": 15, "max_confidence": 95 },
+    "T3_confirmed_by_T2": { "confidence_boost": 10, "max_confidence": 90 },
+    "T3_confirmed_by_T3": { "confidence_boost": 5, "max_confidence": 80 },
+    "T4_confirmed_by_T4": { "confidence_boost": 5, "max_confidence": 60 }
+  },
+  "wording_thresholds": {
+    "factual": { "min_confidence": 80, "style": "Direct, factual statements" },
+    "attributed": { "min_confidence": 60, "style": "Attributed to source, cautious tone" },
+    "hedged": { "min_confidence": 40, "style": "Hedged, conditional language" },
+    "flagged": { "min_confidence": 0, "style": "Strongly hedged, flagged as unverified" }
+  },
+  "x_source_rules": {
+    "default_trust_tier": "T4",
+    "default_trust_score": 25,
+    "confidence_reduction_sole_source": 20,
+    "x_account_confidence_bonus": 5,
+    "confirmation_window_minutes": 15
+  },
+  "unknown_source_rules": {
+    "treat_as_tier": "T4",
+    "severity_cap": 30,
+    "confidence_reduction": 25
+  }
+}

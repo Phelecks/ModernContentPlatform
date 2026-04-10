@@ -123,6 +123,22 @@
       "type": ["string", "null"],
       "maxLength": 100,
       "description": "Short label for the event cluster this alert belongs to. Null if no cluster match."
+    },
+    "trust_tier": {
+      "type": ["string", "null"],
+      "enum": ["T1", "T2", "T3", "T4", null],
+      "description": "Trust classification propagated from the source registry. T1=Official, T2=Wire, T3=Specialist, T4=Signal/Social. Null when unknown. Used by module 06 for per-topic severity caps and confirmation rules."
+    },
+    "trust_score": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Numeric trust score (0–100) from the source registry. Higher is more trusted. Null when unknown."
+    },
+    "source_confidence_note": {
+      "type": ["string", "null"],
+      "maxLength": 300,
+      "description": "Brief AI explanation of how source quality, trust tier, or corroboration level influenced the confidence_score. Null when not applicable."
     }
   },
   "additionalProperties": false,
@@ -151,7 +167,10 @@
       "send_alert": true,
       "alert_reason": "New all-time high is a high-importance milestone for the crypto audience.",
       "event_at": "2025-01-15T14:32:00Z",
-      "cluster_label": "Bitcoin price rally"
+      "cluster_label": "Bitcoin price rally",
+      "trust_tier": "T3",
+      "trust_score": 50,
+      "source_confidence_note": "High confidence: specialist outlet corroborated by real-time market data API."
     }
   ]
 }
