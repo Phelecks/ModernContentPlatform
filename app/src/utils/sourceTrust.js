@@ -60,10 +60,9 @@ export function getDefaultTrustTierForSourceType(sourceType) {
  * @returns {string}
  */
 export function stripHtml(str) {
-  // Two-stage approach: remove complete HTML tags first, then strip any
-  // remaining stray angle-bracket characters (defense-in-depth).
+  // Character-level delimiter stripping avoids incomplete multi-character
+  // sanitization edge cases and removes any HTML-like tag delimiters.
   return (str || '')
-    .replace(/<[^>]*>/g, '')
     .replace(/[<>]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
