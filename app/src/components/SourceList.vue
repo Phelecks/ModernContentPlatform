@@ -12,6 +12,10 @@
         :key="`${source.source_name || ''}::${source.source_url || ''}::${source.source_role || ''}`"
         class="source-list__item"
       >
+        <SourceBadge
+          v-if="source.source_type"
+          :type="source.source_type"
+        />
         <a
           v-if="isSafeUrl(source.source_url)"
           :href="source.source_url"
@@ -39,8 +43,11 @@
 </template>
 
 <script setup>
+import SourceBadge from './SourceBadge.vue'
+import { isSafeUrl } from '@/utils/url.js'
+
 defineProps({
-  /** Array of source objects: { source_name, source_url?, source_role? } */
+  /** Array of source objects: { source_name, source_url?, source_type?, source_role? } */
   sources: {
     type: Array,
     default: null
@@ -51,22 +58,6 @@ defineProps({
     default: null
   }
 })
-
-/**
- * Only allow http: and https: URLs to be rendered as links.
- * Rejects javascript:, data:, and other potentially unsafe schemes.
- * @param {string|null} url
- * @returns {boolean}
- */
-function isSafeUrl(url) {
-  if (!url || typeof url !== 'string') return false
-  try {
-    const parsed = new URL(url)
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
-  } catch {
-    return false
-  }
-}
 </script>
 
 <style scoped>
