@@ -574,6 +574,73 @@ describe('UNKNOWN_SOURCE_SEVERITY_CAP', () => {
 })
 
 // ---------------------------------------------------------------------------
+// applyAlertDecision — snake_case policy integration
+// Verifies that policies sourced directly from config/trust-rules.json
+// (topic_t4_policy entries use snake_case: t4_allowed, severity_cap, etc.)
+// are accepted and produce the correct decision without manual conversion.
+// ---------------------------------------------------------------------------
+
+describe('applyAlertDecision — snake_case policy map (config/trust-rules.json integration)', () => {
+  // Mirrors the shape of trustRules.topic_t4_policy from config/trust-rules.json
+  const snakeCasePolicies = {
+    crypto:     { t4_allowed: true,  severity_cap: 60, can_trigger_alert: true,  confirmation_required: false },
+    finance:    { t4_allowed: true,  severity_cap: 30, can_trigger_alert: false, confirmation_required: true  },
+    economy:    { t4_allowed: false, severity_cap: 0,  can_trigger_alert: false, confirmation_required: false },
+    health:     { t4_allowed: false, severity_cap: 0,  can_trigger_alert: false, confirmation_required: false },
+    ai:         { t4_allowed: true,  severity_cap: 50, can_trigger_alert: true,  confirmation_required: false },
+    energy:     { t4_allowed: true,  severity_cap: 50, can_trigger_alert: true,  confirmation_required: true  },
+    technology: { t4_allowed: true,  severity_cap: 50, can_trigger_alert: true,  confirmation_required: false }
+  }
+
+  it('approves a T4 crypto item using snake_case policy (severity within cap)', () => {
+    const item = makeClassifiedItem({
+      trust_tier: 'T4', topic_slug: 'crypto',
+      severity_score: 55, importance_score: 70, confidence_score: 50
+    })
+    const { result, item: out } = applyAlertDecision(item, snakeCasePolicies)
+    expect(result).toBe('approved')
+    expect(out.severity_score).toBe(55)
+  })
+
+  it('caps T4 crypto severity to 60 using snake_case policy', () => {
+    const item = makeClassifiedItem({
+      trust_tier: 'T4', topic_slug: 'crypto',
+      severity_score: 80, importance_score: 70, confidence_score: 50
+    })
+    const { item: out } = applyAlertDecision(item, snakeCasePolicies)
+    expect(out.severity_score).toBe(60)
+  })
+
+  it('holds a T4 finance item as pending using snake_case policy', () => {
+    const item = makeClassifiedItem({
+      trust_tier: 'T4', topic_slug: 'finance',
+      severity_score: 55, importance_score: 70, confidence_score: 50
+    })
+    const { result, item: out } = applyAlertDecision(item, snakeCasePolicies)
+    expect(result).toBe('pending')
+    expect(out.status).toBe('pending_confirmation')
+  })
+
+  it('rejects a T4 economy item using snake_case policy', () => {
+    const item = makeClassifiedItem({
+      trust_tier: 'T4', topic_slug: 'economy',
+      severity_score: 80, importance_score: 80, confidence_score: 80
+    })
+    const { result } = applyAlertDecision(item, snakeCasePolicies)
+    expect(result).toBe('rejected')
+  })
+
+  it('rejects a T4 health item using snake_case policy', () => {
+    const item = makeClassifiedItem({
+      trust_tier: 'T4', topic_slug: 'health',
+      severity_score: 80, importance_score: 80, confidence_score: 80
+    })
+    const { result } = applyAlertDecision(item, snakeCasePolicies)
+    expect(result).toBe('rejected')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // Alert decision — T1/T2/T3 (high-trust) approved path
 // ---------------------------------------------------------------------------
 

@@ -60,7 +60,13 @@ export function getDefaultTrustTierForSourceType(sourceType) {
  * @returns {string}
  */
 export function stripHtml(str) {
-  return (str || '').replace(/[<>]/g, '').replace(/\s+/g, ' ').trim()
+  // Two-stage approach: remove complete HTML tags first, then strip any
+  // remaining stray angle-bracket characters (defense-in-depth).
+  return (str || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/[<>]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 // ---------------------------------------------------------------------------
@@ -223,7 +229,10 @@ export function applyAlertDecision(item, policies = DEFAULT_TOPIC_POLICIES, thre
   const severityThreshold   = thresholds.severity   ?? 50
   const confidenceThreshold = thresholds.confidence ?? 40
 
-  const topicPolicy = (policies[item.topic_slug] || DEFAULT_DECISION_POLICY)
+  // Normalize the selected policy so callers can pass raw config/trust-rules.json
+  // entries (snake_case fields like t4_allowed, severity_cap, etc.) directly without
+  // needing to manually convert to camelCase first.
+  const topicPolicy = normalizeTopicPolicy(policies[item.topic_slug] || DEFAULT_DECISION_POLICY)
   const trustTier     = item.trust_tier || null
   const isT4          = trustTier === 'T4'
   const isUnknownTier = trustTier === null
