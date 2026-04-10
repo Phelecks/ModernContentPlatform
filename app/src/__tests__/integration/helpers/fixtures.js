@@ -22,6 +22,7 @@ export { default as CRYPTO_PENDING_STATUS } from '@fixtures/page-states/crypto-2
 // ---- Classified alert sets (intraday_classified_alert arrays, per topic/day) ----
 
 export { default as CRYPTO_CLASSIFIED_ALERTS } from '@fixtures/classified-alerts/crypto-2025-01-15.json'
+export { default as CRYPTO_CLASSIFIED_ALERTS_X_SOURCE } from '@fixtures/classified-alerts/crypto-2025-01-15-x-source.json'
 export { default as FINANCE_CLASSIFIED_ALERTS } from '@fixtures/classified-alerts/finance-2025-01-15.json'
 export { default as AI_CLASSIFIED_ALERTS } from '@fixtures/classified-alerts/ai-2025-01-15.json'
 

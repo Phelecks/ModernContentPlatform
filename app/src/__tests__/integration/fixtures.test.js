@@ -17,6 +17,7 @@ import {
   AI_READY_STATUS,
   CRYPTO_PENDING_STATUS,
   CRYPTO_CLASSIFIED_ALERTS,
+  CRYPTO_CLASSIFIED_ALERTS_X_SOURCE,
   FINANCE_CLASSIFIED_ALERTS,
   AI_CLASSIFIED_ALERTS,
   CRYPTO_DAILY_SUMMARY,
@@ -199,6 +200,45 @@ describe('fixtures/classified-alerts', () => {
     ]) {
       const ids = set.map((a) => a.item_id)
       expect(new Set(ids).size, `${label}: item_ids must be unique`).toBe(ids.length)
+    }
+  })
+
+  it('crypto-2025-01-15-x-source is a non-empty array of valid classified alerts from X sources', () => {
+    expect(Array.isArray(CRYPTO_CLASSIFIED_ALERTS_X_SOURCE)).toBe(true)
+    expect(CRYPTO_CLASSIFIED_ALERTS_X_SOURCE.length).toBeGreaterThan(0)
+    for (const alert of CRYPTO_CLASSIFIED_ALERTS_X_SOURCE) {
+      assertClassifiedAlert(alert, 'crypto-classified-alerts-x-source')
+      expect(alert.topic_slug).toBe('crypto')
+    }
+  })
+
+  it('crypto-2025-01-15-x-source alerts have source_confidence_note explaining trust impact', () => {
+    for (const alert of CRYPTO_CLASSIFIED_ALERTS_X_SOURCE) {
+      expect(alert.source_confidence_note, 'source_confidence_note must be a string').toBeTypeOf('string')
+      expect(alert.source_confidence_note.length, 'source_confidence_note non-empty').toBeGreaterThan(0)
+    }
+  })
+
+  it('crypto-2025-01-15-x-source T4 alerts have reduced confidence vs T2 confirmed alert', () => {
+    const t4Alerts = CRYPTO_CLASSIFIED_ALERTS_X_SOURCE.filter(
+      (a) => a.source_type === 'x_account' || a.source_type === 'x_query'
+    )
+    const t2Alert = CRYPTO_CLASSIFIED_ALERTS_X_SOURCE.find((a) => a.source_type === 'rss')
+    expect(t4Alerts.length, 'should have T4 alerts').toBeGreaterThan(0)
+    expect(t2Alert, 'should have a T2/RSS confirmed alert').toBeDefined()
+    for (const t4 of t4Alerts) {
+      expect(t4.confidence_score, 'T4 confidence lower than T2 confirmed').toBeLessThan(
+        t2Alert.confidence_score
+      )
+    }
+  })
+
+  it('crypto-2025-01-15-x-source T4 alerts have severity within crypto T4 cap (60)', () => {
+    const t4Alerts = CRYPTO_CLASSIFIED_ALERTS_X_SOURCE.filter(
+      (a) => a.source_type === 'x_account' || a.source_type === 'x_query'
+    )
+    for (const t4 of t4Alerts) {
+      expect(t4.severity_score, 'T4 severity must be <= 60').toBeLessThanOrEqual(60)
     }
   })
 })

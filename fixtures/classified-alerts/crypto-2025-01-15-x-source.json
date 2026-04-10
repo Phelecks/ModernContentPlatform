@@ -1,0 +1,69 @@
+[
+  {
+    "item_id": "f1a2b3c4d5e6f7081920314b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4",
+    "topic_slug": "crypto",
+    "secondary_topics": [],
+    "headline": "Large BTC transfer to Binance detected by on-chain tracker",
+    "summary_text": "Social media signals indicate a transfer of approximately 1,500 BTC ($183M) from an unknown wallet to Binance, according to Whale Alert on X.",
+    "source_url": "https://x.com/i/status/1879012345678901234",
+    "source_name": "Whale Alert (X)",
+    "source_type": "x_account",
+    "source_domain": "x.com",
+    "supporting_sources": null,
+    "severity_score": 45,
+    "importance_score": 55,
+    "confidence_score": 40,
+    "send_alert": false,
+    "alert_reason": "T4 source with reduced confidence; severity within crypto T4 cap (60) but below alert thresholds.",
+    "event_at": "2025-01-15T14:28:00Z",
+    "cluster_label": "Large BTC transfer",
+    "source_confidence_note": "Low confidence: sole source is a T4 social signal (X account). Confidence reduced by 20 points per trust rules. Wording hedged."
+  },
+  {
+    "item_id": "a2b3c4d5e6f7a8091020415b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4",
+    "topic_slug": "crypto",
+    "secondary_topics": [],
+    "headline": "X search signals suggest BTC breakout chatter rising",
+    "summary_text": "Unconfirmed reports suggest growing social media discussion around a potential Bitcoin breakout above $120K, based on X keyword search signals.",
+    "source_url": null,
+    "source_name": "X Search: BTC Breakout",
+    "source_type": "x_query",
+    "source_domain": null,
+    "supporting_sources": null,
+    "severity_score": 30,
+    "importance_score": 40,
+    "confidence_score": 30,
+    "send_alert": false,
+    "alert_reason": "T4 keyword search with very low confidence; below all alert thresholds. Noise signal.",
+    "event_at": "2025-01-15T14:35:00Z",
+    "cluster_label": "Bitcoin price rally",
+    "source_confidence_note": "Very low confidence: X keyword search (T4) is the sole source. No corroboration from T1-T3 sources. Confidence reduced by 20+ points."
+  },
+  {
+    "item_id": "b3c4d5e6f7a8b9102031526b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4",
+    "topic_slug": "crypto",
+    "secondary_topics": ["finance"],
+    "headline": "Large BTC transfer confirmed as institutional activity by Reuters",
+    "summary_text": "Reuters reports that a large Bitcoin transfer detected earlier was part of institutional rebalancing activity, confirming social media signals from Whale Alert.",
+    "source_url": "https://www.reuters.com/technology/crypto/large-btc-transfer-2025-01-15/",
+    "source_name": "Reuters Crypto RSS",
+    "source_type": "rss",
+    "source_domain": "reuters.com",
+    "supporting_sources": [
+      {
+        "source_name": "Whale Alert (X)",
+        "source_url": "https://x.com/i/status/1879012345678901234",
+        "source_type": "x_account",
+        "source_role": "confirmation"
+      }
+    ],
+    "severity_score": 60,
+    "importance_score": 72,
+    "confidence_score": 80,
+    "send_alert": true,
+    "alert_reason": "T2 wire source confirms T4 signal — confidence upgraded. Institutional BTC movement is relevant to crypto audience.",
+    "event_at": "2025-01-15T14:42:00Z",
+    "cluster_label": "Large BTC transfer",
+    "source_confidence_note": "High confidence: T2 wire source (Reuters) independently confirms initial T4 signal (Whale Alert X). Confidence boosted by +25 points per T4-to-T2 confirmation rule."
+  }
+]
