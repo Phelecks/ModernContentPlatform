@@ -146,6 +146,155 @@ describe('AlertTimelineItem', () => {
     expect(wrapper.find('.alert-timeline-item--severity-low').exists()).toBe(true)
   })
 
+  // ---- Source type badge ----
+
+  it('renders a source type badge when source_type is provided', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: { alert: { ...BASE_ALERT, source_type: 'rss' } }
+    })
+    expect(wrapper.find('.alert-timeline-item__type-badge').exists()).toBe(true)
+    expect(wrapper.find('.source-badge').exists()).toBe(true)
+  })
+
+  it('displays the mapped label for source_type "rss"', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: { alert: { ...BASE_ALERT, source_type: 'rss' } }
+    })
+    expect(wrapper.find('.source-badge').text()).toBe('News')
+  })
+
+  it('displays the mapped label for source_type "api"', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: { alert: { ...BASE_ALERT, source_type: 'api' } }
+    })
+    expect(wrapper.find('.source-badge').text()).toBe('Data')
+  })
+
+  it('does not render the source type badge when source_type is absent', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: { alert: { ...BASE_ALERT, source_type: undefined } }
+    })
+    expect(wrapper.find('.alert-timeline-item__type-badge').exists()).toBe(false)
+  })
+
+  // ---- Supporting sources ----
+
+  it('renders supporting sources when provided', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: {
+        alert: {
+          ...BASE_ALERT,
+          supporting_sources: [
+            { source_name: 'CoinGecko API', source_url: 'https://api.coingecko.com', source_type: 'api' }
+          ]
+        }
+      }
+    })
+    expect(wrapper.find('.alert-timeline-item__supporting').exists()).toBe(true)
+    expect(wrapper.text()).toContain('CoinGecko API')
+  })
+
+  it('renders multiple supporting sources', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: {
+        alert: {
+          ...BASE_ALERT,
+          supporting_sources: [
+            { source_name: 'Source A', source_url: null },
+            { source_name: 'Source B', source_url: 'https://example.com/b' }
+          ]
+        }
+      }
+    })
+    const items = wrapper.findAll('.alert-timeline-item__supporting-source')
+    expect(items).toHaveLength(2)
+  })
+
+  it('renders supporting source as link when URL is provided', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: {
+        alert: {
+          ...BASE_ALERT,
+          supporting_sources: [
+            { source_name: 'CoinGecko', source_url: 'https://api.coingecko.com' }
+          ]
+        }
+      }
+    })
+    const link = wrapper.find('.alert-timeline-item__supporting-link')
+    expect(link.exists()).toBe(true)
+    expect(link.attributes('href')).toBe('https://api.coingecko.com')
+    expect(link.attributes('target')).toBe('_blank')
+    expect(link.attributes('rel')).toBe('noopener noreferrer')
+  })
+
+  it('renders supporting source as plain text when URL is null', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: {
+        alert: {
+          ...BASE_ALERT,
+          supporting_sources: [
+            { source_name: 'Internal Data', source_url: null }
+          ]
+        }
+      }
+    })
+    expect(wrapper.find('.alert-timeline-item__supporting-link').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Internal Data')
+  })
+
+  it('renders source type badge inside supporting source chip', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: {
+        alert: {
+          ...BASE_ALERT,
+          supporting_sources: [
+            { source_name: 'CoinGecko API', source_type: 'api' }
+          ]
+        }
+      }
+    })
+    const supportingBadges = wrapper.findAll('.alert-timeline-item__supporting-source .source-badge')
+    expect(supportingBadges).toHaveLength(1)
+    expect(supportingBadges[0].text()).toBe('Data')
+  })
+
+  it('does not render supporting sources section when array is empty', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: { alert: { ...BASE_ALERT, supporting_sources: [] } }
+    })
+    expect(wrapper.find('.alert-timeline-item__supporting').exists()).toBe(false)
+  })
+
+  it('does not render supporting sources section when not provided', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: { alert: BASE_ALERT }
+    })
+    expect(wrapper.find('.alert-timeline-item__supporting').exists()).toBe(false)
+  })
+
+  it('does not render "Read more" link for javascript: URLs', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: { alert: { ...BASE_ALERT, source_url: 'javascript:alert(1)' } }
+    })
+    expect(wrapper.find('.alert-timeline-item__link').exists()).toBe(false)
+  })
+
+  it('does not render supporting source as link for unsafe URLs', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: {
+        alert: {
+          ...BASE_ALERT,
+          supporting_sources: [
+            { source_name: 'Bad', source_url: 'javascript:alert(1)' }
+          ]
+        }
+      }
+    })
+    expect(wrapper.find('.alert-timeline-item__supporting-link').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Bad')
+  })
+
   // ---- Time display ----
 
   it('renders a non-empty time string from event_at', () => {

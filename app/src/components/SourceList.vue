@@ -12,6 +12,10 @@
         :key="`${source.source_name || ''}::${source.source_url || ''}::${source.source_role || ''}`"
         class="source-list__item"
       >
+        <SourceBadge
+          v-if="source.source_type"
+          :type="source.source_type"
+        />
         <a
           v-if="isSafeUrl(source.source_url)"
           :href="source.source_url"
@@ -39,8 +43,10 @@
 </template>
 
 <script setup>
+import SourceBadge from './SourceBadge.vue'
+
 defineProps({
-  /** Array of source objects: { source_name, source_url?, source_role? } */
+  /** Array of source objects: { source_name, source_url?, source_type?, source_role? } */
   sources: {
     type: Array,
     default: null

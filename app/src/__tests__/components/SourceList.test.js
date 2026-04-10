@@ -141,4 +141,32 @@ describe('SourceList', () => {
     expect(wrapper.findAll('.source-list__item')).toHaveLength(1)
     expect(wrapper.text()).toContain('Reuters')
   })
+
+  // ---- Source type badges ----
+
+  it('renders a source type badge when source_type is provided', () => {
+    const sources = [{ source_name: 'CoinDesk', source_url: 'https://example.com', source_type: 'rss', source_role: 'primary' }]
+    const wrapper = mount(SourceList, { props: { sources } })
+    expect(wrapper.find('.source-badge').exists()).toBe(true)
+    expect(wrapper.find('.source-badge').text()).toBe('News')
+  })
+
+  it('does not render a source type badge when source_type is absent', () => {
+    const sources = [{ source_name: 'CoinDesk', source_url: 'https://example.com', source_role: 'primary' }]
+    const wrapper = mount(SourceList, { props: { sources } })
+    expect(wrapper.find('.source-badge').exists()).toBe(false)
+  })
+
+  it('renders source type badges for each source that has a type', () => {
+    const sources = [
+      { source_name: 'CoinDesk', source_type: 'rss', source_role: 'primary' },
+      { source_name: 'CoinGecko', source_type: 'api', source_role: 'data' },
+      { source_name: 'Unknown', source_role: 'confirmation' }
+    ]
+    const wrapper = mount(SourceList, { props: { sources } })
+    const badges = wrapper.findAll('.source-badge')
+    expect(badges).toHaveLength(2)
+    expect(badges[0].text()).toBe('News')
+    expect(badges[1].text()).toBe('Data')
+  })
 })
