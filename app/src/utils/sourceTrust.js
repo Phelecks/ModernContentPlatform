@@ -60,9 +60,11 @@ export function getDefaultTrustTierForSourceType(sourceType) {
  * @returns {string}
  */
 export function stripHtml(str) {
-  // Character-level delimiter stripping avoids incomplete multi-character
-  // sanitization edge cases and removes any HTML-like tag delimiters.
+  // Two-stage approach: remove complete HTML tags first (`/<[^>]*>/g`), then
+  // strip any remaining stray angle-bracket characters as a defense-in-depth
+  // measure, satisfying CodeQL's incomplete multi-character sanitization rule.
   return (str || '')
+    .replace(/<[^>]*>/g, '')
     .replace(/[<>]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
