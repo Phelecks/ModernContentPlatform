@@ -111,7 +111,7 @@ Location: `app/src/components/SourceList.vue`
 
 ```vue
 <SourceList
-  v-if="summaryData && summaryData.sources"
+  v-if="summaryData && Array.isArray(summaryData.sources) && summaryData.sources.length > 0"
   :sources="summaryData.sources"
   :confidence-note="summaryData.source_confidence_note"
 />

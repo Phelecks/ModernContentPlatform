@@ -226,12 +226,13 @@ function generateSummary(topicSlug, dateKey, displayName, alerts, clusters) {
     : 0
   const sentiment = deriveSentiment(avgImportance, alerts)
 
-  // Article-level sources — deduplicated from alert sources.
+  // Article-level sources — deduplicated from alert sources, capped at 10
+  // (schemas/ai/daily_summary.json maxItems: 10).
   const seenSourceNames = new Set()
   const sources = alerts
     .filter((a) => a.source_name)
     .reduce((acc, a) => {
-      if (!seenSourceNames.has(a.source_name)) {
+      if (!seenSourceNames.has(a.source_name) && acc.length < 10) {
         seenSourceNames.add(a.source_name)
         acc.push({ source_name: a.source_name, source_url: a.source_url ?? null, source_role: 'primary' })
       }

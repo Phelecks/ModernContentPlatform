@@ -8,12 +8,12 @@
     </h3>
     <ul class="source-list__items">
       <li
-        v-for="(source, index) in sources"
-        :key="index"
+        v-for="source in sources"
+        :key="`${source.source_name || ''}::${source.source_url || ''}::${source.source_role || ''}`"
         class="source-list__item"
       >
         <a
-          v-if="source.source_url"
+          v-if="isSafeUrl(source.source_url)"
           :href="source.source_url"
           class="source-list__link"
           target="_blank"
@@ -51,6 +51,22 @@ defineProps({
     default: null
   }
 })
+
+/**
+ * Only allow http: and https: URLs to be rendered as links.
+ * Rejects javascript:, data:, and other potentially unsafe schemes.
+ * @param {string|null} url
+ * @returns {boolean}
+ */
+function isSafeUrl(url) {
+  if (!url || typeof url !== 'string') return false
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
 </script>
 
 <style scoped>

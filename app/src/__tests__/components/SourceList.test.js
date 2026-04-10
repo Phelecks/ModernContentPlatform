@@ -87,6 +87,20 @@ describe('SourceList', () => {
     expect(nameSpans[0].text()).toBe('CoinGecko API')
   })
 
+  it('renders a span instead of a link for javascript: URLs', () => {
+    const sources = [{ source_name: 'Malicious', source_url: 'javascript:alert("xss")', source_role: 'primary' }]
+    const wrapper = mount(SourceList, { props: { sources } })
+    expect(wrapper.find('.source-list__link').exists()).toBe(false)
+    expect(wrapper.find('.source-list__name').text()).toBe('Malicious')
+  })
+
+  it('renders a span instead of a link for data: URLs', () => {
+    const sources = [{ source_name: 'DataURL', source_url: 'data:text/html,<script>alert(1)</script>', source_role: null }]
+    const wrapper = mount(SourceList, { props: { sources } })
+    expect(wrapper.find('.source-list__link').exists()).toBe(false)
+    expect(wrapper.find('.source-list__name').text()).toBe('DataURL')
+  })
+
   // ---- Source roles ----
 
   it('displays the source role when provided', () => {

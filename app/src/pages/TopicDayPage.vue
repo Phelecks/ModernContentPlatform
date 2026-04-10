@@ -70,7 +70,7 @@
 
           <!-- Source attribution -->
           <section
-            v-if="summaryData && summaryData.sources"
+            v-if="summaryData && Array.isArray(summaryData.sources) && summaryData.sources.length > 0"
             class="topic-day-page__section"
           >
             <SourceList
