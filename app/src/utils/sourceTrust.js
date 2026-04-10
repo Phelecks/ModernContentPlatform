@@ -60,11 +60,12 @@ export function getDefaultTrustTierForSourceType(sourceType) {
  * @returns {string}
  */
 export function stripHtml(str) {
-  // Two-stage approach: remove complete HTML tags first (`/<[^>]*>/g`), then
-  // strip any remaining stray angle-bracket characters as a defense-in-depth
-  // measure, satisfying CodeQL's incomplete multi-character sanitization rule.
+  // Two-stage approach: the first pass uses `>?` to match both complete tags
+  // (`<b>`) and incomplete ones (`<script` with no closing `>`), satisfying
+  // CodeQL's js/incomplete-multi-character-sanitization rule. The second pass
+  // removes any residual stray angle-bracket characters as defense-in-depth.
   return (str || '')
-    .replace(/<[^>]*>/g, '')
+    .replace(/<[^>]*>?/g, '')
     .replace(/[<>]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
