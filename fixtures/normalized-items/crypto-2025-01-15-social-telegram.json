@@ -1,0 +1,17 @@
+{
+  "item_id": "fa29ceb09173dff6de83f057f959360508f564ccf2e7e0d66829e4bfe5f77a12",
+  "source_id": "tg-channel-crypto-signals-20250115001",
+  "source_slug": "tg-crypto-signals",
+  "source_name": "CryptoTelegram",
+  "source_type": "social",
+  "source_url": "https://t.me/crypto_signals/20250115001",
+  "headline": "ALERT: Bitcoin whale moves 2,000 BTC to cold storage — bullish signal",
+  "body": null,
+  "author": "@crypto_signals",
+  "topic_candidates": ["crypto"],
+  "published_at": "2025-01-15T12:00:00Z",
+  "fetched_at": "2025-01-15T12:05:00Z",
+  "trust_tier": "T4",
+  "trust_score": 25,
+  "is_duplicate": false
+}

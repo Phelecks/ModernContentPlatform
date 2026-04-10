@@ -26,10 +26,18 @@ import {
   FINANCE_SOURCE_EVENT_FED_MINUTES,
   AI_SOURCE_EVENT_OPEN_WEIGHT_MODEL,
   CRYPTO_SOURCE_EVENT_X_WHALE_ALERT,
+  ECONOMY_SOURCE_EVENT_BLS_CPI,
+  CRYPTO_SOURCE_EVENT_X_QUERY_BTC,
+  CRYPTO_SOURCE_EVENT_SOCIAL_TELEGRAM,
+  CRYPTO_SOURCE_EVENT_WEBHOOK_LIQUIDATION,
   CRYPTO_NORMALIZED_ITEM_BTC_ETF,
   FINANCE_NORMALIZED_ITEM_FED_MINUTES,
   AI_NORMALIZED_ITEM_OPEN_WEIGHT_MODEL,
-  CRYPTO_NORMALIZED_ITEM_X_WHALE_ALERT
+  CRYPTO_NORMALIZED_ITEM_X_WHALE_ALERT,
+  ECONOMY_NORMALIZED_ITEM_BLS_CPI,
+  CRYPTO_NORMALIZED_ITEM_X_QUERY_BTC,
+  CRYPTO_NORMALIZED_ITEM_SOCIAL_TELEGRAM,
+  CRYPTO_NORMALIZED_ITEM_WEBHOOK_LIQUIDATION
 } from './helpers/fixtures.js'
 
 // ---- Helpers ----
@@ -326,6 +334,32 @@ describe('fixtures/source-events', () => {
     expect(CRYPTO_SOURCE_EVENT_X_WHALE_ALERT.source_type).toBe('x_account')
     expect(CRYPTO_SOURCE_EVENT_X_WHALE_ALERT.source_url).toMatch(/x\.com/)
   })
+
+  it('economy-2025-01-15-bls-cpi has required source-event fields for official T1 rss type', () => {
+    assertSourceEvent(ECONOMY_SOURCE_EVENT_BLS_CPI, 'economy-bls-source-event')
+    expect(ECONOMY_SOURCE_EVENT_BLS_CPI.source_type).toBe('rss')
+    expect(ECONOMY_SOURCE_EVENT_BLS_CPI.trust_tier).toBe('T1')
+    expect(ECONOMY_SOURCE_EVENT_BLS_CPI.trust_score).toBe(90)
+  })
+
+  it('crypto-2025-01-15-x-query-btc-breakout has required source-event fields for x_query type', () => {
+    assertSourceEvent(CRYPTO_SOURCE_EVENT_X_QUERY_BTC, 'crypto-x-query-source-event')
+    expect(CRYPTO_SOURCE_EVENT_X_QUERY_BTC.source_type).toBe('x_query')
+    expect(CRYPTO_SOURCE_EVENT_X_QUERY_BTC.trust_tier).toBe('T4')
+  })
+
+  it('crypto-2025-01-15-social-telegram has required source-event fields for social type', () => {
+    assertSourceEvent(CRYPTO_SOURCE_EVENT_SOCIAL_TELEGRAM, 'crypto-social-source-event')
+    expect(CRYPTO_SOURCE_EVENT_SOCIAL_TELEGRAM.source_type).toBe('social')
+    expect(CRYPTO_SOURCE_EVENT_SOCIAL_TELEGRAM.trust_tier).toBe('T4')
+  })
+
+  it('crypto-2025-01-15-webhook-liquidation has required source-event fields for webhook type', () => {
+    assertSourceEvent(CRYPTO_SOURCE_EVENT_WEBHOOK_LIQUIDATION, 'crypto-webhook-source-event')
+    expect(CRYPTO_SOURCE_EVENT_WEBHOOK_LIQUIDATION.source_type).toBe('webhook')
+    expect(CRYPTO_SOURCE_EVENT_WEBHOOK_LIQUIDATION.trust_tier).toBe('T2')
+    expect(CRYPTO_SOURCE_EVENT_WEBHOOK_LIQUIDATION.trust_score).toBe(75)
+  })
 })
 
 // ---- Normalized item fixture tests ----
@@ -356,10 +390,47 @@ describe('fixtures/normalized-items', () => {
     expect(CRYPTO_NORMALIZED_ITEM_X_WHALE_ALERT.topic_candidates).toContain('crypto')
   })
 
+  it('economy-2025-01-15-bls-cpi has required normalized-item fields for official T1 rss type', () => {
+    assertNormalizedItem(ECONOMY_NORMALIZED_ITEM_BLS_CPI, 'economy-bls-normalized')
+    expect(ECONOMY_NORMALIZED_ITEM_BLS_CPI.is_duplicate).toBe(false)
+    expect(ECONOMY_NORMALIZED_ITEM_BLS_CPI.source_type).toBe('rss')
+    expect(ECONOMY_NORMALIZED_ITEM_BLS_CPI.trust_tier).toBe('T1')
+    expect(ECONOMY_NORMALIZED_ITEM_BLS_CPI.trust_score).toBe(90)
+    expect(ECONOMY_NORMALIZED_ITEM_BLS_CPI.topic_candidates).toContain('economy')
+  })
+
+  it('crypto-2025-01-15-x-query-btc-breakout has required normalized-item fields for x_query type', () => {
+    assertNormalizedItem(CRYPTO_NORMALIZED_ITEM_X_QUERY_BTC, 'crypto-x-query-normalized')
+    expect(CRYPTO_NORMALIZED_ITEM_X_QUERY_BTC.is_duplicate).toBe(false)
+    expect(CRYPTO_NORMALIZED_ITEM_X_QUERY_BTC.source_type).toBe('x_query')
+    expect(CRYPTO_NORMALIZED_ITEM_X_QUERY_BTC.trust_tier).toBe('T4')
+    expect(CRYPTO_NORMALIZED_ITEM_X_QUERY_BTC.topic_candidates).toContain('crypto')
+  })
+
+  it('crypto-2025-01-15-social-telegram has required normalized-item fields for social type', () => {
+    assertNormalizedItem(CRYPTO_NORMALIZED_ITEM_SOCIAL_TELEGRAM, 'crypto-social-normalized')
+    expect(CRYPTO_NORMALIZED_ITEM_SOCIAL_TELEGRAM.is_duplicate).toBe(false)
+    expect(CRYPTO_NORMALIZED_ITEM_SOCIAL_TELEGRAM.source_type).toBe('social')
+    expect(CRYPTO_NORMALIZED_ITEM_SOCIAL_TELEGRAM.trust_tier).toBe('T4')
+    expect(CRYPTO_NORMALIZED_ITEM_SOCIAL_TELEGRAM.topic_candidates).toContain('crypto')
+  })
+
+  it('crypto-2025-01-15-webhook-liquidation has required normalized-item fields for webhook type', () => {
+    assertNormalizedItem(CRYPTO_NORMALIZED_ITEM_WEBHOOK_LIQUIDATION, 'crypto-webhook-normalized')
+    expect(CRYPTO_NORMALIZED_ITEM_WEBHOOK_LIQUIDATION.is_duplicate).toBe(false)
+    expect(CRYPTO_NORMALIZED_ITEM_WEBHOOK_LIQUIDATION.source_type).toBe('webhook')
+    expect(CRYPTO_NORMALIZED_ITEM_WEBHOOK_LIQUIDATION.trust_tier).toBe('T2')
+    expect(CRYPTO_NORMALIZED_ITEM_WEBHOOK_LIQUIDATION.topic_candidates).toContain('crypto')
+  })
+
   it('source_id in normalized item matches the corresponding source event', () => {
     expect(CRYPTO_NORMALIZED_ITEM_BTC_ETF.source_id).toBe(CRYPTO_SOURCE_EVENT_BTC_ETF.source_id)
     expect(FINANCE_NORMALIZED_ITEM_FED_MINUTES.source_id).toBe(FINANCE_SOURCE_EVENT_FED_MINUTES.source_id)
     expect(AI_NORMALIZED_ITEM_OPEN_WEIGHT_MODEL.source_id).toBe(AI_SOURCE_EVENT_OPEN_WEIGHT_MODEL.source_id)
     expect(CRYPTO_NORMALIZED_ITEM_X_WHALE_ALERT.source_id).toBe(CRYPTO_SOURCE_EVENT_X_WHALE_ALERT.source_id)
+    expect(ECONOMY_NORMALIZED_ITEM_BLS_CPI.source_id).toBe(ECONOMY_SOURCE_EVENT_BLS_CPI.source_id)
+    expect(CRYPTO_NORMALIZED_ITEM_X_QUERY_BTC.source_id).toBe(CRYPTO_SOURCE_EVENT_X_QUERY_BTC.source_id)
+    expect(CRYPTO_NORMALIZED_ITEM_SOCIAL_TELEGRAM.source_id).toBe(CRYPTO_SOURCE_EVENT_SOCIAL_TELEGRAM.source_id)
+    expect(CRYPTO_NORMALIZED_ITEM_WEBHOOK_LIQUIDATION.source_id).toBe(CRYPTO_SOURCE_EVENT_WEBHOOK_LIQUIDATION.source_id)
   })
 })
