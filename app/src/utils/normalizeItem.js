@@ -5,9 +5,10 @@
  * workflows/n8n/intraday/02_normalization.json so that the transformation
  * can be imported and unit/integration tested outside of n8n.
  *
- * The n8n workflow node uses require('crypto') (CommonJS, available in n8n).
- * This module uses the Node.js ESM equivalent (node:crypto) and is importable
- * from Vitest and other ES-module consumers.
+ * Uses the Node.js built-in crypto module (available in Vitest/Node tests).
+ * This module lives in app/src/utils/ rather than functions/ because it is
+ * not deployed as a Cloudflare Pages Function — it is a test utility that
+ * mirrors the equivalent n8n node logic.
  *
  * Contract:
  *   Input  — intraday_source_item   (workflows/contracts/intraday_source_item.json)
@@ -31,9 +32,20 @@ const TOPIC_KEYWORDS = {
 
 // ---- Helpers -----------------------------------------------------------------
 
-/** Strip HTML tags and collapse whitespace. */
+/**
+ * Strip HTML tags and collapse whitespace.
+ *
+ * Applies the tag-removal regex repeatedly until the output stabilises,
+ * preventing bypass via nested or split tags (e.g. <<b>script></b>).
+ */
 export function stripHtml(str) {
-  return (str || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
+  let s = (str || '')
+  let prev
+  do {
+    prev = s
+    s = s.replace(/<[^>]*>/g, '')
+  } while (s !== prev)
+  return s.replace(/\s+/g, ' ').trim()
 }
 
 /**
@@ -61,7 +73,7 @@ export function detectTopicCandidates(headline, body) {
 /**
  * Normalize a single source_item into the intraday_normalized_item contract.
  *
- * Returns null when the headline is shorter than MIN_HEADLINE_LENGTH (the item
+ * Returns null when the headline is shorter than 5 characters (the item
  * should be discarded, mirroring the "Has Valid Headline?" filter node).
  *
  * @param {Object} item - A source_item object conforming to intraday_source_item.json

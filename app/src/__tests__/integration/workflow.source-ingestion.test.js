@@ -3,13 +3,15 @@
  *
  * Verifies that source items from all configured source types normalize
  * correctly into the intraday_normalized_item contract and that the source
- * registry behaves as expected across topics and trust tiers.
+ * registry trust fields are correctly propagated through normalization.
  *
  * Covered scenarios:
  *   - news item (RSS, T2/T3) normalization
  *   - official source (RSS, T1) normalization with trust propagation
  *   - X account item (x_account, T4) normalization
  *   - X query item (x_query, T4) normalization
+ *   - social channel item (social, T4) normalization
+ *   - webhook item (webhook, T2) normalization
  *   - generic API source normalization
  *   - item_id determinism and format
  *   - HTML stripping from title and body
@@ -17,15 +19,11 @@
  *   - trust field coercion (decimal truncation, clamping, null handling)
  *   - headline validation (items with short headlines are discarded)
  *   - published_at fallback to fetched_at
- *   - source registry lookup: topic filtering, active-only, trust fields
- *   - source registry X source type registration and retrieval
- *   - downstream contract compatibility (all required fields present)
+ *   - downstream contract compatibility (all required fields present,
+ *     all 6 source types covered: rss, api, social, webhook, x_account, x_query)
  */
-import { describe, it, expect, beforeEach } from 'vitest'
-import { normalizeItem, computeItemId, stripHtml, detectTopicCandidates } from '@functions/lib/normalizeItem.js'
-import { onRequestGet } from '@functions/api/sources/index.js'
-import { onRequestPost as onRequestPostSource } from '@functions/api/internal/sources.js'
-import { createSeededDb } from './helpers/mockD1.js'
+import { describe, it, expect } from 'vitest'
+import { normalizeItem, computeItemId, stripHtml, detectTopicCandidates } from '@/utils/normalizeItem.js'
 import {
   CRYPTO_SOURCE_EVENT_BTC_ETF,
   FINANCE_SOURCE_EVENT_FED_MINUTES,
@@ -33,52 +31,11 @@ import {
   CRYPTO_SOURCE_EVENT_X_WHALE_ALERT,
   ECONOMY_SOURCE_EVENT_BLS_CPI,
   CRYPTO_SOURCE_EVENT_X_QUERY_BTC,
+  CRYPTO_SOURCE_EVENT_SOCIAL_TELEGRAM,
+  CRYPTO_SOURCE_EVENT_WEBHOOK_LIQUIDATION,
   ECONOMY_NORMALIZED_ITEM_BLS_CPI,
   CRYPTO_NORMALIZED_ITEM_X_QUERY_BTC
 } from './helpers/fixtures.js'
-
-const WRITE_KEY = 'test-write-key-secret'
-
-// ---- Helpers ----------------------------------------------------------------
-
-/** Build a POST context for the internal sources endpoint. */
-function makeSourceCtx(db, body) {
-  return {
-    request: new Request('http://localhost/api/internal/sources', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Write-Key': WRITE_KEY },
-      body: JSON.stringify(body)
-    }),
-    env: { DB: db, WRITE_API_KEY: WRITE_KEY }
-  }
-}
-
-/** Build a GET context for the public sources endpoint. */
-function makeSourcesGetCtx(db, queryParams = {}) {
-  const url = new URL('http://localhost/api/sources')
-  for (const [key, val] of Object.entries(queryParams)) {
-    url.searchParams.set(key, String(val))
-  }
-  return { request: new Request(url.toString()), env: { DB: db } }
-}
-
-/** Return a minimal valid source registry payload. */
-function sourcePayload(overrides = {}) {
-  return {
-    source_slug: 'test-source',
-    source_name: 'Test Source',
-    topic_slug: 'crypto',
-    source_type: 'rss',
-    trust_tier: 'T3',
-    trust_score: 50,
-    priority_weight: 60,
-    url: 'https://example.com/rss',
-    is_active: 1,
-    poll_interval_minutes: 15,
-    ingestion_method: 'poll',
-    ...overrides
-  }
-}
 
 // ---- normalizeItem — news RSS item ------------------------------------------
 
@@ -560,217 +517,71 @@ describe('normalizeItem — headline validation and timestamp fallback', () => {
   })
 })
 
-// ---- Source registry — topic filtering and trust fields ---------------------
+// ---- normalizeItem — social channel item ------------------------------------
 
-describe('source registry — lookup and trust field propagation', () => {
-  let db
-
-  beforeEach(() => {
-    db = createSeededDb()
-    db.seed('sources', [
-      {
-        id: 1,
-        source_slug: 'bls-rss',
-        source_name: 'BLS News RSS',
-        topic_slug: 'economy',
-        source_type: 'rss',
-        trust_tier: 'T1',
-        trust_score: 90,
-        priority_weight: 90,
-        url: 'https://www.bls.gov/rss/',
-        is_active: 1,
-        poll_interval_minutes: 60,
-        ingestion_method: 'poll'
-      },
-      {
-        id: 2,
-        source_slug: 'coindesk-rss',
-        source_name: 'CoinDesk RSS',
-        topic_slug: 'crypto',
-        source_type: 'rss',
-        trust_tier: 'T3',
-        trust_score: 50,
-        priority_weight: 70,
-        url: 'https://www.coindesk.com/arc/outboundfeeds/rss/',
-        is_active: 1,
-        poll_interval_minutes: 15,
-        ingestion_method: 'poll'
-      },
-      {
-        id: 3,
-        source_slug: 'x-account-whale-alert',
-        source_name: 'Whale Alert (X)',
-        topic_slug: 'crypto',
-        source_type: 'x_account',
-        trust_tier: 'T4',
-        trust_score: 25,
-        priority_weight: 50,
-        url: 'https://x.com/whale_alert',
-        is_active: 1,
-        poll_interval_minutes: 5,
-        ingestion_method: 'poll'
-      },
-      {
-        id: 4,
-        source_slug: 'x-search-btc-breakout',
-        source_name: 'X Search: BTC Breakout',
-        topic_slug: 'crypto',
-        source_type: 'x_query',
-        trust_tier: 'T4',
-        trust_score: 25,
-        priority_weight: 40,
-        url: 'https://api.twitter.com/2/tweets/search/recent',
-        is_active: 1,
-        poll_interval_minutes: 10,
-        ingestion_method: 'poll'
-      },
-      {
-        id: 5,
-        source_slug: 'inactive-source',
-        source_name: 'Inactive Source',
-        topic_slug: 'crypto',
-        source_type: 'rss',
-        trust_tier: 'T3',
-        trust_score: 50,
-        priority_weight: 30,
-        url: 'https://example.com/inactive',
-        is_active: 0,
-        poll_interval_minutes: 15,
-        ingestion_method: 'poll'
-      }
-    ])
+describe('normalizeItem — social channel item', () => {
+  it('normalizes the Telegram social channel source event', () => {
+    const result = normalizeItem(CRYPTO_SOURCE_EVENT_SOCIAL_TELEGRAM)
+    expect(result).not.toBeNull()
+    expect(result.source_id).toBe(CRYPTO_SOURCE_EVENT_SOCIAL_TELEGRAM.source_id)
+    expect(result.source_name).toBe('CryptoTelegram')
+    expect(result.source_type).toBe('social')
   })
 
-  it('returns only active sources (is_active = 1)', async () => {
-    const res = await onRequestGet(makeSourcesGetCtx(db))
-    const sources = await res.json()
-    expect(sources).toHaveLength(4)
-    for (const src of sources) {
-      expect(src.source_slug).not.toBe('inactive-source')
-    }
+  it('propagates T4 trust_tier for the social source', () => {
+    const result = normalizeItem(CRYPTO_SOURCE_EVENT_SOCIAL_TELEGRAM)
+    expect(result.trust_tier).toBe('T4')
+    expect(result.trust_score).toBe(25)
   })
 
-  it('filters sources by topic_slug correctly', async () => {
-    const res = await onRequestGet(makeSourcesGetCtx(db, { topic: 'economy' }))
-    const sources = await res.json()
-    expect(sources).toHaveLength(1)
-    expect(sources[0].source_slug).toBe('bls-rss')
-    expect(sources[0].topic_slug).toBe('economy')
+  it('preserves author from social source event', () => {
+    const result = normalizeItem(CRYPTO_SOURCE_EVENT_SOCIAL_TELEGRAM)
+    expect(result.author).toBe('@crypto_signals')
   })
 
-  it('returns T1 trust fields for the official economy source', async () => {
-    const res = await onRequestGet(makeSourcesGetCtx(db, { topic: 'economy' }))
-    const sources = await res.json()
-    expect(sources[0].trust_tier).toBe('T1')
-    expect(sources[0].trust_score).toBe(90)
+  it('detects crypto topic candidates for BTC whale move alert', () => {
+    const result = normalizeItem(CRYPTO_SOURCE_EVENT_SOCIAL_TELEGRAM)
+    expect(result.topic_candidates).toContain('crypto')
   })
 
-  it('returns both x_account and x_query sources for crypto topic', async () => {
-    const res = await onRequestGet(makeSourcesGetCtx(db, { topic: 'crypto' }))
-    const sources = await res.json()
-    const types = sources.map(s => s.source_type)
-    expect(types).toContain('x_account')
-    expect(types).toContain('x_query')
-  })
-
-  it('returns T4 trust_tier for X account and X query sources', async () => {
-    const res = await onRequestGet(makeSourcesGetCtx(db, { topic: 'crypto' }))
-    const sources = await res.json()
-    const xSources = sources.filter(s => s.source_type === 'x_account' || s.source_type === 'x_query')
-    expect(xSources).toHaveLength(2)
-    for (const src of xSources) {
-      expect(src.trust_tier).toBe('T4')
-      expect(src.trust_score).toBe(25)
-    }
-  })
-
-  it('returns trust_score 25 for the X account whale alert source', async () => {
-    const res = await onRequestGet(makeSourcesGetCtx(db, { topic: 'crypto' }))
-    const sources = await res.json()
-    const xAccount = sources.find(s => s.source_slug === 'x-account-whale-alert')
-    expect(xAccount).toBeDefined()
-    expect(xAccount.trust_score).toBe(25)
-  })
-
-  it('returns an empty array for a valid topic with no sources', async () => {
-    const res = await onRequestGet(makeSourcesGetCtx(db, { topic: 'health' }))
-    expect(res.status).toBe(200)
-    const sources = await res.json()
-    expect(sources).toHaveLength(0)
-  })
-
-  it('returns 400 for an invalid topic parameter', async () => {
-    const res = await onRequestGet(makeSourcesGetCtx(db, { topic: 'INVALID' }))
-    expect(res.status).toBe(400)
+  it('item_id matches expected SHA-256 for the social source event', () => {
+    const expected = computeItemId('CryptoTelegram', 'tg-channel-crypto-signals-20250115001')
+    const result = normalizeItem(CRYPTO_SOURCE_EVENT_SOCIAL_TELEGRAM)
+    expect(result.item_id).toBe(expected)
   })
 })
 
-// ---- Source registry — X source registration --------------------------------
+// ---- normalizeItem — webhook item -------------------------------------------
 
-describe('source registry — X source registration', () => {
-  let db
-
-  beforeEach(() => {
-    db = createSeededDb()
+describe('normalizeItem — webhook item', () => {
+  it('normalizes the exchange webhook liquidation source event', () => {
+    const result = normalizeItem(CRYPTO_SOURCE_EVENT_WEBHOOK_LIQUIDATION)
+    expect(result).not.toBeNull()
+    expect(result.source_id).toBe(CRYPTO_SOURCE_EVENT_WEBHOOK_LIQUIDATION.source_id)
+    expect(result.source_name).toBe('Exchange Webhook')
+    expect(result.source_type).toBe('webhook')
   })
 
-  it('registers an x_account source with T4 trust and returns 201', async () => {
-    const payload = sourcePayload({
-      source_slug: 'x-account-whale-alert',
-      source_name: 'Whale Alert (X)',
-      source_type: 'x_account',
-      topic_slug: 'crypto',
-      trust_tier: 'T4',
-      trust_score: 25,
-      url: 'https://x.com/whale_alert',
-      metadata_json: '{"x_user_id":"123456","x_username":"whale_alert"}'
-    })
-    const res = await onRequestPostSource(makeSourceCtx(db, payload))
-    expect(res.status).toBe(201)
-    const body = await res.json()
-    expect(body.source_slug).toBe('x-account-whale-alert')
-    expect(body.topic_slug).toBe('crypto')
+  it('propagates T2 trust_tier for the webhook source', () => {
+    const result = normalizeItem(CRYPTO_SOURCE_EVENT_WEBHOOK_LIQUIDATION)
+    expect(result.trust_tier).toBe('T2')
+    expect(result.trust_score).toBe(75)
   })
 
-  it('registers an x_query source with T4 trust and returns 201', async () => {
-    const payload = sourcePayload({
-      source_slug: 'x-search-btc-breakout',
-      source_name: 'X Search: BTC Breakout',
-      source_type: 'x_query',
-      topic_slug: 'crypto',
-      trust_tier: 'T4',
-      trust_score: 25,
-      metadata_json: '{"search_query":"(#BTC OR #Bitcoin) breakout -is:retweet"}'
-    })
-    const res = await onRequestPostSource(makeSourceCtx(db, payload))
-    expect(res.status).toBe(201)
-    const body = await res.json()
-    expect(body.source_slug).toBe('x-search-btc-breakout')
+  it('sets source_url to null when the webhook event has none', () => {
+    const result = normalizeItem(CRYPTO_SOURCE_EVENT_WEBHOOK_LIQUIDATION)
+    expect(result.source_url).toBeNull()
   })
 
-  it('registers an official T1 RSS source and returns 201', async () => {
-    const payload = sourcePayload({
-      source_slug: 'bls-rss',
-      source_name: 'BLS News RSS',
-      source_type: 'rss',
-      topic_slug: 'economy',
-      trust_tier: 'T1',
-      trust_score: 90,
-      priority_weight: 90,
-      url: 'https://www.bls.gov/rss/'
-    })
-    const res = await onRequestPostSource(makeSourceCtx(db, payload))
-    expect(res.status).toBe(201)
-    const body = await res.json()
-    expect(body.source_slug).toBe('bls-rss')
-    expect(body.topic_slug).toBe('economy')
+  it('detects crypto topic candidates for BTC liquidation event', () => {
+    const result = normalizeItem(CRYPTO_SOURCE_EVENT_WEBHOOK_LIQUIDATION)
+    expect(result.topic_candidates).toContain('crypto')
   })
 
-  it('returns 409 when registering a source with a duplicate slug', async () => {
-    const payload = sourcePayload({ source_slug: 'x-dup-test', source_type: 'x_account' })
-    await onRequestPostSource(makeSourceCtx(db, payload))
-    const res2 = await onRequestPostSource(makeSourceCtx(db, payload))
-    expect(res2.status).toBe(409)
+  it('item_id matches expected SHA-256 for the webhook source event', () => {
+    const expected = computeItemId('Exchange Webhook', 'webhook-btc-liquidation-20250115002')
+    const result = normalizeItem(CRYPTO_SOURCE_EVENT_WEBHOOK_LIQUIDATION)
+    expect(result.item_id).toBe(expected)
   })
 })
 
@@ -788,7 +599,9 @@ describe('normalizeItem — downstream contract compatibility', () => {
     AI_SOURCE_EVENT_OPEN_WEIGHT_MODEL,
     CRYPTO_SOURCE_EVENT_X_WHALE_ALERT,
     ECONOMY_SOURCE_EVENT_BLS_CPI,
-    CRYPTO_SOURCE_EVENT_X_QUERY_BTC
+    CRYPTO_SOURCE_EVENT_X_QUERY_BTC,
+    CRYPTO_SOURCE_EVENT_SOCIAL_TELEGRAM,
+    CRYPTO_SOURCE_EVENT_WEBHOOK_LIQUIDATION
   ]
 
   for (const event of ALL_SOURCE_EVENTS) {

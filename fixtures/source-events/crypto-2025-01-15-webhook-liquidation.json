@@ -1,0 +1,22 @@
+{
+  "source_id": "webhook-btc-liquidation-20250115002",
+  "source_slug": "exchange-liquidation-webhook",
+  "source_name": "Exchange Webhook",
+  "source_type": "webhook",
+  "source_url": null,
+  "title": "Large BTC long liquidation: $45M wiped on Binance futures",
+  "body": "A $45 million Bitcoin long position was liquidated on Binance futures at 08:32 UTC on January 15, contributing to a 2.3% price drop within three minutes.",
+  "author": null,
+  "published_at": "2025-01-15T08:32:00Z",
+  "fetched_at": "2025-01-15T08:32:05Z",
+  "trust_tier": "T2",
+  "trust_score": 75,
+  "raw_json": {
+    "event_type": "liquidation",
+    "asset": "BTC",
+    "side": "long",
+    "size_usd": 45000000,
+    "exchange": "binance",
+    "timestamp": "2025-01-15T08:32:00Z"
+  }
+}

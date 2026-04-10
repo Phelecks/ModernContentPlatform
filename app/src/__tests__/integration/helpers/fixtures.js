@@ -39,6 +39,8 @@ export { default as AI_SOURCE_EVENT_OPEN_WEIGHT_MODEL } from '@fixtures/source-e
 export { default as CRYPTO_SOURCE_EVENT_X_WHALE_ALERT } from '@fixtures/source-events/crypto-2025-01-15-x-whale-alert.json'
 export { default as ECONOMY_SOURCE_EVENT_BLS_CPI } from '@fixtures/source-events/economy-2025-01-15-bls-cpi.json'
 export { default as CRYPTO_SOURCE_EVENT_X_QUERY_BTC } from '@fixtures/source-events/crypto-2025-01-15-x-query-btc-breakout.json'
+export { default as CRYPTO_SOURCE_EVENT_SOCIAL_TELEGRAM } from '@fixtures/source-events/crypto-2025-01-15-social-telegram.json'
+export { default as CRYPTO_SOURCE_EVENT_WEBHOOK_LIQUIDATION } from '@fixtures/source-events/crypto-2025-01-15-webhook-liquidation.json'
 
 // ---- Normalized items (intraday_normalized_item, individual items) ----
 
@@ -48,3 +50,5 @@ export { default as AI_NORMALIZED_ITEM_OPEN_WEIGHT_MODEL } from '@fixtures/norma
 export { default as CRYPTO_NORMALIZED_ITEM_X_WHALE_ALERT } from '@fixtures/normalized-items/crypto-2025-01-15-x-whale-alert.json'
 export { default as ECONOMY_NORMALIZED_ITEM_BLS_CPI } from '@fixtures/normalized-items/economy-2025-01-15-bls-cpi.json'
 export { default as CRYPTO_NORMALIZED_ITEM_X_QUERY_BTC } from '@fixtures/normalized-items/crypto-2025-01-15-x-query-btc-breakout.json'
+export { default as CRYPTO_NORMALIZED_ITEM_SOCIAL_TELEGRAM } from '@fixtures/normalized-items/crypto-2025-01-15-social-telegram.json'
+export { default as CRYPTO_NORMALIZED_ITEM_WEBHOOK_LIQUIDATION } from '@fixtures/normalized-items/crypto-2025-01-15-webhook-liquidation.json'
