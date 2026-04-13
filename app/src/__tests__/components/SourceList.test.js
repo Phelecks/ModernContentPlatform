@@ -170,3 +170,151 @@ describe('SourceList', () => {
     expect(badges[1].text()).toBe('Data')
   })
 })
+
+// ---------------------------------------------------------------------------
+// Daily summary context
+// ---------------------------------------------------------------------------
+
+const SUMMARY_SOURCES = [
+  {
+    source_name: 'CryptoNews',
+    source_url: 'https://example.com/crypto/btc-etf-inflows',
+    source_type: 'rss',
+    source_role: 'primary'
+  },
+  {
+    source_name: 'CoinGecko API',
+    source_url: 'https://api.coingecko.com/api/v3/simple/price',
+    source_type: 'api',
+    source_role: 'data'
+  },
+  {
+    source_name: 'InternalAnalysis',
+    source_url: null,
+    source_type: null,
+    source_role: 'analysis'
+  }
+]
+
+const SUMMARY_CONFIDENCE_NOTE =
+  'High confidence: multiple specialist outlets corroborated by real-time market data.'
+
+describe('SourceList — daily summary source context', () => {
+  // ---- Primary source presentation ----
+
+  it('renders the primary source first in the list', () => {
+    const wrapper = mount(SourceList, { props: { sources: SUMMARY_SOURCES } })
+    const items = wrapper.findAll('.source-list__item')
+    expect(items[0].text()).toContain('CryptoNews')
+  })
+
+  it('renders the primary source role label', () => {
+    const wrapper = mount(SourceList, { props: { sources: SUMMARY_SOURCES } })
+    const roles = wrapper.findAll('.source-list__role')
+    expect(roles[0].text()).toBe('primary')
+  })
+
+  it('renders a link for the primary source', () => {
+    const wrapper = mount(SourceList, { props: { sources: SUMMARY_SOURCES } })
+    const links = wrapper.findAll('.source-list__link')
+    expect(links[0].attributes('href')).toBe('https://example.com/crypto/btc-etf-inflows')
+  })
+
+  // ---- Supporting (non-primary) source presentation ----
+
+  it('renders supporting data source role', () => {
+    const wrapper = mount(SourceList, { props: { sources: SUMMARY_SOURCES } })
+    expect(wrapper.text()).toContain('data')
+  })
+
+  it('renders plain text for the analysis source without a URL', () => {
+    const wrapper = mount(SourceList, { props: { sources: SUMMARY_SOURCES } })
+    const nameSpans = wrapper.findAll('.source-list__name')
+    const analysisSpan = nameSpans.find(s => s.text() === 'InternalAnalysis')
+    expect(analysisSpan).toBeDefined()
+  })
+
+  // ---- Source type badge variety in summary ----
+
+  it('renders News badge for the RSS primary source', () => {
+    const wrapper = mount(SourceList, { props: { sources: SUMMARY_SOURCES } })
+    const badges = wrapper.findAll('.source-badge')
+    const newsBadge = badges.find(b => b.text() === 'News')
+    expect(newsBadge).toBeDefined()
+  })
+
+  it('renders Data badge for the API supporting source', () => {
+    const wrapper = mount(SourceList, { props: { sources: SUMMARY_SOURCES } })
+    const badges = wrapper.findAll('.source-badge')
+    const dataBadge = badges.find(b => b.text() === 'Data')
+    expect(dataBadge).toBeDefined()
+  })
+
+  it('does not render a badge for the analysis source that has no source_type', () => {
+    const wrapper = mount(SourceList, { props: { sources: SUMMARY_SOURCES } })
+    const items = wrapper.findAll('.source-list__item')
+    const analysisItem = items.find(i => i.text().includes('InternalAnalysis'))
+    expect(analysisItem.find('.source-badge').exists()).toBe(false)
+  })
+
+  // ---- Confidence note ----
+
+  it('renders the confidence note alongside summary sources', () => {
+    const wrapper = mount(SourceList, {
+      props: { sources: SUMMARY_SOURCES, confidenceNote: SUMMARY_CONFIDENCE_NOTE }
+    })
+    expect(wrapper.find('.source-list__confidence').text()).toBe(SUMMARY_CONFIDENCE_NOTE)
+  })
+
+  // ---- Multiple source types together ----
+
+  it('renders all four summary sources correctly', () => {
+    const sources = [
+      { source_name: 'Reuters', source_url: 'https://reuters.com/article', source_type: 'rss', source_role: 'primary' },
+      { source_name: 'Bloomberg', source_url: 'https://bloomberg.com/article', source_type: 'api', source_role: 'confirmation' },
+      { source_name: 'SEC Filing', source_url: 'https://sec.gov/filing', source_type: 'official', source_role: 'official' },
+      { source_name: 'Internal Model', source_url: null, source_type: null, source_role: 'analysis' }
+    ]
+    const wrapper = mount(SourceList, { props: { sources } })
+    expect(wrapper.findAll('.source-list__item')).toHaveLength(4)
+    expect(wrapper.findAll('.source-badge')).toHaveLength(3)
+    expect(wrapper.findAll('.source-list__link')).toHaveLength(3)
+    expect(wrapper.findAll('.source-list__name')).toHaveLength(1)
+  })
+
+  it('renders Official badge for official source type in summary', () => {
+    const sources = [
+      { source_name: 'SEC Filing', source_url: 'https://sec.gov', source_type: 'official', source_role: 'official' }
+    ]
+    const wrapper = mount(SourceList, { props: { sources } })
+    expect(wrapper.find('.source-badge').text()).toBe('Official')
+    expect(wrapper.find('.source-badge--official').exists()).toBe(true)
+  })
+
+  it('renders Research badge for research source type in summary', () => {
+    const sources = [
+      { source_name: 'Arxiv Paper', source_url: 'https://arxiv.org/paper', source_type: 'research', source_role: 'research' }
+    ]
+    const wrapper = mount(SourceList, { props: { sources } })
+    expect(wrapper.find('.source-badge').text()).toBe('Research')
+    expect(wrapper.find('.source-badge--research').exists()).toBe(true)
+  })
+
+  it('renders X badge for x_account source type in summary', () => {
+    const sources = [
+      { source_name: '@elonmusk', source_url: null, source_type: 'x_account', source_role: 'signal' }
+    ]
+    const wrapper = mount(SourceList, { props: { sources } })
+    expect(wrapper.find('.source-badge').text()).toBe('X')
+    expect(wrapper.find('.source-badge--x').exists()).toBe(true)
+  })
+
+  it('renders Signal badge for webhook source type in summary', () => {
+    const sources = [
+      { source_name: 'On-chain Alert', source_url: null, source_type: 'webhook', source_role: 'signal' }
+    ]
+    const wrapper = mount(SourceList, { props: { sources } })
+    expect(wrapper.find('.source-badge').text()).toBe('Signal')
+    expect(wrapper.find('.source-badge--signal').exists()).toBe(true)
+  })
+})
