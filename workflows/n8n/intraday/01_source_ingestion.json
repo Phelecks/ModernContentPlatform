@@ -264,6 +264,99 @@
         1780,
         400
       ]
+    },
+    {
+      "parameters": {
+        "conditions": [
+          {
+            "leftValue": "={{ $json.type }}",
+            "rightValue": "newsapi",
+            "operator": {
+              "type": "string",
+              "operation": "equals"
+            }
+          }
+        ],
+        "options": {
+          "caseSensitive": false
+        }
+      },
+      "id": "b2c3d4e5-0002-0002-0002-000000000015",
+      "name": "Is NewsAPI?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        680,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "redirect": {
+            "redirect": {
+              "followRedirects": true
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "b2c3d4e5-0002-0002-0002-000000000016",
+      "name": "Fetch NewsAPI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        800
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "newsApiCredential",
+          "name": "NewsApiCredential"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem"
+      },
+      "id": "b2c3d4e5-0002-0002-0002-000000000017",
+      "name": "Parse NewsAPI Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        800
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "clashHandling": {
+          "values": {
+            "resolveClash": "addSuffix"
+          }
+        }
+      },
+      "id": "b2c3d4e5-0002-0002-0002-000000000018",
+      "name": "Merge With NewsAPI",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1340,
+        500
+      ]
     }
   ],
   "connections": {
@@ -318,7 +411,7 @@
         ],
         [
           {
-            "node": "Fetch API Source",
+            "node": "Is NewsAPI?",
             "type": "main",
             "index": 0
           }
@@ -406,7 +499,7 @@
       "main": [
         [
           {
-            "node": "Merge All Items",
+            "node": "Merge With NewsAPI",
             "type": "main",
             "index": 0
           }
@@ -418,6 +511,57 @@
         [
           {
             "node": "Collect Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is NewsAPI?": {
+      "main": [
+        [
+          {
+            "node": "Fetch NewsAPI",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch API Source",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch NewsAPI": {
+      "main": [
+        [
+          {
+            "node": "Parse NewsAPI Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse NewsAPI Items": {
+      "main": [
+        [
+          {
+            "node": "Merge With NewsAPI",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge With NewsAPI": {
+      "main": [
+        [
+          {
+            "node": "Merge All Items",
             "type": "main",
             "index": 0
           }
