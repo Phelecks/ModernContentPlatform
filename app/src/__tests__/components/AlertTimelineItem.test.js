@@ -6,6 +6,9 @@
  *   - time display (relative)
  *   - severity-level CSS class (high / medium / low)
  *   - optional fields
+ *   - source badge rendering by type
+ *   - primary source in meta row vs supporting sources section
+ *   - supporting sources from supporting_sources array and source_metadata_json
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
@@ -318,5 +321,207 @@ describe('AlertTimelineItem', () => {
     vi.setSystemTime(new Date('2025-01-15T14:35:00Z'))
     const wrapper = mount(AlertTimelineItem, { props: { alert: BASE_ALERT } })
     expect(wrapper.find('.alert-timeline-item__time').text()).toBe('5m ago')
+  })
+
+  // ---- Primary source in meta row ----
+
+  it('renders primary source name in the meta row', () => {
+    const wrapper = mount(AlertTimelineItem, { props: { alert: BASE_ALERT } })
+    const meta = wrapper.find('.alert-timeline-item__meta')
+    expect(meta.exists()).toBe(true)
+    expect(meta.text()).toContain('CryptoNews')
+  })
+
+  it('renders primary source type badge in the meta row', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: { alert: { ...BASE_ALERT, source_type: 'rss' } }
+    })
+    const meta = wrapper.find('.alert-timeline-item__meta')
+    expect(meta.find('.source-badge').exists()).toBe(true)
+    expect(meta.find('.source-badge').text()).toBe('News')
+  })
+
+  it('meta row contains time, badge, and source name together', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: { alert: { ...BASE_ALERT, source_type: 'api' } }
+    })
+    const meta = wrapper.find('.alert-timeline-item__meta')
+    expect(meta.find('.alert-timeline-item__time').exists()).toBe(true)
+    expect(meta.find('.source-badge').exists()).toBe(true)
+    expect(meta.find('.alert-timeline-item__source').exists()).toBe(true)
+  })
+
+  it('supporting sources section only renders items from supporting_sources prop', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: {
+        alert: {
+          ...BASE_ALERT,
+          source_type: 'rss',
+          supporting_sources: [
+            { source_name: 'CoinGecko API', source_url: 'https://api.coingecko.com', source_type: 'api' }
+          ]
+        }
+      }
+    })
+    const supporting = wrapper.find('.alert-timeline-item__supporting')
+    const items = supporting.findAll('.alert-timeline-item__supporting-source')
+    expect(items).toHaveLength(1)
+    expect(items[0].text()).toContain('CoinGecko API')
+  })
+
+  it('renders primary source name and supporting sources in separate sections', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: {
+        alert: {
+          ...BASE_ALERT,
+          source_type: 'rss',
+          supporting_sources: [
+            { source_name: 'Bloomberg', source_url: 'https://bloomberg.com/article', source_type: 'api' }
+          ]
+        }
+      }
+    })
+    expect(wrapper.find('.alert-timeline-item__meta .alert-timeline-item__source').text()).toBe('CryptoNews')
+    expect(wrapper.find('.alert-timeline-item__supporting').text()).toContain('Bloomberg')
+  })
+
+  // ---- Supporting sources from source_metadata_json ----
+
+  it('parses supporting sources from source_metadata_json string', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: {
+        alert: {
+          ...BASE_ALERT,
+          source_metadata_json: JSON.stringify({
+            supporting_sources: [
+              { source_name: 'CoinGecko API', source_url: 'https://api.coingecko.com', source_type: 'api', source_role: 'data' }
+            ]
+          })
+        }
+      }
+    })
+    expect(wrapper.find('.alert-timeline-item__supporting').exists()).toBe(true)
+    expect(wrapper.text()).toContain('CoinGecko API')
+  })
+
+  it('renders all supporting sources parsed from source_metadata_json', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: {
+        alert: {
+          ...BASE_ALERT,
+          source_metadata_json: JSON.stringify({
+            supporting_sources: [
+              { source_name: 'Source A', source_url: 'https://a.example.com', source_type: 'rss' },
+              { source_name: 'Source B', source_url: null, source_type: 'api' }
+            ]
+          })
+        }
+      }
+    })
+    const items = wrapper.findAll('.alert-timeline-item__supporting-source')
+    expect(items).toHaveLength(2)
+    expect(wrapper.text()).toContain('Source A')
+    expect(wrapper.text()).toContain('Source B')
+  })
+
+  it('renders a link for supporting sources with a URL parsed from source_metadata_json', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: {
+        alert: {
+          ...BASE_ALERT,
+          source_metadata_json: JSON.stringify({
+            supporting_sources: [
+              { source_name: 'CoinGecko API', source_url: 'https://api.coingecko.com', source_type: 'api' }
+            ]
+          })
+        }
+      }
+    })
+    const link = wrapper.find('.alert-timeline-item__supporting-link')
+    expect(link.exists()).toBe(true)
+    expect(link.attributes('href')).toBe('https://api.coingecko.com')
+    expect(link.attributes('target')).toBe('_blank')
+    expect(link.attributes('rel')).toBe('noopener noreferrer')
+  })
+
+  it('renders plain text for supporting sources without a URL from source_metadata_json', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: {
+        alert: {
+          ...BASE_ALERT,
+          source_metadata_json: JSON.stringify({
+            supporting_sources: [
+              { source_name: 'Internal Signal', source_url: null, source_type: 'api' }
+            ]
+          })
+        }
+      }
+    })
+    expect(wrapper.find('.alert-timeline-item__supporting-link').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Internal Signal')
+  })
+
+  it('renders source type badges from source_metadata_json supporting sources', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: {
+        alert: {
+          ...BASE_ALERT,
+          source_metadata_json: JSON.stringify({
+            supporting_sources: [
+              { source_name: 'CoinGecko API', source_url: null, source_type: 'api' }
+            ]
+          })
+        }
+      }
+    })
+    const badge = wrapper.find('.alert-timeline-item__supporting-source .source-badge')
+    expect(badge.exists()).toBe(true)
+    expect(badge.text()).toBe('Data')
+  })
+
+  it('does not render supporting sources when source_metadata_json has empty array', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: {
+        alert: {
+          ...BASE_ALERT,
+          source_metadata_json: JSON.stringify({ supporting_sources: [] })
+        }
+      }
+    })
+    expect(wrapper.find('.alert-timeline-item__supporting').exists()).toBe(false)
+  })
+
+  it('does not render supporting sources when source_metadata_json is malformed JSON', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: { alert: { ...BASE_ALERT, source_metadata_json: '{not valid json' } }
+    })
+    expect(wrapper.find('.alert-timeline-item__supporting').exists()).toBe(false)
+  })
+
+  it('does not render supporting sources when source_metadata_json is null', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: { alert: { ...BASE_ALERT, source_metadata_json: null } }
+    })
+    expect(wrapper.find('.alert-timeline-item__supporting').exists()).toBe(false)
+  })
+
+  it('prefers supporting_sources array over source_metadata_json when both are provided', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: {
+        alert: {
+          ...BASE_ALERT,
+          supporting_sources: [
+            { source_name: 'DirectSource', source_url: null }
+          ],
+          source_metadata_json: JSON.stringify({
+            supporting_sources: [
+              { source_name: 'MetaSource', source_url: null }
+            ]
+          })
+        }
+      }
+    })
+    expect(wrapper.text()).toContain('DirectSource')
+    expect(wrapper.text()).not.toContain('MetaSource')
   })
 })
