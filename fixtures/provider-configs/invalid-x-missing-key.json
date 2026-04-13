@@ -1,0 +1,11 @@
+{
+  "description": "Invalid: X is enabled but X_BEARER_TOKEN is absent. Key validation must reject this configuration.",
+  "env": {
+    "ENABLE_X": "true",
+    "ENABLE_NEWSAPI": "false"
+  },
+  "expected": {
+    "error": "PROVIDER_CONFIG_ERROR",
+    "errorPattern": "X_BEARER_TOKEN is required when ENABLE_X=true"
+  }
+}

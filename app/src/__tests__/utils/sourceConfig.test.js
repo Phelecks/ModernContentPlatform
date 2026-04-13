@@ -18,6 +18,13 @@ import {
   parseProviderFlag,
   parseProviderConfig
 } from '@/utils/sourceConfig.js'
+import xOnlyFixture from '@fixtures/provider-configs/x-only.json'
+import newsapiOnlyFixture from '@fixtures/provider-configs/newsapi-only.json'
+import hybridFixture from '@fixtures/provider-configs/hybrid.json'
+import xOnlyNewsapiKeyIgnoredFixture from '@fixtures/provider-configs/x-only-newsapi-key-ignored.json'
+import invalidBothDisabledFixture from '@fixtures/provider-configs/invalid-both-disabled.json'
+import invalidXMissingKeyFixture from '@fixtures/provider-configs/invalid-x-missing-key.json'
+import invalidNewsapiMissingKeyFixture from '@fixtures/provider-configs/invalid-newsapi-missing-key.json'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -352,5 +359,101 @@ describe('parseProviderConfig — keys only required for enabled providers', () 
     expect(() =>
       parseProviderConfig({ ENABLE_X: 'true', X_BEARER_TOKEN: 'tok' })
     ).not.toThrow()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// parseProviderConfig — fixture-driven tests
+//
+// Each fixture in fixtures/provider-configs/ carries an `env` object and an
+// `expected` descriptor.  These tests import the canonical fixtures and
+// validate them against parseProviderConfig, ensuring the fixtures stay in
+// sync with the implementation and serve as living documentation.
+// ---------------------------------------------------------------------------
+
+describe('parseProviderConfig — fixture: x-only', () => {
+  it('resolves to x_only mode', () => {
+    const { mode } = parseProviderConfig(xOnlyFixture.env)
+    expect(mode).toBe(xOnlyFixture.expected.mode)
+  })
+
+  it('returns enableX=true and enableNewsapi=false', () => {
+    const { enableX, enableNewsapi } = parseProviderConfig(xOnlyFixture.env)
+    expect(enableX).toBe(xOnlyFixture.expected.enableX)
+    expect(enableNewsapi).toBe(xOnlyFixture.expected.enableNewsapi)
+  })
+})
+
+describe('parseProviderConfig — fixture: newsapi-only', () => {
+  it('resolves to newsapi_only mode', () => {
+    const { mode } = parseProviderConfig(newsapiOnlyFixture.env)
+    expect(mode).toBe(newsapiOnlyFixture.expected.mode)
+  })
+
+  it('returns enableX=false and enableNewsapi=true', () => {
+    const { enableX, enableNewsapi } = parseProviderConfig(newsapiOnlyFixture.env)
+    expect(enableX).toBe(newsapiOnlyFixture.expected.enableX)
+    expect(enableNewsapi).toBe(newsapiOnlyFixture.expected.enableNewsapi)
+  })
+})
+
+describe('parseProviderConfig — fixture: hybrid', () => {
+  it('resolves to hybrid mode', () => {
+    const { mode } = parseProviderConfig(hybridFixture.env)
+    expect(mode).toBe(hybridFixture.expected.mode)
+  })
+
+  it('returns enableX=true and enableNewsapi=true', () => {
+    const { enableX, enableNewsapi } = parseProviderConfig(hybridFixture.env)
+    expect(enableX).toBe(hybridFixture.expected.enableX)
+    expect(enableNewsapi).toBe(hybridFixture.expected.enableNewsapi)
+  })
+})
+
+describe('parseProviderConfig — fixture: x-only-newsapi-key-ignored', () => {
+  it('resolves to x_only mode even when a NewsAPI key is present in env', () => {
+    const { mode } = parseProviderConfig(xOnlyNewsapiKeyIgnoredFixture.env)
+    expect(mode).toBe(xOnlyNewsapiKeyIgnoredFixture.expected.mode)
+  })
+
+  it('does not enable NewsAPI when ENABLE_NEWSAPI=false regardless of key presence', () => {
+    const { enableNewsapi } = parseProviderConfig(xOnlyNewsapiKeyIgnoredFixture.env)
+    expect(enableNewsapi).toBe(xOnlyNewsapiKeyIgnoredFixture.expected.enableNewsapi)
+  })
+})
+
+describe('parseProviderConfig — fixture: invalid-both-disabled', () => {
+  it('throws PROVIDER_CONFIG_ERROR when both providers are disabled', () => {
+    expect(() => parseProviderConfig(invalidBothDisabledFixture.env))
+      .toThrow(invalidBothDisabledFixture.expected.error)
+  })
+
+  it('error message matches expected pattern', () => {
+    expect(() => parseProviderConfig(invalidBothDisabledFixture.env))
+      .toThrow(new RegExp(invalidBothDisabledFixture.expected.errorPattern))
+  })
+})
+
+describe('parseProviderConfig — fixture: invalid-x-missing-key', () => {
+  it('throws PROVIDER_CONFIG_ERROR when X is enabled but X_BEARER_TOKEN is absent', () => {
+    expect(() => parseProviderConfig(invalidXMissingKeyFixture.env))
+      .toThrow(invalidXMissingKeyFixture.expected.error)
+  })
+
+  it('error message matches expected pattern', () => {
+    expect(() => parseProviderConfig(invalidXMissingKeyFixture.env))
+      .toThrow(new RegExp(invalidXMissingKeyFixture.expected.errorPattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace('\\=', '=')))
+  })
+})
+
+describe('parseProviderConfig — fixture: invalid-newsapi-missing-key', () => {
+  it('throws PROVIDER_CONFIG_ERROR when NewsAPI is enabled but NEWS_API_KEY is absent', () => {
+    expect(() => parseProviderConfig(invalidNewsapiMissingKeyFixture.env))
+      .toThrow(invalidNewsapiMissingKeyFixture.expected.error)
+  })
+
+  it('error message matches expected pattern', () => {
+    expect(() => parseProviderConfig(invalidNewsapiMissingKeyFixture.env))
+      .toThrow(new RegExp(invalidNewsapiMissingKeyFixture.expected.errorPattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace('\\=', '=')))
   })
 })

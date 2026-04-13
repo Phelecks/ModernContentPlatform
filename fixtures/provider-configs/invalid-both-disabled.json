@@ -1,0 +1,11 @@
+{
+  "description": "Invalid: both providers disabled. No provider is enabled, so the pipeline cannot run.",
+  "env": {
+    "ENABLE_X": "false",
+    "ENABLE_NEWSAPI": "false"
+  },
+  "expected": {
+    "error": "PROVIDER_CONFIG_ERROR",
+    "errorPattern": "No source providers are enabled"
+  }
+}

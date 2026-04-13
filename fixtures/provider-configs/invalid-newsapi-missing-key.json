@@ -1,0 +1,11 @@
+{
+  "description": "Invalid: NewsAPI is enabled but NEWS_API_KEY is absent. Key validation must reject this configuration.",
+  "env": {
+    "ENABLE_X": "false",
+    "ENABLE_NEWSAPI": "true"
+  },
+  "expected": {
+    "error": "PROVIDER_CONFIG_ERROR",
+    "errorPattern": "NEWS_API_KEY is required when ENABLE_NEWSAPI=true"
+  }
+}
