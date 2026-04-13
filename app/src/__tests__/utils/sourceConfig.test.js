@@ -9,6 +9,7 @@
  *   - parseProviderConfig — missing API key errors
  *   - parseProviderConfig — no-provider-enabled error
  *   - parseProviderConfig — invalid / missing input
+ *   - parseProviderConfig — fixture-driven tests (all provider-configs fixtures)
  */
 import { describe, it, expect } from 'vitest'
 import {
@@ -371,6 +372,11 @@ describe('parseProviderConfig — keys only required for enabled providers', () 
 // sync with the implementation and serve as living documentation.
 // ---------------------------------------------------------------------------
 
+/** Escapes all RegExp metacharacters in a plain string. */
+function escapeRegExp(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 describe('parseProviderConfig — fixture: x-only', () => {
   it('resolves to x_only mode', () => {
     const { mode } = parseProviderConfig(xOnlyFixture.env)
@@ -442,7 +448,7 @@ describe('parseProviderConfig — fixture: invalid-x-missing-key', () => {
 
   it('error message matches expected pattern', () => {
     expect(() => parseProviderConfig(invalidXMissingKeyFixture.env))
-      .toThrow(new RegExp(invalidXMissingKeyFixture.expected.errorPattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace('\\=', '=')))
+      .toThrow(new RegExp(escapeRegExp(invalidXMissingKeyFixture.expected.errorPattern)))
   })
 })
 
@@ -454,6 +460,6 @@ describe('parseProviderConfig — fixture: invalid-newsapi-missing-key', () => {
 
   it('error message matches expected pattern', () => {
     expect(() => parseProviderConfig(invalidNewsapiMissingKeyFixture.env))
-      .toThrow(new RegExp(invalidNewsapiMissingKeyFixture.expected.errorPattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace('\\=', '=')))
+      .toThrow(new RegExp(escapeRegExp(invalidNewsapiMissingKeyFixture.expected.errorPattern)))
   })
 })

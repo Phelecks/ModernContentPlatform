@@ -22,7 +22,7 @@ fixtures/
 
 ## Naming convention
 
-All fixture files use the pattern:
+All fixture files in `source-events/`, `normalized-items/`, `classified-alerts/`, `daily-summaries/`, and `page-states/` use the pattern:
 
 ```
 {topic}-{YYYY-MM-DD}-{scenario_or_short_name}.json
@@ -39,6 +39,8 @@ For sets that contain all alerts for a topic/day, the scenario suffix is omitted
 | `{topic}` | Stable topic slug: `crypto`, `finance`, `economy`, `health`, `ai`, `energy`, `technology` |
 | `{YYYY-MM-DD}` | Date key using the canonical `date_key` format |
 | `{scenario}` | Short descriptor: `published`, `ready`, `pending`, `btc-etf-inflows`, `fed-minutes`, etc. |
+
+The `provider-configs/` directory is an intentional exception: fixtures there describe **env-var configuration scenarios** that are not scoped to a single topic or date, so they use semantic names such as `x-only.json` and `invalid-both-disabled.json` instead.
 
 ---
 
