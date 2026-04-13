@@ -914,15 +914,7 @@ describe('Placeholder → ready state transition — source data preserved', () 
       const timelineItem = wrapper.findComponent(AlertTimelineItem)
       expect(timelineItem.exists()).toBe(true)
 
-      const renderedAlert = Object.values(timelineItem.props()).find(
-        (value) =>
-          value &&
-          typeof value === 'object' &&
-          !Array.isArray(value) &&
-          value.source_name === expectedAlert.source_name &&
-          value.source_url === expectedAlert.source_url
-      )
-
+      const renderedAlert = timelineItem.props('alert')
       expect(renderedAlert).toBeTruthy()
       expect(renderedAlert.source_name).toBe(expectedAlert.source_name)
       expect(renderedAlert.source_url).toBe(expectedAlert.source_url)
