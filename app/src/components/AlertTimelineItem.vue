@@ -31,7 +31,7 @@
       class="alert-timeline-item__supporting"
     >
       <span
-        v-for="ss in alert.supporting_sources"
+        v-for="ss in parsedSupportingSources"
         :key="`${ss.source_name || ''}|${ss.source_url || ''}|${ss.source_type || ''}`"
         class="alert-timeline-item__supporting-source"
       >
@@ -83,9 +83,22 @@ const severityLevel = computed(() => {
   return 'low'
 })
 
-const hasSupportingSources = computed(() =>
-  Array.isArray(props.alert.supporting_sources) && props.alert.supporting_sources.length > 0
-)
+const hasSupportingSources = computed(() => parsedSupportingSources.value.length > 0)
+
+const parsedSupportingSources = computed(() => {
+  if (Array.isArray(props.alert.supporting_sources) && props.alert.supporting_sources.length > 0) {
+    return props.alert.supporting_sources
+  }
+  if (typeof props.alert.source_metadata_json === 'string' && props.alert.source_metadata_json) {
+    try {
+      const meta = JSON.parse(props.alert.source_metadata_json)
+      return Array.isArray(meta.supporting_sources) ? meta.supporting_sources : []
+    } catch {
+      return []
+    }
+  }
+  return []
+})
 </script>
 
 <style scoped>

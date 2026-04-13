@@ -402,6 +402,7 @@ describe('Timeline API — source attribution data contract', () => {
       env: { DB: db }
     })
     const { alerts } = await res.json()
+    expect(alerts.length).toBeGreaterThan(0)
     for (const alert of alerts) {
       expect(alert).toHaveProperty('source_type')
       expect(alert).toHaveProperty('source_domain')
@@ -542,6 +543,9 @@ describe('Classified alert fixture — source fields preserved', () => {
 // ---------------------------------------------------------------------------
 
 describe('AlertTimelineItem — source attribution rendering', () => {
+  // baseAlert mirrors the shape returned by /api/timeline: source attribution
+  // is carried in source_type, source_domain, and source_metadata_json (a JSON
+  // string), NOT in a pre-parsed supporting_sources array.
   const baseAlert = {
     id: 1,
     headline: 'BTC ETF inflows hit record',
@@ -550,6 +554,7 @@ describe('AlertTimelineItem — source attribution rendering', () => {
     source_url: 'https://example.com/btc-etf',
     source_type: 'rss',
     source_domain: 'example.com',
+    source_metadata_json: null,
     severity_score: 60,
     importance_score: 82,
     confidence_score: 90,
@@ -575,34 +580,38 @@ describe('AlertTimelineItem — source attribution rendering', () => {
     expect(wrapper.find('.alert-timeline-item__type-badge').exists()).toBe(false)
   })
 
-  it('renders supporting sources section when supporting_sources is present', () => {
+  it('renders supporting sources section when source_metadata_json contains supporting_sources', () => {
     const wrapper = mount(AlertTimelineItem, {
       props: {
         alert: {
           ...baseAlert,
-          supporting_sources: [
-            {
-              source_name: 'CoinGecko API',
-              source_url: 'https://api.coingecko.com',
-              source_type: 'api',
-              source_role: 'data'
-            }
-          ]
+          source_metadata_json: JSON.stringify({
+            supporting_sources: [
+              {
+                source_name: 'CoinGecko API',
+                source_url: 'https://api.coingecko.com',
+                source_type: 'api',
+                source_role: 'data'
+              }
+            ]
+          })
         }
       }
     })
     expect(wrapper.find('.alert-timeline-item__supporting').exists()).toBe(true)
   })
 
-  it('renders all supporting source entries', () => {
+  it('renders all supporting source entries parsed from source_metadata_json', () => {
     const wrapper = mount(AlertTimelineItem, {
       props: {
         alert: {
           ...baseAlert,
-          supporting_sources: [
-            { source_name: 'Source A', source_url: 'https://a.example.com', source_type: 'rss', source_role: 'primary' },
-            { source_name: 'Source B', source_url: 'https://b.example.com', source_type: 'api', source_role: 'data' }
-          ]
+          source_metadata_json: JSON.stringify({
+            supporting_sources: [
+              { source_name: 'Source A', source_url: 'https://a.example.com', source_type: 'rss', source_role: 'primary' },
+              { source_name: 'Source B', source_url: 'https://b.example.com', source_type: 'api', source_role: 'data' }
+            ]
+          })
         }
       }
     })
@@ -610,14 +619,16 @@ describe('AlertTimelineItem — source attribution rendering', () => {
     expect(items).toHaveLength(2)
   })
 
-  it('renders supporting source links as external links', () => {
+  it('renders supporting source links as external links from source_metadata_json', () => {
     const wrapper = mount(AlertTimelineItem, {
       props: {
         alert: {
           ...baseAlert,
-          supporting_sources: [
-            { source_name: 'CoinGecko API', source_url: 'https://api.coingecko.com', source_type: 'api' }
-          ]
+          source_metadata_json: JSON.stringify({
+            supporting_sources: [
+              { source_name: 'CoinGecko API', source_url: 'https://api.coingecko.com', source_type: 'api' }
+            ]
+          })
         }
       }
     })
@@ -628,28 +639,35 @@ describe('AlertTimelineItem — source attribution rendering', () => {
     expect(link.attributes('rel')).toBe('noopener noreferrer')
   })
 
-  it('does not render supporting sources section when supporting_sources is null', () => {
+  it('does not render supporting sources section when source_metadata_json is null', () => {
     const wrapper = mount(AlertTimelineItem, {
-      props: { alert: { ...baseAlert, supporting_sources: null } }
+      props: { alert: { ...baseAlert, source_metadata_json: null } }
     })
     expect(wrapper.find('.alert-timeline-item__supporting').exists()).toBe(false)
   })
 
-  it('does not render supporting sources section when supporting_sources is an empty array', () => {
-    const wrapper = mount(AlertTimelineItem, {
-      props: { alert: { ...baseAlert, supporting_sources: [] } }
-    })
-    expect(wrapper.find('.alert-timeline-item__supporting').exists()).toBe(false)
-  })
-
-  it('renders a supporting source without a URL as plain text', () => {
+  it('does not render supporting sources section when source_metadata_json has empty supporting_sources', () => {
     const wrapper = mount(AlertTimelineItem, {
       props: {
         alert: {
           ...baseAlert,
-          supporting_sources: [
-            { source_name: 'Internal Signal', source_url: null, source_type: 'api' }
-          ]
+          source_metadata_json: JSON.stringify({ supporting_sources: [] })
+        }
+      }
+    })
+    expect(wrapper.find('.alert-timeline-item__supporting').exists()).toBe(false)
+  })
+
+  it('renders a supporting source without a URL as plain text from source_metadata_json', () => {
+    const wrapper = mount(AlertTimelineItem, {
+      props: {
+        alert: {
+          ...baseAlert,
+          source_metadata_json: JSON.stringify({
+            supporting_sources: [
+              { source_name: 'Internal Signal', source_url: null, source_type: 'api' }
+            ]
+          })
         }
       }
     })
@@ -752,6 +770,7 @@ describe('SourceList — summary source attribution rendering', () => {
 describe('Placeholder → ready state transition — source data preserved', () => {
   afterEach(() => {
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   const TIMELINE_WITH_SOURCES = {
@@ -887,17 +906,45 @@ describe('Placeholder → ready state transition — source data preserved', () 
     expect(timelineCalls.length).toBeGreaterThan(0)
   })
 
-  it('source attribution fields are present in the timeline data shape used by both states', () => {
-    // Validate that the timeline response shape that the frontend consumes
-    // always carries source attribution fields — regardless of page_state.
-    const alert = TIMELINE_WITH_SOURCES.alerts[0]
-    expect(alert).toHaveProperty('source_name')
-    expect(alert).toHaveProperty('source_url')
-    expect(alert).toHaveProperty('source_type')
-    expect(alert).toHaveProperty('source_domain')
-    expect(alert).toHaveProperty('source_metadata_json')
-    const metadata = JSON.parse(alert.source_metadata_json)
-    expect(Array.isArray(metadata.supporting_sources)).toBe(true)
-    expect(metadata.supporting_sources[0].source_name).toBe('CoinGecko API')
+  it('source attribution fields are preserved by the mounted timeline in both pending and ready states', async () => {
+    const expectedAlert = TIMELINE_WITH_SOURCES.alerts[0]
+
+    const assertRenderedAlertSourceData = (wrapper) => {
+      expect(wrapper.find('.alert-timeline').exists()).toBe(true)
+      const timelineItem = wrapper.findComponent(AlertTimelineItem)
+      expect(timelineItem.exists()).toBe(true)
+
+      const renderedAlert = Object.values(timelineItem.props()).find(
+        (value) =>
+          value &&
+          typeof value === 'object' &&
+          !Array.isArray(value) &&
+          value.source_name === expectedAlert.source_name &&
+          value.source_url === expectedAlert.source_url
+      )
+
+      expect(renderedAlert).toBeTruthy()
+      expect(renderedAlert.source_name).toBe(expectedAlert.source_name)
+      expect(renderedAlert.source_url).toBe(expectedAlert.source_url)
+      expect(renderedAlert.source_type).toBe(expectedAlert.source_type)
+      expect(renderedAlert.source_domain).toBe(expectedAlert.source_domain)
+      expect(renderedAlert.source_metadata_json).toBe(expectedAlert.source_metadata_json)
+
+      const metadata = JSON.parse(renderedAlert.source_metadata_json)
+      expect(Array.isArray(metadata.supporting_sources)).toBe(true)
+      expect(metadata.supporting_sources[0].source_name).toBe('CoinGecko API')
+    }
+
+    vi.stubGlobal('fetch', buildFetch(PENDING_STATUS))
+    const pendingWrapper = await mountTopicDayPage()
+    await flushPromises()
+    assertRenderedAlertSourceData(pendingWrapper)
+    expect(pendingWrapper.find('.summary-placeholder').exists()).toBe(true)
+
+    vi.stubGlobal('fetch', buildFetch(READY_STATUS, '# Crypto Report\n\nSome content.'))
+    const readyWrapper = await mountTopicDayPage()
+    await flushPromises()
+    assertRenderedAlertSourceData(readyWrapper)
+    expect(readyWrapper.find('.summary-section').exists()).toBe(true)
   })
 })
