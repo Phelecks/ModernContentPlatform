@@ -108,11 +108,12 @@ export function parseProviderConfig(env = {}) {
   }
 
   // Validate required API keys for each enabled provider.
+  // Whitespace-only values are treated the same as absent (effectively empty).
   const missing = []
-  if (enableX && !env.X_BEARER_TOKEN) {
+  if (enableX && !(typeof env.X_BEARER_TOKEN === 'string' && env.X_BEARER_TOKEN.trim() !== '')) {
     missing.push('X_BEARER_TOKEN is required when ENABLE_X=true')
   }
-  if (enableNewsapi && !env.NEWS_API_KEY) {
+  if (enableNewsapi && !(typeof env.NEWS_API_KEY === 'string' && env.NEWS_API_KEY.trim() !== '')) {
     missing.push('NEWS_API_KEY is required when ENABLE_NEWSAPI=true')
   }
 

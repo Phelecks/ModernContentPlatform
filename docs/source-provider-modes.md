@@ -83,7 +83,7 @@ correspond to the entries documented in `.env.example`.
 | `ENABLE_NEWSAPI` | `'true'` / `'false'` | No | (inferred) | Enable NewsAPI provider |
 | `X_BEARER_TOKEN` | string | When `ENABLE_X=true` | — | X API v2 bearer token |
 | `NEWS_API_KEY` | string | When `ENABLE_NEWSAPI=true` | — | NewsAPI API key |
-| `INTRADAY_SOURCES_JSON` | JSON string | Yes | (defaults) | Source config array |
+| `INTRADAY_SOURCES_JSON` | JSON string | No | (defaults) | Source config array; if unset or empty, the workflow falls back to a built-in default list. Set explicitly in production to control sources deterministically. |
 
 ### Flag format
 
@@ -108,8 +108,8 @@ before any source fetching occurs.
 | Condition | Error |
 |-----------|-------|
 | `ENABLE_X=false` **and** `ENABLE_NEWSAPI=false` | `PROVIDER_CONFIG_ERROR: No source providers are enabled` |
-| `ENABLE_X=true` **and** `X_BEARER_TOKEN` is missing or empty | `PROVIDER_CONFIG_ERROR: Missing required API keys — X_BEARER_TOKEN` |
-| `ENABLE_NEWSAPI=true` **and** `NEWS_API_KEY` is missing or empty | `PROVIDER_CONFIG_ERROR: Missing required API keys — NEWS_API_KEY` |
+| `ENABLE_X=true` **and** `X_BEARER_TOKEN` is missing or empty | `PROVIDER_CONFIG_ERROR: Missing required API keys.\nX_BEARER_TOKEN is required when ENABLE_X=true` |
+| `ENABLE_NEWSAPI=true` **and** `NEWS_API_KEY` is missing or empty | `PROVIDER_CONFIG_ERROR: Missing required API keys.\nNEWS_API_KEY is required when ENABLE_NEWSAPI=true` |
 
 ### Ordering
 

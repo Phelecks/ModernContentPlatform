@@ -278,6 +278,12 @@ describe('parseProviderConfig — missing X_BEARER_TOKEN', () => {
     ).toThrow('PROVIDER_CONFIG_ERROR')
   })
 
+  it('throws when ENABLE_X=true and X_BEARER_TOKEN is whitespace-only', () => {
+    expect(() =>
+      parseProviderConfig({ ENABLE_X: 'true', X_BEARER_TOKEN: '   ' })
+    ).toThrow('PROVIDER_CONFIG_ERROR')
+  })
+
   it('error message names X_BEARER_TOKEN', () => {
     expect(() =>
       parseProviderConfig({ ENABLE_X: 'true' })
@@ -295,6 +301,12 @@ describe('parseProviderConfig — missing NEWS_API_KEY', () => {
   it('throws when ENABLE_NEWSAPI=true and NEWS_API_KEY is empty string', () => {
     expect(() =>
       parseProviderConfig({ ENABLE_NEWSAPI: 'true', NEWS_API_KEY: '' })
+    ).toThrow('PROVIDER_CONFIG_ERROR')
+  })
+
+  it('throws when ENABLE_NEWSAPI=true and NEWS_API_KEY is whitespace-only', () => {
+    expect(() =>
+      parseProviderConfig({ ENABLE_NEWSAPI: 'true', NEWS_API_KEY: '\t  ' })
     ).toThrow('PROVIDER_CONFIG_ERROR')
   })
 
