@@ -264,9 +264,6 @@ describe('resolveProviderMode — X-only mode', () => {
   })
 
   it('excludes NewsAPI sources in X-only mode', () => {
-    const sources = [xAccountSource(), newsapiSource(), rssSource()]
-    // Only X sources detected → actually hybrid since newsapi is present too
-    // Use a strict X-only setup:
     const xOnlySources = [xAccountSource(), rssSource()]
     const { activeSources } = resolveProviderMode(xOnlySources)
     expect(activeSources.some(s => s.type === 'newsapi')).toBe(false)
@@ -378,9 +375,6 @@ describe('resolveProviderMode — no provider configured', () => {
 
 describe('resolveProviderMode — activeSources count', () => {
   it('returns correct count for x_only mode with mixed sources', () => {
-    const sources = [xAccountSource(), newsapiSource(), rssSource()]
-    // newsapiSource is present → hybrid, not x_only
-    // For x_only + rss only:
     const xRss = [xAccountSource(), rssSource()]
     const { activeSources } = resolveProviderMode(xRss)
     expect(activeSources).toHaveLength(2)
@@ -392,9 +386,7 @@ describe('resolveProviderMode — activeSources count', () => {
     expect(activeSources).toHaveLength(3)
   })
 
-  it('returns only non-provider sources when both providers are disabled but non-provider exist', () => {
-    // This combination (only rss/api/webhook) fails with a config error.
-    // Verify by testing that the mode would not be set to x_only/newsapi_only.
+  it('throws PROVIDER_CONFIG_ERROR when only non-provider sources (rss, api) are present', () => {
     expect(() => resolveProviderMode([rssSource(), apiSource()])).toThrow('PROVIDER_CONFIG_ERROR')
   })
 })

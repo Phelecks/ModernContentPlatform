@@ -80,11 +80,16 @@ Set these in **Settings → Variables** in your n8n instance.
 | `DISCORD_WEBHOOK_URL` | Discord incoming webhook URL | Full pipeline |
 | `FAILURE_ALERT_CHANNEL` | Telegram chat ID for failure notifications | Full pipeline |
 | `INTRADAY_SOURCES_JSON` | JSON array of source configs (see below) | Full pipeline |
+| `NEWSAPI_API_KEY` | NewsAPI.org API key — store in this variable and reference from the `NewsApiCredential` HTTP Header Auth credential | NewsAPI sources only |
 
 ## Source configuration
 
 `INTRADAY_SOURCES_JSON` is a JSON array of source objects.  
-When empty or omitted, the default public RSS sources are used.
+When the variable is empty or omitted the workflow falls back to a default set
+of public RSS/API sources for local development.  **These defaults contain no X
+or NewsAPI sources and will cause a `PROVIDER_CONFIG_ERROR`.  For production use
+you must set `INTRADAY_SOURCES_JSON` explicitly with at least one X source
+(`type: x_account` or `type: x_query`) or one NewsAPI source (`type: newsapi`).**
 
 ```json
 [
@@ -168,9 +173,12 @@ NewsAPI sources use `type: "newsapi"` and are fetched as generic API sources
 ]
 ```
 
-Set the `NEWSAPI_API_KEY` n8n variable and include your API key in the URL
-or as a request header via a dedicated credential.  NewsAPI sources are
-classified as T3 (Specialist news) by default.
+Authenticate using an n8n HTTP Header Auth credential named `NewsApiCredential`
+with header name `X-Api-Key` and your NewsAPI.org key as the value.  Store the
+key in the `NEWSAPI_API_KEY` n8n variable and reference it from the credential —
+do **not** embed API keys in the URL, as they can be leaked via logs, monitoring,
+and proxy or referrer headers.  NewsAPI sources are classified as T3 (Specialist
+news) by default.
 
 ## Required n8n credentials
 
