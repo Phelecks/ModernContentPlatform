@@ -27,7 +27,7 @@
     "source_type": {
       "type": "string",
       "enum": ["rss", "api", "social", "webhook", "x_account", "x_query", "newsapi"],
-      "description": "Technical source category. x_account and x_query are first-class types for X (Twitter) monitoring. Use 'api' for official data releases, market data APIs, and structured feeds. Use 'rss' for news and research/official RSS/Atom feeds. Use 'social' for generic social channels (Telegram, Reddit)."
+      "description": "Technical source category. x_account and x_query are first-class types for X (Twitter) monitoring. Use 'api' for official data releases, market data APIs, and other direct structured feeds from the original provider. Use 'newsapi' for items fetched via the NewsAPI aggregator/search service rather than directly from the publisher feed or API. Use 'rss' for news and research/official RSS/Atom feeds. Use 'social' for generic social channels (Telegram, Reddit). Use 'webhook' for push-delivered events received from external systems."
     },
     "source_url": {
       "type": ["string", "null"],

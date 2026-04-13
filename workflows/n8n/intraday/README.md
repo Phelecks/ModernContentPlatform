@@ -80,7 +80,7 @@ Set these in **Settings → Variables** in your n8n instance.
 | `DISCORD_WEBHOOK_URL` | Discord incoming webhook URL | Full pipeline |
 | `FAILURE_ALERT_CHANNEL` | Telegram chat ID for failure notifications | Full pipeline |
 | `INTRADAY_SOURCES_JSON` | JSON array of source configs (see below) | Full pipeline |
-| `NEWSAPI_API_KEY` | NewsAPI.org API key — store in this variable and reference from the `NewsApiCredential` HTTP Header Auth credential | NewsAPI sources only |
+| `NEWS_API_KEY` | NewsAPI.org API key — store in this variable and reference from the `NewsApiCredential` HTTP Header Auth credential | NewsAPI sources only |
 
 ## Source adapter pattern
 
@@ -114,7 +114,7 @@ any fetches run.  Two managed provider types are recognised:
 | Provider | Source types | Credential needed |
 |----------|-------------|-------------------|
 | **X** | `x_account`, `x_query` | `X Bearer Token` HTTP Header Auth credential |
-| **NewsAPI** | `newsapi` | `NEWSAPI_API_KEY` n8n variable |
+| **NewsAPI** | `newsapi` | `NEWS_API_KEY` n8n variable |
 
 Provider mode is resolved automatically from the contents of `INTRADAY_SOURCES_JSON`:
 
@@ -181,7 +181,7 @@ NewsAPI sources use `type: "newsapi"` and are fetched as generic API sources
 
 Authenticate using an n8n HTTP Header Auth credential named `NewsApiCredential`
 with header name `X-Api-Key` and your NewsAPI.org key as the value.  Store the
-key in the `NEWSAPI_API_KEY` n8n variable and reference it from the credential —
+key in the `NEWS_API_KEY` n8n variable and reference it from the credential —
 do **not** embed API keys in the URL, as they can be leaked via logs, monitoring,
 and proxy or referrer headers.  NewsAPI sources are classified as T3 (Specialist
 news) by default.

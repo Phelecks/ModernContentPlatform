@@ -107,8 +107,10 @@ Provider activation is governed by:
 When neither flag is set, the pipeline infers provider presence from the
 source types in `INTRADAY_SOURCES_JSON` (backward-compatible behaviour).
 
-The JavaScript utility at `app/src/utils/sourceConfig.js` mirrors this logic
-and is used in unit tests.
+This provider-presence inference is implemented in
+`app/src/utils/sourceProviders.js`. The JavaScript utility at
+`app/src/utils/sourceConfig.js` handles `ENABLE_*` flag parsing and related
+key validation, and is used in unit tests.
 
 See `docs/source-provider-modes.md` for the full configuration reference.
 
