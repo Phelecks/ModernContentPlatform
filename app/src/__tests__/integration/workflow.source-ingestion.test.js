@@ -637,7 +637,7 @@ describe('normalizeItem — downstream contract compatibility', () => {
   })
 
   it('source_type is always a known enum value', () => {
-    const VALID_TYPES = ['rss', 'api', 'social', 'webhook', 'x_account', 'x_query']
+    const VALID_TYPES = ['rss', 'api', 'social', 'webhook', 'x_account', 'x_query', 'newsapi']
     for (const event of ALL_SOURCE_EVENTS) {
       const result = normalizeItem(event)
       expect(VALID_TYPES).toContain(result.source_type)

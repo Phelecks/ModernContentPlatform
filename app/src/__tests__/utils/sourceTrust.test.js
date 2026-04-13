@@ -189,6 +189,10 @@ describe('getDefaultTrustTierForSourceType', () => {
     expect(getDefaultTrustTierForSourceType('webhook')).toBe('T2')
   })
 
+  it('returns T3 for newsapi', () => {
+    expect(getDefaultTrustTierForSourceType('newsapi')).toBe('T3')
+  })
+
   it('returns null for an unknown type', () => {
     expect(getDefaultTrustTierForSourceType('unknown_type')).toBeNull()
   })

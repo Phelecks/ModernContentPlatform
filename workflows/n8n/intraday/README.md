@@ -80,11 +80,16 @@ Set these in **Settings → Variables** in your n8n instance.
 | `DISCORD_WEBHOOK_URL` | Discord incoming webhook URL | Full pipeline |
 | `FAILURE_ALERT_CHANNEL` | Telegram chat ID for failure notifications | Full pipeline |
 | `INTRADAY_SOURCES_JSON` | JSON array of source configs (see below) | Full pipeline |
+| `NEWSAPI_API_KEY` | NewsAPI.org API key — store in this variable and reference from the `NewsApiCredential` HTTP Header Auth credential | NewsAPI sources only |
 
 ## Source configuration
 
 `INTRADAY_SOURCES_JSON` is a JSON array of source objects.  
-When empty or omitted, the default public RSS sources are used.
+When the variable is empty or omitted the workflow falls back to a default set
+of public RSS/API sources for local development.  **These defaults contain no X
+or NewsAPI sources and will cause a `PROVIDER_CONFIG_ERROR`.  For production use
+you must set `INTRADAY_SOURCES_JSON` explicitly with at least one X source
+(`type: x_account` or `type: x_query`) or one NewsAPI source (`type: newsapi`).**
 
 ```json
 [
@@ -94,6 +99,38 @@ When empty or omitted, the default public RSS sources are used.
   { "name": "Hacker News",     "type": "api", "url": "https://hacker-news.firebaseio.com/v0/topstories.json" }
 ]
 ```
+
+### Source-provider selection (required)
+
+Module 01 (`Build Source List`) enforces source-provider validation before
+any fetches run.  Two managed provider types are recognised:
+
+| Provider | Source types | Credential needed |
+|----------|-------------|-------------------|
+| **X** | `x_account`, `x_query` | `X Bearer Token` HTTP Header Auth credential |
+| **NewsAPI** | `newsapi` | `NEWSAPI_API_KEY` n8n variable |
+
+Provider mode is resolved automatically from the contents of `INTRADAY_SOURCES_JSON`:
+
+| State | Result |
+|-------|--------|
+| X sources present, no NewsAPI sources | `x_only` — only X and non-provider sources fetched |
+| NewsAPI sources present, no X sources | `newsapi_only` — only NewsAPI and non-provider sources fetched |
+| Both present | `hybrid` — all sources fetched |
+| Neither present | **Workflow fails** with `PROVIDER_CONFIG_ERROR` |
+
+Non-provider source types (`rss`, `api`, `webhook`, `social`) are always
+included and do not count toward the provider-presence check.  The error
+state only triggers when the source list contains **no X and no NewsAPI
+sources**.
+
+The resolved mode is logged at the start of each run:
+```
+[source-ingestion] provider_mode=x_only active_sources=3
+```
+
+The selection logic is implemented in `app/src/utils/sourceProviders.js` and
+mirrored in the `Build Source List` node for testability.
 
 ### X source configuration
 
@@ -119,6 +156,29 @@ metadata in `metadata_json`:
 
 X sources require an n8n HTTP Header Auth credential named "X Bearer Token"
 with a valid X API v2 bearer token. See `config/sources/README.md` for details.
+
+### NewsAPI source configuration
+
+NewsAPI sources use `type: "newsapi"` and are fetched as generic API sources
+(routed through `Fetch API Source` → `Parse API Items`):
+
+```json
+[
+  {
+    "name": "NewsAPI Top Headlines",
+    "type": "newsapi",
+    "url": "https://newsapi.org/v2/top-headlines?language=en&pageSize=20",
+    "metadata_json": "{\"category\":\"technology\"}"
+  }
+]
+```
+
+Authenticate using an n8n HTTP Header Auth credential named `NewsApiCredential`
+with header name `X-Api-Key` and your NewsAPI.org key as the value.  Store the
+key in the `NEWSAPI_API_KEY` n8n variable and reference it from the credential —
+do **not** embed API keys in the URL, as they can be leaked via logs, monitoring,
+and proxy or referrer headers.  NewsAPI sources are classified as T3 (Specialist
+news) by default.
 
 ## Required n8n credentials
 
