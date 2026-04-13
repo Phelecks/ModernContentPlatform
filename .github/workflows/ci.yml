@@ -35,7 +35,19 @@ jobs:
         run: npm run build
 
       - name: Run unit tests
-        run: npm run test:run -- --reporter=verbose src/__tests__/components src/__tests__/utils
+        run: npm run test:run -- --reporter=verbose src/__tests__/components src/__tests__/utils src/__tests__/services
+
+      - name: Run source and X tests
+        run: >
+          npm run test:run -- --reporter=verbose
+          src/__tests__/utils/sourceTrust.test.js
+          src/__tests__/utils/url.test.js
+          src/__tests__/components/SourceBadge.test.js
+          src/__tests__/components/SourceList.test.js
+          src/__tests__/integration/workflow.source-ingestion.test.js
+          src/__tests__/integration/source-attribution.test.js
+          src/__tests__/integration/api.sources.test.js
+          src/__tests__/integration/api.internal.sources.test.js
 
       - name: Run integration tests
         run: npm run test:integration -- --reporter=verbose

@@ -14,9 +14,12 @@ Integration tests sit one level above unit tests. They verify that the full requ
 | Pages Function | `api.timeline.test.js` | `GET /api/timeline/:topicSlug/:dateKey` — alerts, pagination, cursor, validation |
 | Pages Function | `api.day-status.test.js` | `GET /api/day-status/:topicSlug/:dateKey` — status flags, pending/ready/published states |
 | Pages Function | `api.navigation.test.js` | `GET /api/navigation/:topicSlug/:dateKey` — prev/next date keys |
+| Pages Function | `api.sources.test.js` | `GET /api/sources` — source registry listing, topic filtering, active-only, error states |
 | Pages Function (write) | `api.internal.alerts.test.js` | `POST /api/internal/alerts` — auth, payload validation, D1 writes |
 | Pages Function (write) | `api.internal.daily-status.test.js` | `POST /api/internal/daily-status` — auth, payload validation, upsert |
 | Pages Function (write) | `api.internal.publish-jobs.test.js` | `POST /api/internal/publish-jobs` — auth, create, update, lifecycle |
+| Pages Function (write) | `api.internal.sources.test.js` | `POST /api/internal/sources` — auth, source creation, X account/query types, dedup |
+| Pages Function (write) | `api.internal.workflow-logs.test.js` | `POST /api/internal/workflow-logs` — auth, log creation, error states |
 | Vue page | `page.TopicDayPage.test.js` | TopicDayPage — placeholder, summary, banner messages, error state, loading |
 | Vue page | `page.TopicDayPage.extended.test.js` | TopicDayPage — video embed, navigation, load-more pagination, full published state |
 | Vue page | `page.TopicPage.test.js` | TopicPage — redirect to today's day page, error state |
@@ -24,17 +27,23 @@ Integration tests sit one level above unit tests. They verify that the full requ
 | Vue component | `components/AlertTimeline.test.js` | AlertTimeline — all states: loading, error, empty, populated, load-more |
 | Vue component | `components/AlertTimelineItem.test.js` | AlertTimelineItem — rendering, severity levels, time display, optional fields |
 | Vue component | `components/PageStateBanner.test.js` | PageStateBanner — all types (info/warning/success/error), message, accessibility |
+| Vue component | `components/SourceBadge.test.js` | SourceBadge — all source type labels (rss, api, official, x_account, x_query, social, webhook), empty guard |
+| Vue component | `components/SourceList.test.js` | SourceList — summary source attribution, role labels, badges, URLs, confidence notes |
 | Vue component | `components/SummarySection.test.js` | SummarySection — markdown, html, sanitization, slot fallback |
 | Vue component | `components/VideoEmbed.test.js` | VideoEmbed — iframe src, title, lazy loading |
 | Vue component | `components/DateNavigator.test.js` | DateNavigator — date display, prev/next links, disabled state |
 | Vue component | `components/TopicCard.test.js` | TopicCard — display name, description, route link |
 | Vue component | `components/SummaryPlaceholder.test.js` | SummaryPlaceholder — title, guidance text |
 | Utility | `utils/date.test.js` | formatDateKey, todayKey, isToday, formatTime, timeAgo |
+| Utility | `utils/url.test.js` | isSafeUrl — HTTP/HTTPS allowed, javascript:/data:/null/malformed rejected |
 | Utility | `utils/validate.test.js` | validateAlertPayload, validateDailyStatusPayload, validatePublishJobPayload |
+| Utility | `utils/sourceTrust.test.js` | Source normalization, trust tier/score mapping, HTML stripping, confirmation rules, attribution payload shaping |
 | Service | `services/api.test.js` | fetchTopics, fetchDayStatus, fetchTimeline, fetchNavigation — paths, params, errors |
 | Service | `services/content.test.js` | fetchSummary, fetchArticle, fetchVideoMeta, fetchMetadata — paths, 404 handling, errors |
 | Content files | `content.daily-summary.test.js` | Generated content schema validation and placeholder→final state transition |
 | Fixtures | `fixtures.test.js` | All fixture files — structural validation of page states, alerts, summaries |
+| Source ingestion | `workflow.source-ingestion.test.js` | normalizeItem for all 6 source types (rss, api, social, webhook, x_account, x_query), trust propagation, HTML stripping, topic candidate detection, item_id determinism |
+| Source attribution | `source-attribution.test.js` | Source attribution round-trip: alert write → timeline API → frontend rendering; placeholder→ready state transition with source data preserved |
 
 ---
 
@@ -54,12 +63,64 @@ cd app
 npm run test:integration
 ```
 
+### Source and X tests only
+
+```bash
+cd app
+npm run test:run -- \
+  src/__tests__/utils/sourceTrust.test.js \
+  src/__tests__/utils/url.test.js \
+  src/__tests__/components/SourceBadge.test.js \
+  src/__tests__/components/SourceList.test.js \
+  src/__tests__/integration/workflow.source-ingestion.test.js \
+  src/__tests__/integration/source-attribution.test.js \
+  src/__tests__/integration/api.sources.test.js \
+  src/__tests__/integration/api.internal.sources.test.js
+```
+
 ### Watch mode (during development)
 
 ```bash
 cd app
 npm test
 ```
+
+---
+
+## CI test coverage
+
+The GitHub Actions CI workflow (`.github/workflows/ci.yml`) runs three test steps on every push and pull request.
+
+### Step 1 — Unit tests
+
+Runs all component, utility, and service unit tests:
+
+```
+src/__tests__/components   (all component tests, including SourceBadge and SourceList)
+src/__tests__/utils        (all utility tests, including sourceTrust and url)
+src/__tests__/services     (all service tests)
+```
+
+### Step 2 — Source and X tests
+
+A dedicated CI step that runs only source-related and X-related tests. This step exists so that source logic failures are immediately visible and actionable as a named CI check, separate from the broader test suites:
+
+| Test file | What it protects |
+|---|---|
+| `utils/sourceTrust.test.js` | Source type mapping, trust tier/score assignment, HTML stripping, confirmation rules |
+| `utils/url.test.js` | isSafeUrl helper used by source attribution rendering |
+| `components/SourceBadge.test.js` | Source type badge labels and rendering guard |
+| `components/SourceList.test.js` | Summary source attribution display with role labels, URLs, and badges |
+| `integration/workflow.source-ingestion.test.js` | normalizeItem for all 6 source types including x_account and x_query; trust field propagation; item_id determinism |
+| `integration/source-attribution.test.js` | Source attribution round-trip from alert write through timeline API to frontend rendering |
+| `integration/api.sources.test.js` | `GET /api/sources` response shape, filtering, and error handling |
+| `integration/api.internal.sources.test.js` | `POST /api/internal/sources` authentication, payload validation, and X source creation |
+
+A failure in this step indicates a regression in source normalization, trust scoring, X ingestion, or source attribution.
+
+### Step 3 — Integration tests
+
+Runs the full integration test suite (`src/__tests__/integration`), which includes all source integration tests plus the broader API, page, and content tests.
 
 ---
 
@@ -115,23 +176,30 @@ app/
           mockD1.js                              ← mock D1 + createSeededDb()
           fixtures.js                            ← canonical fixture re-exports
         api.day-status.test.js
-        api.navigation.test.js
-        api.timeline.test.js
-        api.topics.test.js
         api.internal.alerts.test.js
         api.internal.daily-status.test.js
         api.internal.publish-jobs.test.js
+        api.internal.sources.test.js            ← source registry write API
+        api.internal.workflow-logs.test.js
+        api.navigation.test.js
+        api.sources.test.js                     ← source registry read API
+        api.timeline.test.js
+        api.topics.test.js
         content.daily-summary.test.js
         fixtures.test.js
         page.HomePage.test.js
         page.TopicDayPage.test.js
         page.TopicDayPage.extended.test.js      ← video, navigation, load-more
         page.TopicPage.test.js
+        source-attribution.test.js              ← source attribution end-to-end
+        workflow.source-ingestion.test.js       ← source normalization + X ingestion
       components/
         AlertTimeline.test.js
         AlertTimelineItem.test.js
         DateNavigator.test.js
         PageStateBanner.test.js
+        SourceBadge.test.js                     ← source type badge rendering
+        SourceList.test.js                      ← summary source attribution UI
         SummaryPlaceholder.test.js
         SummarySection.test.js
         TopicCard.test.js
@@ -141,6 +209,8 @@ app/
         content.test.js
       utils/
         date.test.js
+        sourceTrust.test.js                     ← source normalization + trust scoring
+        url.test.js                             ← isSafeUrl helper
         validate.test.js
 ```
 
