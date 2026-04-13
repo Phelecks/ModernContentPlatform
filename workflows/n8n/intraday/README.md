@@ -95,6 +95,38 @@ When empty or omitted, the default public RSS sources are used.
 ]
 ```
 
+### Source-provider selection (required)
+
+Module 01 (`Build Source List`) enforces source-provider validation before
+any fetches run.  Two managed provider types are recognised:
+
+| Provider | Source types | Credential needed |
+|----------|-------------|-------------------|
+| **X** | `x_account`, `x_query` | `X Bearer Token` HTTP Header Auth credential |
+| **NewsAPI** | `newsapi` | `NEWSAPI_API_KEY` n8n variable |
+
+Provider mode is resolved automatically from the contents of `INTRADAY_SOURCES_JSON`:
+
+| State | Result |
+|-------|--------|
+| X sources present, no NewsAPI sources | `x_only` — only X and non-provider sources fetched |
+| NewsAPI sources present, no X sources | `newsapi_only` — only NewsAPI and non-provider sources fetched |
+| Both present | `hybrid` — all sources fetched |
+| Neither present | **Workflow fails** with `PROVIDER_CONFIG_ERROR` |
+
+Non-provider source types (`rss`, `api`, `webhook`, `social`) are always
+included and do not count toward the provider-presence check.  The error
+state only triggers when the source list contains **no X and no NewsAPI
+sources**.
+
+The resolved mode is logged at the start of each run:
+```
+[source-ingestion] provider_mode=x_only active_sources=3
+```
+
+The selection logic is implemented in `app/src/utils/sourceProviders.js` and
+mirrored in the `Build Source List` node for testability.
+
 ### X source configuration
 
 X sources use `type: "x_account"` or `type: "x_query"` and carry source-specific
@@ -119,6 +151,26 @@ metadata in `metadata_json`:
 
 X sources require an n8n HTTP Header Auth credential named "X Bearer Token"
 with a valid X API v2 bearer token. See `config/sources/README.md` for details.
+
+### NewsAPI source configuration
+
+NewsAPI sources use `type: "newsapi"` and are fetched as generic API sources
+(routed through `Fetch API Source` → `Parse API Items`):
+
+```json
+[
+  {
+    "name": "NewsAPI Top Headlines",
+    "type": "newsapi",
+    "url": "https://newsapi.org/v2/top-headlines?language=en&pageSize=20",
+    "metadata_json": "{\"category\":\"technology\"}"
+  }
+]
+```
+
+Set the `NEWSAPI_API_KEY` n8n variable and include your API key in the URL
+or as a request header via a dedicated credential.  NewsAPI sources are
+classified as T3 (Specialist news) by default.
 
 ## Required n8n credentials
 

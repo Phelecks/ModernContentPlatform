@@ -46,6 +46,7 @@ export function getDefaultTrustTierForSourceType(sourceType) {
   if (sourceType === 'api') return 'T1'
   if (sourceType === 'rss') return 'T3'
   if (sourceType === 'webhook') return 'T2'
+  if (sourceType === 'newsapi') return 'T3'
   return null
 }
 

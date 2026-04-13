@@ -41,6 +41,7 @@ jobs:
         run: >
           npm run test:run -- --reporter=verbose
           src/__tests__/utils/sourceTrust.test.js
+          src/__tests__/utils/sourceProviders.test.js
           src/__tests__/utils/url.test.js
           src/__tests__/components/SourceBadge.test.js
           src/__tests__/components/SourceList.test.js
