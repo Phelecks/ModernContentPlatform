@@ -1,0 +1,13 @@
+{
+  "description": "X-only mode: X enabled, NewsAPI disabled. X_BEARER_TOKEN is required and present.",
+  "env": {
+    "ENABLE_X": "true",
+    "ENABLE_NEWSAPI": "false",
+    "X_BEARER_TOKEN": "test-x-bearer-token"
+  },
+  "expected": {
+    "mode": "x_only",
+    "enableX": true,
+    "enableNewsapi": false
+  }
+}

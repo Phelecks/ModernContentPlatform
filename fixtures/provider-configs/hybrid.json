@@ -1,0 +1,14 @@
+{
+  "description": "Hybrid mode: both X and NewsAPI enabled. Both API keys are required and present.",
+  "env": {
+    "ENABLE_X": "true",
+    "ENABLE_NEWSAPI": "true",
+    "X_BEARER_TOKEN": "test-x-bearer-token",
+    "NEWS_API_KEY": "test-news-api-key"
+  },
+  "expected": {
+    "mode": "hybrid",
+    "enableX": true,
+    "enableNewsapi": true
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "description": "X-only mode: X is enabled, NewsAPI is disabled. A NEWS_API_KEY is present in env but must be ignored because ENABLE_NEWSAPI=false. The disabled provider's key must not cause errors or activate that provider.",
+  "env": {
+    "ENABLE_X": "true",
+    "ENABLE_NEWSAPI": "false",
+    "X_BEARER_TOKEN": "test-x-bearer-token",
+    "NEWS_API_KEY": "test-news-api-key-that-should-be-ignored"
+  },
+  "expected": {
+    "mode": "x_only",
+    "enableX": true,
+    "enableNewsapi": false
+  }
+}

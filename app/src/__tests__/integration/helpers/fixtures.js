@@ -52,3 +52,13 @@ export { default as ECONOMY_NORMALIZED_ITEM_BLS_CPI } from '@fixtures/normalized
 export { default as CRYPTO_NORMALIZED_ITEM_X_QUERY_BTC } from '@fixtures/normalized-items/crypto-2025-01-15-x-query-btc-breakout.json'
 export { default as CRYPTO_NORMALIZED_ITEM_SOCIAL_TELEGRAM } from '@fixtures/normalized-items/crypto-2025-01-15-social-telegram.json'
 export { default as CRYPTO_NORMALIZED_ITEM_WEBHOOK_LIQUIDATION } from '@fixtures/normalized-items/crypto-2025-01-15-webhook-liquidation.json'
+
+// ---- Provider config fixtures (env objects + expected outcomes for parseProviderConfig) ----
+
+export { default as PROVIDER_CONFIG_X_ONLY } from '@fixtures/provider-configs/x-only.json'
+export { default as PROVIDER_CONFIG_NEWSAPI_ONLY } from '@fixtures/provider-configs/newsapi-only.json'
+export { default as PROVIDER_CONFIG_HYBRID } from '@fixtures/provider-configs/hybrid.json'
+export { default as PROVIDER_CONFIG_X_ONLY_NEWSAPI_KEY_IGNORED } from '@fixtures/provider-configs/x-only-newsapi-key-ignored.json'
+export { default as PROVIDER_CONFIG_INVALID_BOTH_DISABLED } from '@fixtures/provider-configs/invalid-both-disabled.json'
+export { default as PROVIDER_CONFIG_INVALID_X_MISSING_KEY } from '@fixtures/provider-configs/invalid-x-missing-key.json'
+export { default as PROVIDER_CONFIG_INVALID_NEWSAPI_MISSING_KEY } from '@fixtures/provider-configs/invalid-newsapi-missing-key.json'

@@ -15,13 +15,14 @@ fixtures/
   classified-alerts/      AI-classified alert sets per topic/day (matches intraday_classified_alert schema)
   daily-summaries/        AI-generated daily summary outputs per topic/day (matches daily_summary schema)
   page-states/            Day-status API response snapshots for each page_state scenario
+  provider-configs/       Env-var config objects for each source-provider mode scenario
 ```
 
 ---
 
 ## Naming convention
 
-All fixture files use the pattern:
+All fixture files in `source-events/`, `normalized-items/`, `classified-alerts/`, `daily-summaries/`, and `page-states/` use the pattern:
 
 ```
 {topic}-{YYYY-MM-DD}-{scenario_or_short_name}.json
@@ -38,6 +39,8 @@ For sets that contain all alerts for a topic/day, the scenario suffix is omitted
 | `{topic}` | Stable topic slug: `crypto`, `finance`, `economy`, `health`, `ai`, `energy`, `technology` |
 | `{YYYY-MM-DD}` | Date key using the canonical `date_key` format |
 | `{scenario}` | Short descriptor: `published`, `ready`, `pending`, `btc-etf-inflows`, `fed-minutes`, etc. |
+
+The `provider-configs/` directory is an intentional exception: fixtures there describe **env-var configuration scenarios** that are not scoped to a single topic or date, so they use semantic names such as `x-only.json` and `invalid-both-disabled.json` instead.
 
 ---
 
@@ -92,6 +95,20 @@ Snapshots of the `GET /api/day-status/:topicSlug/:dateKey` response for common p
 | `finance-2025-01-15-published.json` | finance | `published` | ✓ | ✗ |
 | `ai-2025-01-15-ready.json` | ai | `ready` | ✗ | ✗ |
 | `crypto-2025-01-16-pending.json` | crypto | `pending` | ✗ | ✗ |
+
+### provider-configs/
+
+Env-var config objects for each source-provider mode scenario. Each fixture file contains an `env` object (the input to `parseProviderConfig`) and an `expected` object (the resolved mode or the expected error). Used in unit tests for `app/src/utils/sourceConfig.js`.
+
+| File | Scenario | `env.ENABLE_X` | `env.ENABLE_NEWSAPI` | Expected mode / error |
+|---|---|---|---|---|
+| `x-only.json` | X enabled, NewsAPI disabled, X key present | `"true"` | `"false"` | `x_only` |
+| `newsapi-only.json` | NewsAPI enabled, X disabled, NewsAPI key present | `"false"` | `"true"` | `newsapi_only` |
+| `hybrid.json` | Both providers enabled, both keys present | `"true"` | `"true"` | `hybrid` |
+| `x-only-newsapi-key-ignored.json` | X enabled, NewsAPI disabled — extra NewsAPI key must be ignored | `"true"` | `"false"` | `x_only` |
+| `invalid-both-disabled.json` | Both providers disabled | `"false"` | `"false"` | `PROVIDER_CONFIG_ERROR` |
+| `invalid-x-missing-key.json` | X enabled but `X_BEARER_TOKEN` absent | `"true"` | `"false"` | `PROVIDER_CONFIG_ERROR` |
+| `invalid-newsapi-missing-key.json` | NewsAPI enabled but `NEWS_API_KEY` absent | `"false"` | `"true"` | `PROVIDER_CONFIG_ERROR` |
 
 ---
 
