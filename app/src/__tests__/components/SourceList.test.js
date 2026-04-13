@@ -202,10 +202,12 @@ const SUMMARY_CONFIDENCE_NOTE =
 describe('SourceList — daily summary source context', () => {
   // ---- Primary source presentation ----
 
-  it('renders the primary source first in the list', () => {
+  it('renders sources in the order they are provided', () => {
     const wrapper = mount(SourceList, { props: { sources: SUMMARY_SOURCES } })
     const items = wrapper.findAll('.source-list__item')
     expect(items[0].text()).toContain('CryptoNews')
+    expect(items[1].text()).toContain('CoinGecko API')
+    expect(items[2].text()).toContain('InternalAnalysis')
   })
 
   it('renders the primary source role label', () => {

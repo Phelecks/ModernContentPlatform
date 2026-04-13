@@ -351,7 +351,7 @@ describe('AlertTimelineItem', () => {
     expect(meta.find('.alert-timeline-item__source').exists()).toBe(true)
   })
 
-  it('primary source does not appear in the supporting sources section', () => {
+  it('supporting sources section only renders items from supporting_sources prop', () => {
     const wrapper = mount(AlertTimelineItem, {
       props: {
         alert: {
@@ -364,8 +364,9 @@ describe('AlertTimelineItem', () => {
       }
     })
     const supporting = wrapper.find('.alert-timeline-item__supporting')
-    expect(supporting.text()).not.toContain('CryptoNews')
-    expect(supporting.text()).toContain('CoinGecko API')
+    const items = supporting.findAll('.alert-timeline-item__supporting-source')
+    expect(items).toHaveLength(1)
+    expect(items[0].text()).toContain('CoinGecko API')
   })
 
   it('renders primary source name and supporting sources in separate sections', () => {
