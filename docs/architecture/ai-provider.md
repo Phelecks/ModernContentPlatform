@@ -28,7 +28,7 @@ The integration is modular:
 | Task | Workflow | Default model | Model tier | Rationale |
 |------|----------|--------------|-----------|-----------|
 | Alert classification | `intraday/05_ai_classification.json` | `gpt-4o-mini` | Fast | High volume, short prompts, cost-sensitive; runs every 15 min per source |
-| Timeline entry formatting | `intraday/05_ai_classification.json` | `gpt-4o-mini` | Fast | Short structured output (headline + label); runs per alert, cost-sensitive |
+| Timeline entry formatting | `intraday/05_ai_classification.json` | `gpt-4o-mini` | Fast | Headline and label generated within the same classification call today; separate workflow step planned for future |
 | Daily summary generation | `daily/02_generate_summary.json` | `gpt-4o` | Standard | Editorial quality matters; moderate-length structured JSON output |
 | Article generation | `daily/03_generate_article.json` | `gpt-4o` | Standard | Long-form Markdown; needs strong reasoning and coherent narrative |
 | Expectation check | `daily/04_generate_expectation_check.json` | `gpt-4o` | Standard | Analytical; compares prior predictions to actual outcomes |
@@ -183,9 +183,9 @@ default. Override individual tasks only when you have a clear reason:
 
 | Scenario | Suggested override |
 |----------|--------------------|
-| Daily summary quality is too low | Upgrade `AI_MODEL_STANDARD` → `gpt-4o` (already default); check prompt first |
+| Daily summary quality is too low | Check the prompt and token limits first; only set a task-specific `OPENAI_MODEL_*` override if you need a higher-quality compatible model than the standard tier |
 | Alert classification cost is too high | Ensure `AI_MODEL_FAST` is `gpt-4o-mini`; do not upgrade to standard tier |
-| Video script quality needs improvement | Set `OPENAI_MODEL_VIDEO_SCRIPT=gpt-4o` (already default); verify prompt length |
+| Video script quality needs improvement | Verify prompt length first; if quality is still insufficient, set `OPENAI_MODEL_VIDEO_SCRIPT` to a higher-quality compatible model and update the workflow node |
 | Testing a faster editorial pipeline | Set `AI_MODEL_STANDARD=gpt-4o-mini`; accept lower quality |
 | A newer cheaper model is available | Update `AI_MODEL_FAST` in n8n variables only; no workflow JSON changes needed |
 | A task needs a reasoning model | Set the task-specific `OPENAI_MODEL_*` var and update the corresponding workflow node |
