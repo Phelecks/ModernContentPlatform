@@ -15,6 +15,7 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import TopicDayPage from '@/pages/TopicDayPage.vue'
+import { validateDailySummary, VALID_SOURCE_ROLES_SUMMARY } from '@/utils/validateAiOutput.js'
 
 // ---------------------------------------------------------------------------
 // Load generated content files from the repository content directory.
@@ -306,14 +307,20 @@ describe('Frontend state transition — placeholder → final summary', () => {
 
 // ---------------------------------------------------------------------------
 // Tests: example Crypto and Finance summary payloads
-// These validate that the committed example content files conform to the
-// full daily_summary schema (schemas/ai/daily_summary.json) and can serve
-// as reference payloads for the OpenAI daily summary generation flow.
+//
+// Validates that the committed content/topics/ example payloads conform to the
+// AI output fields defined in schemas/ai/daily_summary.json by calling the
+// same validateDailySummary() helper used by the n8n parse-and-validate step.
+// The published content files also carry extra envelope fields (topic_slug,
+// date_key, generated_at) that are intentionally outside the AI schema; those
+// are checked separately below.
 // ---------------------------------------------------------------------------
 
 describe('Example payload — crypto/2025-01-15 schema validation', () => {
-  it('summary.json has the required daily summary fields', () => {
-    expect(hasDailySummaryShape(CRYPTO_SUMMARY)).toBe(true)
+  it('AI output fields pass validateDailySummary()', () => {
+    const { ok, errors } = validateDailySummary(CRYPTO_SUMMARY)
+    expect(errors).toEqual([])
+    expect(ok).toBe(true)
   })
 
   it('summary.json topic_slug is crypto', () => {
@@ -328,41 +335,35 @@ describe('Example payload — crypto/2025-01-15 schema validation', () => {
     expect(CRYPTO_SUMMARY.sentiment).toBe('bullish')
   })
 
-  it('summary.json topic_score is between 0 and 100', () => {
-    expect(CRYPTO_SUMMARY.topic_score).toBeGreaterThanOrEqual(0)
-    expect(CRYPTO_SUMMARY.topic_score).toBeLessThanOrEqual(100)
-  })
-
-  it('summary.json key_events contains at least one event', () => {
-    expect(CRYPTO_SUMMARY.key_events.length).toBeGreaterThanOrEqual(1)
-  })
-
-  it('summary.json every key_event has required fields', () => {
-    for (const event of CRYPTO_SUMMARY.key_events) {
-      expect(hasKeyEventShape(event)).toBe(true)
-    }
-  })
-
-  it('summary.json key_events have section-level sources', () => {
+  it('summary.json key_events have section-level sources with valid shape', () => {
     for (const event of CRYPTO_SUMMARY.key_events) {
       expect(Array.isArray(event.sources)).toBe(true)
       expect(event.sources.length).toBeGreaterThanOrEqual(1)
       for (const src of event.sources) {
         expect(typeof src.source_name).toBe('string')
         expect(src.source_name.length).toBeGreaterThan(0)
+        if (src.source_url !== null && src.source_url !== undefined) {
+          expect(src.source_url).toMatch(/^https?:\/\//)
+        }
+        if (src.source_role !== null && src.source_role !== undefined) {
+          expect(VALID_SOURCE_ROLES_SUMMARY).toContain(src.source_role)
+        }
       }
     }
   })
 
-  it('summary.json has an article-level sources array', () => {
+  it('summary.json has an article-level sources array with valid shape', () => {
     expect(Array.isArray(CRYPTO_SUMMARY.sources)).toBe(true)
     expect(CRYPTO_SUMMARY.sources.length).toBeGreaterThan(0)
-  })
-
-  it('summary.json sources contain valid source objects', () => {
     for (const src of CRYPTO_SUMMARY.sources) {
       expect(typeof src.source_name).toBe('string')
       expect(src.source_name.length).toBeGreaterThan(0)
+      if (src.source_url !== null && src.source_url !== undefined) {
+        expect(src.source_url).toMatch(/^https?:\/\//)
+      }
+      if (src.source_role !== null && src.source_role !== undefined) {
+        expect(VALID_SOURCE_ROLES_SUMMARY).toContain(src.source_role)
+      }
     }
   })
 
@@ -373,8 +374,10 @@ describe('Example payload — crypto/2025-01-15 schema validation', () => {
 })
 
 describe('Example payload — finance/2025-01-15 schema validation', () => {
-  it('summary.json has the required daily summary fields', () => {
-    expect(hasDailySummaryShape(FINANCE_SUMMARY)).toBe(true)
+  it('AI output fields pass validateDailySummary()', () => {
+    const { ok, errors } = validateDailySummary(FINANCE_SUMMARY)
+    expect(errors).toEqual([])
+    expect(ok).toBe(true)
   })
 
   it('summary.json topic_slug is finance', () => {
@@ -389,41 +392,35 @@ describe('Example payload — finance/2025-01-15 schema validation', () => {
     expect(FINANCE_SUMMARY.sentiment).toBe('bearish')
   })
 
-  it('summary.json topic_score is between 0 and 100', () => {
-    expect(FINANCE_SUMMARY.topic_score).toBeGreaterThanOrEqual(0)
-    expect(FINANCE_SUMMARY.topic_score).toBeLessThanOrEqual(100)
-  })
-
-  it('summary.json key_events contains at least one event', () => {
-    expect(FINANCE_SUMMARY.key_events.length).toBeGreaterThanOrEqual(1)
-  })
-
-  it('summary.json every key_event has required fields', () => {
-    for (const event of FINANCE_SUMMARY.key_events) {
-      expect(hasKeyEventShape(event)).toBe(true)
-    }
-  })
-
-  it('summary.json key_events have section-level sources', () => {
+  it('summary.json key_events have section-level sources with valid shape', () => {
     for (const event of FINANCE_SUMMARY.key_events) {
       expect(Array.isArray(event.sources)).toBe(true)
       expect(event.sources.length).toBeGreaterThanOrEqual(1)
       for (const src of event.sources) {
         expect(typeof src.source_name).toBe('string')
         expect(src.source_name.length).toBeGreaterThan(0)
+        if (src.source_url !== null && src.source_url !== undefined) {
+          expect(src.source_url).toMatch(/^https?:\/\//)
+        }
+        if (src.source_role !== null && src.source_role !== undefined) {
+          expect(VALID_SOURCE_ROLES_SUMMARY).toContain(src.source_role)
+        }
       }
     }
   })
 
-  it('summary.json has an article-level sources array', () => {
+  it('summary.json has an article-level sources array with valid shape', () => {
     expect(Array.isArray(FINANCE_SUMMARY.sources)).toBe(true)
     expect(FINANCE_SUMMARY.sources.length).toBeGreaterThan(0)
-  })
-
-  it('summary.json sources contain valid source objects', () => {
     for (const src of FINANCE_SUMMARY.sources) {
       expect(typeof src.source_name).toBe('string')
       expect(src.source_name.length).toBeGreaterThan(0)
+      if (src.source_url !== null && src.source_url !== undefined) {
+        expect(src.source_url).toMatch(/^https?:\/\//)
+      }
+      if (src.source_role !== null && src.source_role !== undefined) {
+        expect(VALID_SOURCE_ROLES_SUMMARY).toContain(src.source_role)
+      }
     }
   })
 
