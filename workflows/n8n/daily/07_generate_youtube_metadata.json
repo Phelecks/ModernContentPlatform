@@ -13,7 +13,7 @@
       "parameters": {
         "resource": "chat",
         "operation": "message",
-        "model": "={{ $vars.AI_MODEL_FAST }}",
+        "model": "={{ $vars.AI_MODEL_FAST || 'gpt-4o-mini' }}",
         "messages": {
           "values": [
             {

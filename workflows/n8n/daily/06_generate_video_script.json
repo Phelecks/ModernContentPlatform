@@ -16,7 +16,7 @@
       "parameters": {
         "resource": "chat",
         "operation": "message",
-        "model": "={{ $vars.AI_MODEL_STANDARD }}",
+        "model": "={{ $vars.AI_MODEL_STANDARD || 'gpt-4o' }}",
         "messages": {
           "values": [
             {

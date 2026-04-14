@@ -5,14 +5,16 @@
 OpenAI is the default AI provider for Modern Content Platform v1.
 
 All AI-powered steps — alert classification, timeline summarisation, daily
-summary generation, expectation checks, tomorrow outlooks, video script
-generation, and YouTube metadata generation — run through the OpenAI Chat
-Completions API via the `OpenAiApi` n8n credential.
+summary generation, article generation, expectation checks, tomorrow outlooks,
+video script generation, and YouTube metadata generation — run through the
+OpenAI Chat Completions API via the `OpenAiApi` n8n credential.
 
 The integration is modular:
 
 - every AI step lives in a dedicated n8n sub-workflow
-- every AI prompt demands a **structured JSON output**
+- most AI prompts demand a **structured JSON output**; article generation
+  (`daily/03_generate_article.json`) returns Markdown and is validated with
+  Markdown-specific rules before use
 - every AI output is **validated before use** — the workflow throws or falls
   back rather than storing malformed AI data
 - model selection is **environment-controlled** via n8n variables
@@ -35,13 +37,15 @@ The integration is modular:
 
 ### Model tiers
 
-| Variable | Default value | Intended use |
-|----------|--------------|-------------|
+| Variable | Recommended value | Intended use |
+|----------|-------------------|-------------|
 | `AI_MODEL_STANDARD` | `gpt-4o` | Editorial content generation — summary, article, script |
 | `AI_MODEL_FAST` | `gpt-4o-mini` | High-volume or short-output tasks — classification, metadata |
 
-Both variables are set in n8n **Settings → Variables**. Changing a variable
-immediately affects all subsequent workflow executions without any code changes.
+Create both variables in n8n **Settings → Variables** and set them to the
+recommended values above unless you intentionally want different models.
+Changing a variable immediately affects all subsequent workflow executions
+without any code changes.
 
 ---
 
@@ -59,8 +63,8 @@ change when rotating the API key.
 
 Set the following variables in **Settings → Variables** in your n8n instance:
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
+| Variable | Required | Recommended value | Description |
+|----------|----------|--------------------|-------------|
 | `AI_MODEL_STANDARD` | Yes | `gpt-4o` | Model used for editorial generation tasks |
 | `AI_MODEL_FAST` | Yes | `gpt-4o-mini` | Model used for classification and metadata tasks |
 
@@ -74,7 +78,11 @@ available as a variable reference. Set it in `.env` (see `.env.example`).
 
 ## Structured output contract
 
-Every AI step uses a **structured JSON output** contract:
+Most AI steps use a **structured JSON output** contract. Article generation
+(`daily/03_generate_article.json`) is the exception — it returns Markdown and
+is validated with Markdown-specific rules before use.
+
+For JSON-output steps:
 
 - the system prompt defines an exact JSON schema the model must return
 - the model is instructed to return **only** a JSON object — no markdown
@@ -85,6 +93,9 @@ Every AI step uses a **structured JSON output** contract:
 - on parse failure the workflow throws a descriptive error; alert
   classification additionally falls back to a zero-score safe default rather
   than dropping the item silently
+
+For the Markdown article step, the validation Code node checks minimum content
+length and structure rather than parsing JSON.
 
 AI output schemas live in `schemas/ai/`:
 
