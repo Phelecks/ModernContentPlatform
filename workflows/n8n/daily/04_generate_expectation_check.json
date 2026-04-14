@@ -7,7 +7,10 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
@@ -28,14 +31,18 @@
         },
         "options": {
           "temperature": 0.2,
-          "maxTokens": 700
+          "maxTokens": 700,
+          "responseFormat": "json_object"
         }
       },
       "id": "d1e2f3a4-0004-0004-0004-000000000002",
       "name": "Generate Expectation Check with AI",
       "type": "n8n-nodes-base.openAi",
       "typeVersion": 1,
-      "position": [460, 300],
+      "position": [
+        460,
+        300
+      ],
       "credentials": {
         "openAiApi": {
           "id": "openai-api-credentials",
@@ -55,18 +62,33 @@
       "name": "Parse and Validate Expectation Check",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [680, 300]
+      "position": [
+        680,
+        300
+      ]
     }
   ],
   "connections": {
     "Execute Workflow Trigger": {
       "main": [
-        [{ "node": "Generate Expectation Check with AI", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Generate Expectation Check with AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Generate Expectation Check with AI": {
       "main": [
-        [{ "node": "Parse and Validate Expectation Check", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Parse and Validate Expectation Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -79,5 +101,11 @@
     "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
   },
   "id": "daily-04-generate-expectation-check-v1",
-  "tags": ["daily", "editorial", "ai", "expectation-check", "v1"]
+  "tags": [
+    "daily",
+    "editorial",
+    "ai",
+    "expectation-check",
+    "v1"
+  ]
 }

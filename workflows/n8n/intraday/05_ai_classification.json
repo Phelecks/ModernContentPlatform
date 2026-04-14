@@ -45,7 +45,8 @@
         },
         "options": {
           "temperature": 0.1,
-          "maxTokens": 400
+          "maxTokens": 400,
+          "responseFormat": "json_object"
         }
       },
       "id": "f6a7b8c9-0006-0006-0006-000000000003",

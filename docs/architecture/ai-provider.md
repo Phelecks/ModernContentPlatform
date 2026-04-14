@@ -127,12 +127,20 @@ For JSON-output steps:
 - the system prompt defines an exact JSON schema the model must return
 - the model is instructed to return **only** a JSON object — no markdown
   fences, no surrounding text
-- the validation step (Code node after each AI call) strips code fences,
-  parses JSON, and validates required fields before passing the output
+- the n8n OpenAI node sets `responseFormat: "json_object"` (maps to
+  `response_format: { type: "json_object" }` in the OpenAI API) to enforce
+  valid JSON at the API level, independent of prompt instructions
+- the validation step (Code node after each AI call) strips any remaining code
+  fences, parses JSON, and validates required fields before passing the output
   downstream
 - on parse failure the workflow throws a descriptive error; alert
   classification additionally falls back to a zero-score safe default rather
   than dropping the item silently
+
+`OPENAI_STRUCTURED_OUTPUT_TASKS` in `app/src/utils/openaiConfig.js` documents
+the `responseFormat` setting for each task and serves as the canonical
+reference for which tasks use JSON mode. The reusable validation logic for
+each task lives in `app/src/utils/validateAiOutput.js`.
 
 For the Markdown article step, the validation Code node checks minimum content
 length and structure rather than parsing JSON.
