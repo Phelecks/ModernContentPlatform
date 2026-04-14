@@ -76,6 +76,7 @@ Set these in **Settings → Variables** in your n8n instance.
 | `ALERT_IMPORTANCE_THRESHOLD` | Minimum importance score to send (default: `60`) | Full pipeline |
 | `ALERT_SEVERITY_THRESHOLD` | Minimum severity score to send (default: `50`) | Full pipeline |
 | `ALERT_CONFIDENCE_THRESHOLD` | Minimum AI confidence to send (default: `40`) | Full pipeline |
+| `AI_MODEL_FAST` | OpenAI model for classification (default: `gpt-4o-mini`) | Module 05 |
 | `TELEGRAM_CHAT_ID` | Target Telegram chat or channel ID | Full pipeline |
 | `DISCORD_WEBHOOK_URL` | Discord incoming webhook URL | Full pipeline |
 | `FAILURE_ALERT_CHANNEL` | Telegram chat ID for failure notifications | Full pipeline |

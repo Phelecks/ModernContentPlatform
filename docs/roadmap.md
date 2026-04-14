@@ -179,6 +179,7 @@ curl https://<your-pages-domain>/api/navigation/crypto/2025-01-01
   - All `*_WORKFLOW_ID` variables pointing to imported workflows
   - `CF_ACCOUNT_ID`, `CF_D1_DATABASE_ID`
   - `ALERT_IMPORTANCE_THRESHOLD`, `ALERT_SEVERITY_THRESHOLD`, `ALERT_CONFIDENCE_THRESHOLD`
+  - `AI_MODEL_FAST` (default: `gpt-4o-mini`) — OpenAI model for alert classification
   - `TELEGRAM_CHAT_ID`, `DISCORD_WEBHOOK_URL`
   - `FAILURE_ALERT_CHANNEL`
   - `INTRADAY_SOURCES_JSON` (optional — default public RSS sources used if omitted)
@@ -249,6 +250,8 @@ Set all `*_WORKFLOW_ID` variables after import, before activating the orchestrat
   - All `DAILY_*_WORKFLOW_ID` variables
   - `CF_ACCOUNT_ID`, `CF_D1_DATABASE_ID`
   - `CF_API_TOKEN` (Cloudflare API token with D1:Edit permission — used by module 01 when marking a publish job as failed on the no-alerts path)
+  - `AI_MODEL_STANDARD` (default: `gpt-4o`) — OpenAI model for editorial generation
+  - `AI_MODEL_FAST` (default: `gpt-4o-mini`) — OpenAI model for YouTube metadata generation
   - `GITHUB_REPO_OWNER`, `GITHUB_REPO_NAME`, `GITHUB_CONTENT_BRANCH`
   - `GITHUB_TOKEN` (fine-grained personal access token with `contents:write` on this repo)
   - `CLOUDFLARE_PAGES_DEPLOY_HOOK` (optional — webhook URL to trigger redeploy)
