@@ -11,11 +11,15 @@
  *                    OPENAI_CONFIG_ERROR at validation time.
  *
  * Optional variables (defaults shown):
- *   AI_PROVIDER                        — AI provider slug (default: 'openai')
- *   OPENAI_MODEL_ALERT_CLASSIFICATION  — model for alert classification (default: 'gpt-4o-mini')
- *   OPENAI_MODEL_DAILY_SUMMARY         — model for daily summary generation (default: 'gpt-4o')
- *   OPENAI_MODEL_VIDEO_SCRIPT          — model for video script generation (default: 'gpt-4o')
- *   OPENAI_MODEL_YOUTUBE_METADATA      — model for YouTube metadata generation (default: 'gpt-4o-mini')
+ *   AI_PROVIDER                          — AI provider slug (default: 'openai')
+ *   OPENAI_MODEL_ALERT_CLASSIFICATION    — model for alert classification (default: 'gpt-4o-mini')
+ *   OPENAI_MODEL_TIMELINE_FORMATTING     — model for timeline entry formatting (default: 'gpt-4o-mini')
+ *   OPENAI_MODEL_DAILY_SUMMARY           — model for daily summary generation (default: 'gpt-4o')
+ *   OPENAI_MODEL_ARTICLE_GENERATION      — model for article generation (default: 'gpt-4o')
+ *   OPENAI_MODEL_EXPECTATION_CHECK       — model for expectation check (default: 'gpt-4o')
+ *   OPENAI_MODEL_TOMORROW_OUTLOOK        — model for tomorrow outlook generation (default: 'gpt-4o')
+ *   OPENAI_MODEL_VIDEO_SCRIPT            — model for video script generation (default: 'gpt-4o')
+ *   OPENAI_MODEL_YOUTUBE_METADATA        — model for YouTube metadata generation (default: 'gpt-4o-mini')
  *
  * Usage:
  *   import { parseOpenAIConfig } from '@/utils/openaiConfig.js'
@@ -47,15 +51,26 @@ export const VALID_PROVIDERS = [PROVIDER_OPENAI]
 /**
  * Default models per task.
  * Used when the matching OPENAI_MODEL_* override is absent or empty.
+ *
+ * Fast tier  (gpt-4o-mini) — high-volume or short-output tasks; cost-sensitive.
+ * Standard tier (gpt-4o)   — editorial and analytical tasks; quality matters.
  */
 export const OPENAI_MODEL_DEFAULTS = {
-  /** High-volume, cost-sensitive classification task. */
+  /** High-volume intraday classification. Short prompts, cost-sensitive. */
   alertClassification: 'gpt-4o-mini',
-  /** Editorial quality summary generation. */
+  /** Per-alert timeline entry formatting. Short structured output, runs per alert. */
+  timelineFormatting: 'gpt-4o-mini',
+  /** Editorial quality daily summary generation. Longer output, quality matters. */
   dailySummary: 'gpt-4o',
-  /** Spoken-word video script generation. */
+  /** Long-form Markdown article generation. Needs strong reasoning. */
+  articleGeneration: 'gpt-4o',
+  /** Analytical expectation check. Compares predictions to outcomes. */
+  expectationCheck: 'gpt-4o',
+  /** Forward-looking editorial tomorrow outlook. */
+  tomorrowOutlook: 'gpt-4o',
+  /** Spoken-word video script generation. Longer output, quality matters. */
   videoScript: 'gpt-4o',
-  /** Short structured metadata generation. */
+  /** Short structured YouTube metadata generation. Cost-sensitive. */
   youtubeMetadata: 'gpt-4o-mini',
 }
 
@@ -83,19 +98,27 @@ function resolveModel(envValue, defaultValue) {
  * task tier when the override is absent or empty.
  *
  * @param {Object} env
- * @param {string}  [env.OPENAI_API_KEY]                     - Required OpenAI API key
- * @param {string}  [env.AI_PROVIDER]                        - AI provider slug (default: 'openai')
- * @param {string}  [env.OPENAI_MODEL_ALERT_CLASSIFICATION]  - Per-task model override
- * @param {string}  [env.OPENAI_MODEL_DAILY_SUMMARY]         - Per-task model override
- * @param {string}  [env.OPENAI_MODEL_VIDEO_SCRIPT]          - Per-task model override
- * @param {string}  [env.OPENAI_MODEL_YOUTUBE_METADATA]      - Per-task model override
+ * @param {string}  [env.OPENAI_API_KEY]                       - Required OpenAI API key
+ * @param {string}  [env.AI_PROVIDER]                          - AI provider slug (default: 'openai')
+ * @param {string}  [env.OPENAI_MODEL_ALERT_CLASSIFICATION]    - Per-task model override
+ * @param {string}  [env.OPENAI_MODEL_TIMELINE_FORMATTING]     - Per-task model override
+ * @param {string}  [env.OPENAI_MODEL_DAILY_SUMMARY]           - Per-task model override
+ * @param {string}  [env.OPENAI_MODEL_ARTICLE_GENERATION]      - Per-task model override
+ * @param {string}  [env.OPENAI_MODEL_EXPECTATION_CHECK]       - Per-task model override
+ * @param {string}  [env.OPENAI_MODEL_TOMORROW_OUTLOOK]        - Per-task model override
+ * @param {string}  [env.OPENAI_MODEL_VIDEO_SCRIPT]            - Per-task model override
+ * @param {string}  [env.OPENAI_MODEL_YOUTUBE_METADATA]        - Per-task model override
  *
  * @returns {{
  *   apiKey: string,
  *   provider: string,
  *   models: {
  *     alertClassification: string,
+ *     timelineFormatting: string,
  *     dailySummary: string,
+ *     articleGeneration: string,
+ *     expectationCheck: string,
+ *     tomorrowOutlook: string,
  *     videoScript: string,
  *     youtubeMetadata: string
  *   }
@@ -138,9 +161,25 @@ export function parseOpenAIConfig(env = {}) {
         env.OPENAI_MODEL_ALERT_CLASSIFICATION,
         OPENAI_MODEL_DEFAULTS.alertClassification
       ),
+      timelineFormatting: resolveModel(
+        env.OPENAI_MODEL_TIMELINE_FORMATTING,
+        OPENAI_MODEL_DEFAULTS.timelineFormatting
+      ),
       dailySummary: resolveModel(
         env.OPENAI_MODEL_DAILY_SUMMARY,
         OPENAI_MODEL_DEFAULTS.dailySummary
+      ),
+      articleGeneration: resolveModel(
+        env.OPENAI_MODEL_ARTICLE_GENERATION,
+        OPENAI_MODEL_DEFAULTS.articleGeneration
+      ),
+      expectationCheck: resolveModel(
+        env.OPENAI_MODEL_EXPECTATION_CHECK,
+        OPENAI_MODEL_DEFAULTS.expectationCheck
+      ),
+      tomorrowOutlook: resolveModel(
+        env.OPENAI_MODEL_TOMORROW_OUTLOOK,
+        OPENAI_MODEL_DEFAULTS.tomorrowOutlook
       ),
       videoScript: resolveModel(
         env.OPENAI_MODEL_VIDEO_SCRIPT,

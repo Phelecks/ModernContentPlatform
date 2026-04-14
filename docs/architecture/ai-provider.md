@@ -25,22 +25,23 @@ The integration is modular:
 
 ## Task mapping
 
-| Task | Workflow | Model tier | Why |
-|------|----------|-----------|-----|
-| Alert classification | `intraday/05_ai_classification.json` | `AI_MODEL_FAST` | High volume, short prompts, cost-sensitive |
-| Daily summary generation | `daily/02_generate_summary.json` | `AI_MODEL_STANDARD` | Quality matters; editorial output |
-| Article generation | `daily/03_generate_article.json` | `AI_MODEL_STANDARD` | Long-form Markdown; needs strong reasoning |
-| Expectation check | `daily/04_generate_expectation_check.json` | `AI_MODEL_STANDARD` | Analytical; compares predictions to outcomes |
-| Tomorrow outlook | `daily/05_generate_tomorrow_outlook.json` | `AI_MODEL_STANDARD` | Forward-looking editorial content |
-| Video script | `daily/06_generate_video_script.json` | `AI_MODEL_STANDARD` | Spoken-word quality; longer output |
-| YouTube metadata | `daily/07_generate_youtube_metadata.json` | `AI_MODEL_FAST` | Short structured output; cost-sensitive |
+| Task | Workflow | Default model | Model tier | Rationale |
+|------|----------|--------------|-----------|-----------|
+| Alert classification | `intraday/05_ai_classification.json` | `gpt-4o-mini` | Fast | High volume, short prompts, cost-sensitive; runs every 15 min per source |
+| Timeline entry formatting | `intraday/05_ai_classification.json` | `gpt-4o-mini` | Fast | Short structured output (headline + label); runs per alert, cost-sensitive |
+| Daily summary generation | `daily/02_generate_summary.json` | `gpt-4o` | Standard | Editorial quality matters; moderate-length structured JSON output |
+| Article generation | `daily/03_generate_article.json` | `gpt-4o` | Standard | Long-form Markdown; needs strong reasoning and coherent narrative |
+| Expectation check | `daily/04_generate_expectation_check.json` | `gpt-4o` | Standard | Analytical; compares prior predictions to actual outcomes |
+| Tomorrow outlook | `daily/05_generate_tomorrow_outlook.json` | `gpt-4o` | Standard | Forward-looking editorial content; requires nuanced reasoning |
+| Video script generation | `daily/06_generate_video_script.json` | `gpt-4o` | Standard | Spoken-word quality; longer output; audience-facing |
+| YouTube metadata generation | `daily/07_generate_youtube_metadata.json` | `gpt-4o-mini` | Fast | Short structured output (title, description, tags); cost-sensitive |
 
 ### Model tiers
 
-| Variable | Recommended value | Intended use |
-|----------|-------------------|-------------|
-| `AI_MODEL_STANDARD` | `gpt-4o` | Editorial content generation — summary, article, script |
-| `AI_MODEL_FAST` | `gpt-4o-mini` | High-volume or short-output tasks — classification, metadata |
+| Variable | Default value | Intended use |
+|----------|--------------|-------------|
+| `AI_MODEL_STANDARD` | `gpt-4o` | Editorial content generation — summary, article, expectation check, outlook, script |
+| `AI_MODEL_FAST` | `gpt-4o-mini` | High-volume or short-output tasks — classification, timeline formatting, metadata |
 
 Create both variables in n8n **Settings → Variables** and set them to the
 recommended values above unless you intentionally want different models.
@@ -79,10 +80,14 @@ The following variables are also passed to the n8n container:
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `AI_PROVIDER` | No | `openai` | AI provider slug — only `openai` is supported in v1 |
-| `OPENAI_MODEL_ALERT_CLASSIFICATION` | No | `gpt-4o-mini` | Intended model for alert classification |
-| `OPENAI_MODEL_DAILY_SUMMARY` | No | `gpt-4o` | Intended model for daily summary generation |
-| `OPENAI_MODEL_VIDEO_SCRIPT` | No | `gpt-4o` | Intended model for video script generation |
-| `OPENAI_MODEL_YOUTUBE_METADATA` | No | `gpt-4o-mini` | Intended model for YouTube metadata generation |
+| `OPENAI_MODEL_ALERT_CLASSIFICATION` | No | `gpt-4o-mini` | Alert classification (intraday fast tier) |
+| `OPENAI_MODEL_TIMELINE_FORMATTING` | No | `gpt-4o-mini` | Timeline entry formatting (intraday fast tier) |
+| `OPENAI_MODEL_DAILY_SUMMARY` | No | `gpt-4o` | Daily summary generation (daily standard tier) |
+| `OPENAI_MODEL_ARTICLE_GENERATION` | No | `gpt-4o` | Article generation (daily standard tier) |
+| `OPENAI_MODEL_EXPECTATION_CHECK` | No | `gpt-4o` | Expectation check (daily standard tier) |
+| `OPENAI_MODEL_TOMORROW_OUTLOOK` | No | `gpt-4o` | Tomorrow outlook generation (daily standard tier) |
+| `OPENAI_MODEL_VIDEO_SCRIPT` | No | `gpt-4o` | Video script generation (daily standard tier) |
+| `OPENAI_MODEL_YOUTUBE_METADATA` | No | `gpt-4o-mini` | YouTube metadata generation (daily fast tier) |
 
 > **Important:** current n8n workflows select models via the n8n variables
 > `$vars.AI_MODEL_STANDARD` and `$vars.AI_MODEL_FAST` (with hard-coded
@@ -92,12 +97,14 @@ The following variables are also passed to the n8n container:
 > to reference them directly.
 >
 > For the current workflows, set these in **n8n Settings → Variables**:
-> - `AI_MODEL_STANDARD=gpt-4o` — editorial tasks (summary, article, script)
-> - `AI_MODEL_FAST=gpt-4o-mini` — classification and metadata tasks
+> - `AI_MODEL_STANDARD=gpt-4o` — daily editorial tasks (summary, article,
+>   expectation check, tomorrow outlook, video script)
+> - `AI_MODEL_FAST=gpt-4o-mini` — intraday and short-output tasks
+>   (classification, timeline formatting, YouTube metadata)
 
 The `OPENAI_MODEL_*` environment variables document the intended per-task model
 split and are consumed by `app/src/utils/openaiConfig.js` for local config
-validation. They serve as the source of truth for future workflow wiring.
+validation. They serve as the source of truth for future per-task workflow wiring.
 
 Config parsing and validation are handled by `app/src/utils/openaiConfig.js`,
 which exports `parseOpenAIConfig(env)`. It throws an `OPENAI_CONFIG_ERROR` when:
@@ -157,17 +164,46 @@ which sends a Telegram alert to the `FAILURE_ALERT_CHANNEL` chat.
 ## Cost management
 
 - `AI_MODEL_FAST` (`gpt-4o-mini`) is used for all high-volume steps. At 15-minute
-  intraday cycles each cycle classifies up to ~30 items; keeping this path on the
-  fast tier controls the per-item cost.
-- `AI_MODEL_STANDARD` (`gpt-4o`) is used only once per topic per day across six
-  daily generation steps. The total daily token spend per topic is bounded by
-  the `maxTokens` cap in each node (400–1 500 tokens per call).
+  intraday cycles each cycle classifies up to ~30 items and formats timeline entries;
+  keeping both intraday paths on the fast tier controls the per-item cost.
+- `AI_MODEL_STANDARD` (`gpt-4o`) is used only once per topic per day across five
+  daily generation steps (summary, article, expectation check, tomorrow outlook,
+  video script). YouTube metadata also runs once per day but on the fast tier.
+  The total daily token spend per topic is bounded by the `maxTokens` cap in each
+  node (400–1 500 tokens per call).
 - Both models can be changed to any OpenAI Chat Completions model that supports
   the same JSON output contract by updating the n8n variables.
 
 ---
 
-## Adding a secondary AI provider (future)
+## When to override models
+
+The two-tier model split (`gpt-4o` / `gpt-4o-mini`) is the recommended v1
+default. Override individual tasks only when you have a clear reason:
+
+| Scenario | Suggested override |
+|----------|--------------------|
+| Daily summary quality is too low | Upgrade `AI_MODEL_STANDARD` → `gpt-4o` (already default); check prompt first |
+| Alert classification cost is too high | Ensure `AI_MODEL_FAST` is `gpt-4o-mini`; do not upgrade to standard tier |
+| Video script quality needs improvement | Set `OPENAI_MODEL_VIDEO_SCRIPT=gpt-4o` (already default); verify prompt length |
+| Testing a faster editorial pipeline | Set `AI_MODEL_STANDARD=gpt-4o-mini`; accept lower quality |
+| A newer cheaper model is available | Update `AI_MODEL_FAST` in n8n variables only; no workflow JSON changes needed |
+| A task needs a reasoning model | Set the task-specific `OPENAI_MODEL_*` var and update the corresponding workflow node |
+
+**Rules of thumb:**
+
+- Change `AI_MODEL_FAST` and `AI_MODEL_STANDARD` in n8n variables to affect all
+  tasks in a tier at once.
+- Set a task-specific `OPENAI_MODEL_*` env var (and wire it into the workflow
+  node) only when one task needs a different model than the rest of its tier.
+- Do not upgrade intraday classification to the standard tier — the volume makes
+  it cost-prohibitive.
+- Do not downgrade daily summary, article, or video script to the fast tier in
+  production — quality will noticeably suffer.
+
+---
+
+
 
 To add a secondary provider (e.g., Anthropic Claude) in a future release:
 

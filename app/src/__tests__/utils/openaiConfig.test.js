@@ -13,7 +13,7 @@
  *   - parseOpenAIConfig — default AI_PROVIDER resolves to 'openai'
  *   - parseOpenAIConfig — whitespace-only model override falls back to default
  *   - parseOpenAIConfig — empty env object throws on missing API key
- *   - OPENAI_MODEL_DEFAULTS — correct default values exported
+ *   - OPENAI_MODEL_DEFAULTS — correct default values exported for all 8 tasks
  */
 import { describe, it, expect } from 'vitest'
 import {
@@ -45,9 +45,13 @@ describe('constants', () => {
     expect(VALID_PROVIDERS).toEqual(['openai'])
   })
 
-  it('OPENAI_MODEL_DEFAULTS has correct default models', () => {
+  it('OPENAI_MODEL_DEFAULTS has correct default models for all 8 tasks', () => {
     expect(OPENAI_MODEL_DEFAULTS.alertClassification).toBe('gpt-4o-mini')
+    expect(OPENAI_MODEL_DEFAULTS.timelineFormatting).toBe('gpt-4o-mini')
     expect(OPENAI_MODEL_DEFAULTS.dailySummary).toBe('gpt-4o')
+    expect(OPENAI_MODEL_DEFAULTS.articleGeneration).toBe('gpt-4o')
+    expect(OPENAI_MODEL_DEFAULTS.expectationCheck).toBe('gpt-4o')
+    expect(OPENAI_MODEL_DEFAULTS.tomorrowOutlook).toBe('gpt-4o')
     expect(OPENAI_MODEL_DEFAULTS.videoScript).toBe('gpt-4o')
     expect(OPENAI_MODEL_DEFAULTS.youtubeMetadata).toBe('gpt-4o-mini')
   })
@@ -64,10 +68,14 @@ describe('parseOpenAIConfig — valid configurations', () => {
     expect(config.provider).toBe('openai')
   })
 
-  it('resolves all four model keys', () => {
+  it('resolves all eight model keys', () => {
     const config = parseOpenAIConfig(VALID_ENV)
     expect(config.models).toHaveProperty('alertClassification')
+    expect(config.models).toHaveProperty('timelineFormatting')
     expect(config.models).toHaveProperty('dailySummary')
+    expect(config.models).toHaveProperty('articleGeneration')
+    expect(config.models).toHaveProperty('expectationCheck')
+    expect(config.models).toHaveProperty('tomorrowOutlook')
     expect(config.models).toHaveProperty('videoScript')
     expect(config.models).toHaveProperty('youtubeMetadata')
   })
@@ -75,7 +83,11 @@ describe('parseOpenAIConfig — valid configurations', () => {
   it('falls back to default models when overrides are absent', () => {
     const config = parseOpenAIConfig(VALID_ENV)
     expect(config.models.alertClassification).toBe(OPENAI_MODEL_DEFAULTS.alertClassification)
+    expect(config.models.timelineFormatting).toBe(OPENAI_MODEL_DEFAULTS.timelineFormatting)
     expect(config.models.dailySummary).toBe(OPENAI_MODEL_DEFAULTS.dailySummary)
+    expect(config.models.articleGeneration).toBe(OPENAI_MODEL_DEFAULTS.articleGeneration)
+    expect(config.models.expectationCheck).toBe(OPENAI_MODEL_DEFAULTS.expectationCheck)
+    expect(config.models.tomorrowOutlook).toBe(OPENAI_MODEL_DEFAULTS.tomorrowOutlook)
     expect(config.models.videoScript).toBe(OPENAI_MODEL_DEFAULTS.videoScript)
     expect(config.models.youtubeMetadata).toBe(OPENAI_MODEL_DEFAULTS.youtubeMetadata)
   })
@@ -84,12 +96,20 @@ describe('parseOpenAIConfig — valid configurations', () => {
     const config = parseOpenAIConfig({
       ...VALID_ENV,
       OPENAI_MODEL_ALERT_CLASSIFICATION: 'gpt-4o',
+      OPENAI_MODEL_TIMELINE_FORMATTING: 'gpt-4o',
       OPENAI_MODEL_DAILY_SUMMARY: 'gpt-4o-mini',
+      OPENAI_MODEL_ARTICLE_GENERATION: 'gpt-4o-mini',
+      OPENAI_MODEL_EXPECTATION_CHECK: 'gpt-4o-mini',
+      OPENAI_MODEL_TOMORROW_OUTLOOK: 'gpt-4o-mini',
       OPENAI_MODEL_VIDEO_SCRIPT: 'gpt-4-turbo',
       OPENAI_MODEL_YOUTUBE_METADATA: 'gpt-4o',
     })
     expect(config.models.alertClassification).toBe('gpt-4o')
+    expect(config.models.timelineFormatting).toBe('gpt-4o')
     expect(config.models.dailySummary).toBe('gpt-4o-mini')
+    expect(config.models.articleGeneration).toBe('gpt-4o-mini')
+    expect(config.models.expectationCheck).toBe('gpt-4o-mini')
+    expect(config.models.tomorrowOutlook).toBe('gpt-4o-mini')
     expect(config.models.videoScript).toBe('gpt-4-turbo')
     expect(config.models.youtubeMetadata).toBe('gpt-4o')
   })
@@ -101,6 +121,10 @@ describe('parseOpenAIConfig — valid configurations', () => {
     })
     expect(config.models.dailySummary).toBe('gpt-4o-mini')
     expect(config.models.alertClassification).toBe(OPENAI_MODEL_DEFAULTS.alertClassification)
+    expect(config.models.timelineFormatting).toBe(OPENAI_MODEL_DEFAULTS.timelineFormatting)
+    expect(config.models.articleGeneration).toBe(OPENAI_MODEL_DEFAULTS.articleGeneration)
+    expect(config.models.expectationCheck).toBe(OPENAI_MODEL_DEFAULTS.expectationCheck)
+    expect(config.models.tomorrowOutlook).toBe(OPENAI_MODEL_DEFAULTS.tomorrowOutlook)
     expect(config.models.videoScript).toBe(OPENAI_MODEL_DEFAULTS.videoScript)
     expect(config.models.youtubeMetadata).toBe(OPENAI_MODEL_DEFAULTS.youtubeMetadata)
   })
@@ -137,12 +161,44 @@ describe('parseOpenAIConfig — model override edge cases', () => {
     expect(config.models.alertClassification).toBe(OPENAI_MODEL_DEFAULTS.alertClassification)
   })
 
+  it('falls back to default when OPENAI_MODEL_TIMELINE_FORMATTING is an empty string', () => {
+    const config = parseOpenAIConfig({
+      ...VALID_ENV,
+      OPENAI_MODEL_TIMELINE_FORMATTING: '',
+    })
+    expect(config.models.timelineFormatting).toBe(OPENAI_MODEL_DEFAULTS.timelineFormatting)
+  })
+
   it('falls back to default when override is whitespace-only', () => {
     const config = parseOpenAIConfig({
       ...VALID_ENV,
       OPENAI_MODEL_DAILY_SUMMARY: '   ',
     })
     expect(config.models.dailySummary).toBe(OPENAI_MODEL_DEFAULTS.dailySummary)
+  })
+
+  it('falls back to default when OPENAI_MODEL_ARTICLE_GENERATION is whitespace-only', () => {
+    const config = parseOpenAIConfig({
+      ...VALID_ENV,
+      OPENAI_MODEL_ARTICLE_GENERATION: '   ',
+    })
+    expect(config.models.articleGeneration).toBe(OPENAI_MODEL_DEFAULTS.articleGeneration)
+  })
+
+  it('falls back to default when OPENAI_MODEL_EXPECTATION_CHECK is undefined', () => {
+    const config = parseOpenAIConfig({
+      ...VALID_ENV,
+      OPENAI_MODEL_EXPECTATION_CHECK: undefined,
+    })
+    expect(config.models.expectationCheck).toBe(OPENAI_MODEL_DEFAULTS.expectationCheck)
+  })
+
+  it('falls back to default when OPENAI_MODEL_TOMORROW_OUTLOOK is undefined', () => {
+    const config = parseOpenAIConfig({
+      ...VALID_ENV,
+      OPENAI_MODEL_TOMORROW_OUTLOOK: undefined,
+    })
+    expect(config.models.tomorrowOutlook).toBe(OPENAI_MODEL_DEFAULTS.tomorrowOutlook)
   })
 
   it('falls back to default when override is undefined', () => {
