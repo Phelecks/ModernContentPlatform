@@ -4,7 +4,7 @@
  * OpenAI configuration parsing and validation for Modern Content Platform.
  *
  * Reads environment variables and resolves per-task model overrides, falling
- * back to tier-based defaults when a task-specific override is not set.
+ * back to per-task defaults when a task-specific override is not set.
  *
  * Required variable:
  *   OPENAI_API_KEY — OpenAI API key.  Missing or empty value triggers a

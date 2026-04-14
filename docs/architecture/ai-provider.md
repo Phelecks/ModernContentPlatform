@@ -74,19 +74,30 @@ The `OPENAI_API_KEY` environment variable is passed to the n8n container via
 `n8n/docker-compose.yml`. n8n uses it to pre-populate credentials or make it
 available as a variable reference. Set it in `.env` (see `.env.example`).
 
-The following variables are also passed to the n8n container and are available
-as workflow variable references:
+The following variables are also passed to the n8n container:
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `AI_PROVIDER` | No | `openai` | AI provider slug — only `openai` is supported in v1 |
-| `OPENAI_MODEL_ALERT_CLASSIFICATION` | No | `gpt-4o-mini` | Model for alert classification |
-| `OPENAI_MODEL_DAILY_SUMMARY` | No | `gpt-4o` | Model for daily summary generation |
-| `OPENAI_MODEL_VIDEO_SCRIPT` | No | `gpt-4o` | Model for video script generation |
-| `OPENAI_MODEL_YOUTUBE_METADATA` | No | `gpt-4o-mini` | Model for YouTube metadata generation |
+| `OPENAI_MODEL_ALERT_CLASSIFICATION` | No | `gpt-4o-mini` | Intended model for alert classification |
+| `OPENAI_MODEL_DAILY_SUMMARY` | No | `gpt-4o` | Intended model for daily summary generation |
+| `OPENAI_MODEL_VIDEO_SCRIPT` | No | `gpt-4o` | Intended model for video script generation |
+| `OPENAI_MODEL_YOUTUBE_METADATA` | No | `gpt-4o-mini` | Intended model for YouTube metadata generation |
 
-Omitting a model variable causes the platform to use the default for that task.
-Set a variable only when you want to override the default for a specific task.
+> **Important:** current n8n workflows select models via the n8n variables
+> `$vars.AI_MODEL_STANDARD` and `$vars.AI_MODEL_FAST` (with hard-coded
+> fallbacks), **not** via the `OPENAI_MODEL_*` environment variables above.
+> Setting only `OPENAI_MODEL_*` here will **not** change workflow behavior
+> unless you also map those values into n8n variables or update the workflows
+> to reference them directly.
+>
+> For the current workflows, set these in **n8n Settings → Variables**:
+> - `AI_MODEL_STANDARD=gpt-4o` — editorial tasks (summary, article, script)
+> - `AI_MODEL_FAST=gpt-4o-mini` — classification and metadata tasks
+
+The `OPENAI_MODEL_*` environment variables document the intended per-task model
+split and are consumed by `app/src/utils/openaiConfig.js` for local config
+validation. They serve as the source of truth for future workflow wiring.
 
 Config parsing and validation are handled by `app/src/utils/openaiConfig.js`,
 which exports `parseOpenAIConfig(env)`. It throws an `OPENAI_CONFIG_ERROR` when:

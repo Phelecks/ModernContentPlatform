@@ -111,7 +111,8 @@ describe('parseOpenAIConfig — valid configurations', () => {
   })
 
   it('defaults AI_PROVIDER to "openai" when not set', () => {
-    const { AI_PROVIDER: _, ...envWithoutProvider } = VALID_ENV
+    const envWithoutProvider = { ...VALID_ENV }
+    delete envWithoutProvider.AI_PROVIDER
     const config = parseOpenAIConfig(envWithoutProvider)
     expect(config.provider).toBe('openai')
   })

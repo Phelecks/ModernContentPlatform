@@ -39,6 +39,10 @@ services:
       # -- AI ------------------------------------------------------------------
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       AI_PROVIDER: ${AI_PROVIDER:-openai}
+      # The OPENAI_MODEL_* vars below document the intended per-task model split.
+      # Current workflows read $vars.AI_MODEL_STANDARD / $vars.AI_MODEL_FAST
+      # (set in n8n Settings → Variables) and do not reference these env vars
+      # directly. Set them here for documentation and future workflow wiring.
       OPENAI_MODEL_ALERT_CLASSIFICATION: ${OPENAI_MODEL_ALERT_CLASSIFICATION:-}
       OPENAI_MODEL_DAILY_SUMMARY: ${OPENAI_MODEL_DAILY_SUMMARY:-}
       OPENAI_MODEL_VIDEO_SCRIPT: ${OPENAI_MODEL_VIDEO_SCRIPT:-}
