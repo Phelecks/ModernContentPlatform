@@ -33,8 +33,10 @@ import {
   CRYPTO_SOURCE_EVENT_X_QUERY_BTC,
   CRYPTO_SOURCE_EVENT_SOCIAL_TELEGRAM,
   CRYPTO_SOURCE_EVENT_WEBHOOK_LIQUIDATION,
+  CRYPTO_SOURCE_EVENT_NEWSAPI,
   ECONOMY_NORMALIZED_ITEM_BLS_CPI,
-  CRYPTO_NORMALIZED_ITEM_X_QUERY_BTC
+  CRYPTO_NORMALIZED_ITEM_X_QUERY_BTC,
+  CRYPTO_NORMALIZED_ITEM_NEWSAPI
 } from './helpers/fixtures.js'
 
 // ---- normalizeItem — news RSS item ------------------------------------------
@@ -585,6 +587,59 @@ describe('normalizeItem — webhook item', () => {
   })
 })
 
+// ---- normalizeItem — NewsAPI item -------------------------------------------
+
+describe('normalizeItem — NewsAPI item', () => {
+  it('normalizes the NewsAPI crypto source event', () => {
+    const result = normalizeItem(CRYPTO_SOURCE_EVENT_NEWSAPI)
+    expect(result).not.toBeNull()
+    expect(result.source_id).toBe(CRYPTO_SOURCE_EVENT_NEWSAPI.source_id)
+    expect(result.source_name).toBe('NewsAPI Top Headlines')
+    expect(result.source_type).toBe('newsapi')
+  })
+
+  it('propagates T3 trust_tier for the NewsAPI source', () => {
+    const result = normalizeItem(CRYPTO_SOURCE_EVENT_NEWSAPI)
+    expect(result.trust_tier).toBe('T3')
+    expect(result.trust_score).toBe(50)
+  })
+
+  it('preserves source_slug from the NewsAPI source event', () => {
+    const result = normalizeItem(CRYPTO_SOURCE_EVENT_NEWSAPI)
+    expect(result.source_slug).toBe('newsapi-top-headlines')
+  })
+
+  it('detects crypto and finance topic candidates for BTC ETF news', () => {
+    const result = normalizeItem(CRYPTO_SOURCE_EVENT_NEWSAPI)
+    expect(result.topic_candidates).toContain('crypto')
+    expect(result.topic_candidates).toContain('finance')
+  })
+
+  it('preserves author from the NewsAPI source event', () => {
+    const result = normalizeItem(CRYPTO_SOURCE_EVENT_NEWSAPI)
+    expect(result.author).toBe('Jane Smith')
+  })
+
+  it('sets source_url from the NewsAPI source event', () => {
+    const result = normalizeItem(CRYPTO_SOURCE_EVENT_NEWSAPI)
+    expect(result.source_url).toBe(CRYPTO_SOURCE_EVENT_NEWSAPI.source_url)
+  })
+
+  it('item_id matches the expected SHA-256 for the NewsAPI source event', () => {
+    const result = normalizeItem(CRYPTO_SOURCE_EVENT_NEWSAPI)
+    expect(result.item_id).toBe(CRYPTO_NORMALIZED_ITEM_NEWSAPI.item_id)
+  })
+
+  it('normalized output matches the expected fixture shape', () => {
+    const result = normalizeItem(CRYPTO_SOURCE_EVENT_NEWSAPI)
+    expect(result.headline).toBe(CRYPTO_NORMALIZED_ITEM_NEWSAPI.headline)
+    expect(result.source_slug).toBe(CRYPTO_NORMALIZED_ITEM_NEWSAPI.source_slug)
+    expect(result.trust_tier).toBe(CRYPTO_NORMALIZED_ITEM_NEWSAPI.trust_tier)
+    expect(result.trust_score).toBe(CRYPTO_NORMALIZED_ITEM_NEWSAPI.trust_score)
+    expect(result.is_duplicate).toBe(false)
+  })
+})
+
 // ---- Downstream contract compatibility --------------------------------------
 
 describe('normalizeItem — downstream contract compatibility', () => {
@@ -601,7 +656,8 @@ describe('normalizeItem — downstream contract compatibility', () => {
     ECONOMY_SOURCE_EVENT_BLS_CPI,
     CRYPTO_SOURCE_EVENT_X_QUERY_BTC,
     CRYPTO_SOURCE_EVENT_SOCIAL_TELEGRAM,
-    CRYPTO_SOURCE_EVENT_WEBHOOK_LIQUIDATION
+    CRYPTO_SOURCE_EVENT_WEBHOOK_LIQUIDATION,
+    CRYPTO_SOURCE_EVENT_NEWSAPI
   ]
 
   for (const event of ALL_SOURCE_EVENTS) {

@@ -21,7 +21,7 @@ Schedule → Ingestion → Normalization → Deduplication → Clustering
 |------|--------|---------|
 | `00_local_alert_smoke_test.json` | Smoke Test | **Local dev only.** Manual trigger, mock payload, D1 write + read-back verify. No external dependencies. |
 | `orchestrator.json` | Orchestrator | Schedule trigger + module chain |
-| `01_source_ingestion.json` | 01 | Fetch raw items from RSS, API, and X sources |
+| `01_source_ingestion.json` | 01 | Fetch raw items from RSS, API, NewsAPI, and X sources; routes each source config through its dedicated adapter |
 | `02_normalization.json` | 02 | Normalize to internal format, compute item_id |
 | `03_deduplication.json` | 03 | Drop items already in D1 (last 24 h) |
 | `04_clustering.json` | 04 | Keyword-based event clustering |
@@ -80,7 +80,13 @@ Set these in **Settings → Variables** in your n8n instance.
 | `DISCORD_WEBHOOK_URL` | Discord incoming webhook URL | Full pipeline |
 | `FAILURE_ALERT_CHANNEL` | Telegram chat ID for failure notifications | Full pipeline |
 | `INTRADAY_SOURCES_JSON` | JSON array of source configs (see below) | Full pipeline |
-| `NEWSAPI_API_KEY` | NewsAPI.org API key — store in this variable and reference from the `NewsApiCredential` HTTP Header Auth credential | NewsAPI sources only |
+| `NEWS_API_KEY` | NewsAPI.org API key — store in this variable and reference from the `NewsApiCredential` HTTP Header Auth credential | NewsAPI sources only |
+
+## Source adapter pattern
+
+Module 01 routes each source config item through a dedicated adapter based on
+its `type` field.  See [`adapters/README.md`](adapters/README.md) for the
+adapter pattern and instructions on adding new provider adapters.
 
 ## Source configuration
 
@@ -108,7 +114,7 @@ any fetches run.  Two managed provider types are recognised:
 | Provider | Source types | Credential needed |
 |----------|-------------|-------------------|
 | **X** | `x_account`, `x_query` | `X Bearer Token` HTTP Header Auth credential |
-| **NewsAPI** | `newsapi` | `NEWSAPI_API_KEY` n8n variable |
+| **NewsAPI** | `newsapi` | `NEWS_API_KEY` n8n variable |
 
 Provider mode is resolved automatically from the contents of `INTRADAY_SOURCES_JSON`:
 
@@ -175,7 +181,7 @@ NewsAPI sources use `type: "newsapi"` and are fetched as generic API sources
 
 Authenticate using an n8n HTTP Header Auth credential named `NewsApiCredential`
 with header name `X-Api-Key` and your NewsAPI.org key as the value.  Store the
-key in the `NEWSAPI_API_KEY` n8n variable and reference it from the credential —
+key in the `NEWS_API_KEY` n8n variable and reference it from the credential —
 do **not** embed API keys in the URL, as they can be leaked via logs, monitoring,
 and proxy or referrer headers.  NewsAPI sources are classified as T3 (Specialist
 news) by default.
@@ -188,6 +194,7 @@ news) by default.
 | `OpenAiApi` | OpenAI API | Module 05 |
 | `TelegramBotApi` | Telegram Bot API | Modules 08, shared notifier |
 | `X Bearer Token` | HTTP Header Auth | Module 01 (X sources only) |
+| `NewsApiCredential` | HTTP Header Auth | Module 01 (NewsAPI sources only) |
 
 For `CloudflareD1Api` set the header:
 - Header name: `Authorization`

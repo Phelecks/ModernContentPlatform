@@ -26,8 +26,8 @@
     },
     "source_type": {
       "type": "string",
-      "enum": ["rss", "api", "social", "webhook", "x_account", "x_query"],
-      "description": "Technical source category. x_account and x_query are first-class types for X (Twitter) monitoring. Use 'api' for official data releases, market data APIs, and structured feeds. Use 'rss' for news and research/official RSS/Atom feeds. Use 'social' for generic social channels (Telegram, Reddit)."
+      "enum": ["rss", "api", "social", "webhook", "x_account", "x_query", "newsapi"],
+      "description": "Technical source category. x_account and x_query are first-class types for X (Twitter) monitoring. Use 'api' for official data releases, market data APIs, and other direct structured feeds from the original provider. Use 'newsapi' for items fetched via the NewsAPI aggregator/search service rather than directly from the publisher feed or API. Use 'rss' for news and research/official RSS/Atom feeds. Use 'social' for generic social channels (Telegram, Reddit). Use 'webhook' for push-delivered events received from external systems."
     },
     "source_url": {
       "type": ["string", "null"],
@@ -150,6 +150,28 @@
         "guid": "https://arxiv.org/abs/2501.12345",
         "category": "cs.AI",
         "dc:creator": "Jane Smith, John Doe"
+      }
+    },
+    {
+      "_comment": "news — NewsAPI managed provider",
+      "source_id": "newsapi-btc-etf-inflows-20250115",
+      "source_slug": "newsapi-top-headlines",
+      "source_name": "NewsAPI Top Headlines",
+      "source_type": "newsapi",
+      "source_url": "https://example.com/crypto/btc-etf-inflows",
+      "title": "Spot Bitcoin ETFs record $500M inflows in a single session",
+      "body": "US-listed spot Bitcoin ETFs attracted more than $500 million in net inflows on January 15...",
+      "author": "Jane Smith",
+      "published_at": "2025-01-15T14:00:00Z",
+      "fetched_at": "2025-01-15T14:45:00Z",
+      "trust_tier": "T3",
+      "trust_score": 50,
+      "raw_json": {
+        "source": { "id": "crypto-news", "name": "CryptoNews" },
+        "author": "Jane Smith",
+        "title": "Spot Bitcoin ETFs record $500M inflows in a single session",
+        "url": "https://example.com/crypto/btc-etf-inflows",
+        "publishedAt": "2025-01-15T14:00:00Z"
       }
     },
     {

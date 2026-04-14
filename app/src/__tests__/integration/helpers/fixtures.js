@@ -41,6 +41,7 @@ export { default as ECONOMY_SOURCE_EVENT_BLS_CPI } from '@fixtures/source-events
 export { default as CRYPTO_SOURCE_EVENT_X_QUERY_BTC } from '@fixtures/source-events/crypto-2025-01-15-x-query-btc-breakout.json'
 export { default as CRYPTO_SOURCE_EVENT_SOCIAL_TELEGRAM } from '@fixtures/source-events/crypto-2025-01-15-social-telegram.json'
 export { default as CRYPTO_SOURCE_EVENT_WEBHOOK_LIQUIDATION } from '@fixtures/source-events/crypto-2025-01-15-webhook-liquidation.json'
+export { default as CRYPTO_SOURCE_EVENT_NEWSAPI } from '@fixtures/source-events/crypto-2025-01-15-newsapi.json'
 
 // ---- Normalized items (intraday_normalized_item, individual items) ----
 
@@ -52,6 +53,7 @@ export { default as ECONOMY_NORMALIZED_ITEM_BLS_CPI } from '@fixtures/normalized
 export { default as CRYPTO_NORMALIZED_ITEM_X_QUERY_BTC } from '@fixtures/normalized-items/crypto-2025-01-15-x-query-btc-breakout.json'
 export { default as CRYPTO_NORMALIZED_ITEM_SOCIAL_TELEGRAM } from '@fixtures/normalized-items/crypto-2025-01-15-social-telegram.json'
 export { default as CRYPTO_NORMALIZED_ITEM_WEBHOOK_LIQUIDATION } from '@fixtures/normalized-items/crypto-2025-01-15-webhook-liquidation.json'
+export { default as CRYPTO_NORMALIZED_ITEM_NEWSAPI } from '@fixtures/normalized-items/crypto-2025-01-15-newsapi.json'
 
 // ---- Provider config fixtures (env objects + expected outcomes for parseProviderConfig) ----
 
