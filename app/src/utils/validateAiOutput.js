@@ -17,8 +17,9 @@
  *   - Per-task `parseAndValidate*(rawContent)` functions
  *       Combine `parseJsonOutput` and the matching `validate*` call.  Throw
  *       `AI_PARSE_ERROR` on JSON parse failure or `AI_VALIDATION_ERROR` when
- *       required fields are absent or out of range.  Return the normalised
- *       object on success.
+ *       required fields are absent or out of range.  Return the parsed object
+ *       on success (the object is not normalised or clamped — callers that
+ *       need normalisation should apply it separately after validation).
  *
  * All functions are side-effect-free and can be used in:
  *   - n8n Code node logic (copy-paste the relevant helper)
@@ -60,7 +61,7 @@ export function parseJsonOutput(rawContent) {
   if (typeof rawContent !== 'string') {
     throw new Error('AI_PARSE_ERROR: rawContent must be a string.')
   }
-  const cleaned = rawContent.replace(/^```[a-z]*\n?|\n?```$/g, '').trim()
+  const cleaned = rawContent.replace(/^```[a-zA-Z]*\r?\n?|\r?\n?```$/g, '').trim()
   try {
     return JSON.parse(cleaned)
   } catch (e) {
@@ -122,6 +123,19 @@ export function validateAlertClassification(obj) {
   if (!VALID_TOPICS.includes(obj.topic_slug)) {
     errors.push(`topic_slug "${obj.topic_slug}" is not a valid topic. Expected one of: ${VALID_TOPICS.join(', ')}.`)
   }
+  if ('secondary_topics' in obj) {
+    if (!Array.isArray(obj.secondary_topics)) {
+      errors.push('secondary_topics must be an array when present.')
+    } else if (obj.secondary_topics.length > 2) {
+      errors.push('secondary_topics must have at most 2 items.')
+    } else {
+      obj.secondary_topics.forEach((t, i) => {
+        if (!VALID_TOPICS.includes(t)) {
+          errors.push(`secondary_topics[${i}] "${t}" is not a valid topic. Expected one of: ${VALID_TOPICS.join(', ')}.`)
+        }
+      })
+    }
+  }
   if (!isString(obj.headline, 10, 250)) {
     errors.push('headline must be a string of 10–250 characters.')
   }
@@ -142,6 +156,8 @@ export function validateAlertClassification(obj) {
   }
   if (!('cluster_label' in obj)) {
     errors.push('cluster_label field must be present (string or null).')
+  } else if (obj.cluster_label !== null && !isString(obj.cluster_label, 1, 100)) {
+    errors.push('cluster_label must be a string of 1–100 characters or null.')
   }
 
   return { ok: errors.length === 0, errors }
@@ -198,6 +214,14 @@ export function validateTimelineEntry(obj) {
   }
   if ('label_color' in obj && obj.label_color !== null && !VALID_LABEL_COLORS.includes(obj.label_color)) {
     errors.push(`label_color "${obj.label_color}" is invalid. Expected one of: ${VALID_LABEL_COLORS.join(', ')} or null.`)
+  }
+  if ('source_attribution' in obj && obj.source_attribution !== null && !isString(obj.source_attribution, 1, 100)) {
+    errors.push('source_attribution must be a string of 1–100 characters or null.')
+  }
+  if ('source_url' in obj && obj.source_url !== null) {
+    if (typeof obj.source_url !== 'string' || !/^https?:\/\//i.test(obj.source_url)) {
+      errors.push('source_url must be an HTTP or HTTPS URL or null.')
+    }
   }
 
   return { ok: errors.length === 0, errors }
@@ -312,6 +336,8 @@ export function validateExpectationCheck(obj) {
 
   if (!Array.isArray(obj.expectations_checked)) {
     errors.push('expectations_checked must be an array.')
+  } else if (obj.expectations_checked.length > 5) {
+    errors.push('expectations_checked must have at most 5 items.')
   } else {
     obj.expectations_checked.forEach((e, i) => {
       if (!isString(e.expectation, 10, 200)) {
@@ -324,6 +350,14 @@ export function validateExpectationCheck(obj) {
   }
   if (!Array.isArray(obj.surprise_events)) {
     errors.push('surprise_events must be an array.')
+  } else if (obj.surprise_events.length > 5) {
+    errors.push('surprise_events must have at most 5 items.')
+  } else {
+    obj.surprise_events.forEach((s, i) => {
+      if (!isString(s, 10, 200)) {
+        errors.push(`surprise_events[${i}] must be a string of 10–200 characters.`)
+      }
+    })
   }
   if (!isIntegerInRange(obj.alignment_score, 0, 100)) {
     errors.push('alignment_score must be an integer 0–100.')
@@ -385,6 +419,8 @@ export function validateTomorrowOutlook(obj) {
   }
   if (!Array.isArray(obj.scheduled_events)) {
     errors.push('scheduled_events must be an array.')
+  } else if (obj.scheduled_events.length > 5) {
+    errors.push('scheduled_events must have at most 5 items.')
   } else {
     obj.scheduled_events.forEach((e, i) => {
       if (!isString(e.title, 5, 150)) {
@@ -392,6 +428,9 @@ export function validateTomorrowOutlook(obj) {
       }
       if (!VALID_IMPACT_LEVELS.includes(e.impact)) {
         errors.push(`scheduled_events[${i}].impact "${e.impact}" is invalid. Expected: ${VALID_IMPACT_LEVELS.join(', ')}.`)
+      }
+      if ('time_hint' in e && e.time_hint !== null && !isString(e.time_hint, 1, 50)) {
+        errors.push(`scheduled_events[${i}].time_hint must be a string of 1–50 characters or null.`)
       }
     })
   }

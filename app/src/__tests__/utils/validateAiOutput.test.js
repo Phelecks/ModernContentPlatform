@@ -4,12 +4,12 @@
  * Validates the structured AI output parsing and validation utilities.
  *
  * Covers:
- *   parseJsonOutput            — valid JSON, markdown-fenced JSON, parse failure, non-string input
- *   validateAlertClassification — required fields, enum values, integer ranges, boolean type
- *   validateTimelineEntry       — required fields, severity_level enum, label_color enum
+ *   parseJsonOutput            — valid JSON, markdown-fenced JSON, CRLF fences, uppercase lang tags, parse failure, non-string input
+ *   validateAlertClassification — required fields, enum values, secondary_topics, cluster_label type, integer ranges, boolean type
+ *   validateTimelineEntry       — required fields, severity_level enum, label_color enum, source_url pattern, source_attribution length
  *   validateDailySummary        — required fields, nested key_events, sentiment enum, topic_score
- *   validateExpectationCheck    — required fields, outcome enum, alignment_score range
- *   validateTomorrowOutlook     — required fields, key_watchpoints, risk_level enum
+ *   validateExpectationCheck    — required fields, outcome enum, alignment_score range, array maxItems, surprise_events length bounds
+ *   validateTomorrowOutlook     — required fields, key_watchpoints, scheduled_events maxItems, time_hint length, risk_level enum
  *   validateVideoScript         — required fields, segments array, duration ranges
  *   validateYoutubeMetadata     — required fields, tags array, visibility enum
  *   parseAndValidate* functions — parse + validate integration, error propagation
@@ -218,6 +218,16 @@ describe('parseJsonOutput', () => {
     const result = parseJsonOutput('  {"a": 1}  ')
     expect(result).toEqual({ a: 1 })
   })
+
+  it('strips a CRLF-terminated code fence before parsing', () => {
+    const result = parseJsonOutput('```json\r\n{"key": "value"}\r\n```')
+    expect(result).toEqual({ key: 'value' })
+  })
+
+  it('strips an uppercase language tag code fence before parsing', () => {
+    const result = parseJsonOutput('```JSON\n{"key": "value"}\n```')
+    expect(result).toEqual({ key: 'value' })
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -326,6 +336,53 @@ describe('validateAlertClassification', () => {
     expect(ok).toBe(false)
     expect(errors.length).toBeGreaterThanOrEqual(3)
   })
+
+  it('reports an error when cluster_label is a non-string non-null value', () => {
+    const { ok, errors } = validateAlertClassification({ ...VALID_ALERT_CLASSIFICATION, cluster_label: 123 })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('cluster_label'))).toBe(true)
+  })
+
+  it('reports an error when cluster_label exceeds 100 characters', () => {
+    const { ok, errors } = validateAlertClassification({ ...VALID_ALERT_CLASSIFICATION, cluster_label: 'A'.repeat(101) })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('cluster_label'))).toBe(true)
+  })
+
+  it('reports an error when secondary_topics contains an invalid topic', () => {
+    const { ok, errors } = validateAlertClassification({ ...VALID_ALERT_CLASSIFICATION, secondary_topics: ['sports'] })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('secondary_topics'))).toBe(true)
+  })
+
+  it('reports an error when secondary_topics has more than 2 items', () => {
+    const { ok, errors } = validateAlertClassification({ ...VALID_ALERT_CLASSIFICATION, secondary_topics: ['finance', 'economy', 'ai'] })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('secondary_topics'))).toBe(true)
+  })
+
+  it('reports an error when secondary_topics is not an array', () => {
+    const { ok, errors } = validateAlertClassification({ ...VALID_ALERT_CLASSIFICATION, secondary_topics: 'finance' })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('secondary_topics'))).toBe(true)
+  })
+
+  it('accepts secondary_topics as an empty array', () => {
+    const { ok } = validateAlertClassification({ ...VALID_ALERT_CLASSIFICATION, secondary_topics: [] })
+    expect(ok).toBe(true)
+  })
+
+  it('accepts secondary_topics with two valid topics', () => {
+    const { ok } = validateAlertClassification({ ...VALID_ALERT_CLASSIFICATION, secondary_topics: ['finance', 'economy'] })
+    expect(ok).toBe(true)
+  })
+
+  it('accepts a valid object without secondary_topics field', () => {
+    const obj = { ...VALID_ALERT_CLASSIFICATION }
+    delete obj.secondary_topics
+    const { ok } = validateAlertClassification(obj)
+    expect(ok).toBe(true)
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -399,6 +456,39 @@ describe('validateTimelineEntry', () => {
       label: 'Price Action',
     }
     const { ok } = validateTimelineEntry(minimal)
+    expect(ok).toBe(true)
+  })
+
+  it('reports an error when source_url uses a non-HTTP scheme', () => {
+    const { ok, errors } = validateTimelineEntry({ ...VALID_TIMELINE_ENTRY, source_url: 'ftp://example.com/file' })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('source_url'))).toBe(true)
+  })
+
+  it('reports an error when source_url is a plain string without a scheme', () => {
+    const { ok, errors } = validateTimelineEntry({ ...VALID_TIMELINE_ENTRY, source_url: 'example.com/path' })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('source_url'))).toBe(true)
+  })
+
+  it('accepts source_url as null', () => {
+    const { ok } = validateTimelineEntry({ ...VALID_TIMELINE_ENTRY, source_url: null })
+    expect(ok).toBe(true)
+  })
+
+  it('accepts source_url as a valid HTTPS URL', () => {
+    const { ok } = validateTimelineEntry({ ...VALID_TIMELINE_ENTRY, source_url: 'https://example.com/article' })
+    expect(ok).toBe(true)
+  })
+
+  it('reports an error when source_attribution exceeds 100 characters', () => {
+    const { ok, errors } = validateTimelineEntry({ ...VALID_TIMELINE_ENTRY, source_attribution: 'via '.repeat(26) })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('source_attribution'))).toBe(true)
+  })
+
+  it('accepts source_attribution as null', () => {
+    const { ok } = validateTimelineEntry({ ...VALID_TIMELINE_ENTRY, source_attribution: null })
     expect(ok).toBe(true)
   })
 })
@@ -572,6 +662,36 @@ describe('validateExpectationCheck', () => {
     expect(ok).toBe(false)
     expect(errors.some(e => e.includes('alignment_score'))).toBe(true)
   })
+
+  it('reports an error when expectations_checked has more than 5 items', () => {
+    const many = Array.from({ length: 6 }, () => ({
+      expectation: 'Bitcoin would test resistance near $115K before moving higher',
+      outcome: 'met',
+      note: null,
+    }))
+    const { ok, errors } = validateExpectationCheck({ ...VALID_EXPECTATION_CHECK, expectations_checked: many })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('expectations_checked'))).toBe(true)
+  })
+
+  it('reports an error when surprise_events has more than 5 items', () => {
+    const many = Array.from({ length: 6 }, () => 'An unexpected event occurred today in the market.')
+    const { ok, errors } = validateExpectationCheck({ ...VALID_EXPECTATION_CHECK, surprise_events: many })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('surprise_events'))).toBe(true)
+  })
+
+  it('reports an error when a surprise_events item is too short', () => {
+    const { ok, errors } = validateExpectationCheck({ ...VALID_EXPECTATION_CHECK, surprise_events: ['Short.'] })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('surprise_events[0]'))).toBe(true)
+  })
+
+  it('reports an error when a surprise_events item exceeds 200 characters', () => {
+    const { ok, errors } = validateExpectationCheck({ ...VALID_EXPECTATION_CHECK, surprise_events: ['A'.repeat(201)] })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('surprise_events[0]'))).toBe(true)
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -654,6 +774,35 @@ describe('validateTomorrowOutlook', () => {
       const { ok } = validateTomorrowOutlook({ ...VALID_TOMORROW_OUTLOOK, risk_level: level })
       expect(ok).toBe(true)
     })
+  })
+
+  it('reports an error when scheduled_events has more than 5 items', () => {
+    const many = Array.from({ length: 6 }, (_, i) => ({
+      title: `Scheduled Event ${i + 1}`,
+      impact: 'medium',
+    }))
+    const { ok, errors } = validateTomorrowOutlook({ ...VALID_TOMORROW_OUTLOOK, scheduled_events: many })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('scheduled_events'))).toBe(true)
+  })
+
+  it('reports an error when time_hint exceeds 50 characters', () => {
+    const bad = [{ title: 'FOMC Meeting Minutes Release', impact: 'high', time_hint: 'A'.repeat(51) }]
+    const { ok, errors } = validateTomorrowOutlook({ ...VALID_TOMORROW_OUTLOOK, scheduled_events: bad })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('time_hint'))).toBe(true)
+  })
+
+  it('accepts time_hint as null', () => {
+    const event = [{ title: 'FOMC Meeting Minutes Release', impact: 'high', time_hint: null }]
+    const { ok } = validateTomorrowOutlook({ ...VALID_TOMORROW_OUTLOOK, scheduled_events: event })
+    expect(ok).toBe(true)
+  })
+
+  it('accepts a scheduled event without a time_hint field', () => {
+    const event = [{ title: 'FOMC Meeting Minutes Release', impact: 'high' }]
+    const { ok } = validateTomorrowOutlook({ ...VALID_TOMORROW_OUTLOOK, scheduled_events: event })
+    expect(ok).toBe(true)
   })
 })
 
