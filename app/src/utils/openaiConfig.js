@@ -32,6 +32,7 @@
  * All functions are side-effect-free and do not depend on any runtime globals.
  *
  * See docs/architecture/ai-provider.md for the full AI provider guide.
+ * See app/src/utils/validateAiOutput.js for per-task output validation.
  */
 
 // ---------------------------------------------------------------------------
@@ -72,6 +73,40 @@ export const OPENAI_MODEL_DEFAULTS = {
   videoScript: 'gpt-4o',
   /** Short structured YouTube metadata generation. Cost-sensitive. */
   youtubeMetadata: 'gpt-4o-mini',
+}
+
+// ---------------------------------------------------------------------------
+// Structured output configuration
+// ---------------------------------------------------------------------------
+
+/**
+ * Per-task structured output configuration.
+ *
+ * `responseFormat: 'json_object'` instructs the OpenAI API to return a
+ * guaranteed-valid JSON object (no markdown, no surrounding text).  It maps
+ * to `response_format: { type: "json_object" }` in the OpenAI Chat
+ * Completions API and to the `responseFormat` option in the n8n OpenAI node.
+ *
+ * Article generation is intentionally excluded because it returns Markdown,
+ * not JSON, and is validated with Markdown-specific rules instead.
+ *
+ * All other AI tasks produce JSON and must enable JSON mode.
+ */
+export const OPENAI_STRUCTURED_OUTPUT_TASKS = {
+  /** Intraday alert classification — must return JSON matching alert_classification schema. */
+  alertClassification: { responseFormat: 'json_object' },
+  /** Timeline entry formatting — must return JSON matching timeline_entry schema. */
+  timelineFormatting: { responseFormat: 'json_object' },
+  /** Daily summary generation — must return JSON matching daily_summary schema. */
+  dailySummary: { responseFormat: 'json_object' },
+  /** Expectation check — must return JSON matching expectation_check schema. */
+  expectationCheck: { responseFormat: 'json_object' },
+  /** Tomorrow outlook — must return JSON matching tomorrow_outlook schema. */
+  tomorrowOutlook: { responseFormat: 'json_object' },
+  /** Video script generation — must return JSON matching video_script schema. */
+  videoScript: { responseFormat: 'json_object' },
+  /** YouTube metadata generation — must return JSON matching youtube_metadata schema. */
+  youtubeMetadata: { responseFormat: 'json_object' },
 }
 
 // ---------------------------------------------------------------------------

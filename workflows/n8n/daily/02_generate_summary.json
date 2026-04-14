@@ -1,5 +1,5 @@
 {
-  "name": "Daily \u2014 02 Generate Summary",
+  "name": "Daily — 02 Generate Summary",
   "nodes": [
     {
       "parameters": {},
@@ -15,7 +15,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Build a compact text representation of alerts and clusters for the AI prompt.\n// Limits token usage by truncating long summaries.\n// Source names are included when available to support source-aware summary generation.\nconst ctx = $input.first().json;\n\nconst topAlerts = (ctx.alerts || []).slice(0, 20).map((a, i) => {\n  const sourceNote = a.source_name ? ` [source: ${a.source_name}]` : '';\n  return `${i + 1}. [importance=${a.importance_score}] ${a.headline}${a.summary_text ? ' \u2014 ' + a.summary_text.slice(0, 150) : ''}${sourceNote}`;\n}).join('\\n');\n\nconst clusterText = (ctx.clusters || []).map(c =>\n  `- ${c.cluster_label} (${c.alert_count} alerts, importance=${c.importance_score})${c.summary_text ? ': ' + c.summary_text.slice(0, 150) : ''}`\n).join('\\n');\n\nreturn [{\n  json: {\n    ...ctx,\n    _prompt_alerts: topAlerts,\n    _prompt_clusters: clusterText || '(no clusters identified)'\n  }\n}];"
+        "jsCode": "// Build a compact text representation of alerts and clusters for the AI prompt.\n// Limits token usage by truncating long summaries.\n// Source names are included when available to support source-aware summary generation.\nconst ctx = $input.first().json;\n\nconst topAlerts = (ctx.alerts || []).slice(0, 20).map((a, i) => {\n  const sourceNote = a.source_name ? ` [source: ${a.source_name}]` : '';\n  return `${i + 1}. [importance=${a.importance_score}] ${a.headline}${a.summary_text ? ' — ' + a.summary_text.slice(0, 150) : ''}${sourceNote}`;\n}).join('\\n');\n\nconst clusterText = (ctx.clusters || []).map(c =>\n  `- ${c.cluster_label} (${c.alert_count} alerts, importance=${c.importance_score})${c.summary_text ? ': ' + c.summary_text.slice(0, 150) : ''}`\n).join('\\n');\n\nreturn [{\n  json: {\n    ...ctx,\n    _prompt_alerts: topAlerts,\n    _prompt_clusters: clusterText || '(no clusters identified)'\n  }\n}];"
       },
       "id": "d1e2f3a4-0002-0002-0002-000000000002",
       "name": "Build Prompt Context",
@@ -45,7 +45,8 @@
         },
         "options": {
           "temperature": 0.2,
-          "maxTokens": 1000
+          "maxTokens": 1000,
+          "responseFormat": "json_object"
         }
       },
       "id": "d1e2f3a4-0002-0002-0002-000000000003",

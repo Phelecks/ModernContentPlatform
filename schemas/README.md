@@ -15,6 +15,10 @@ Use these schemas to keep boundaries explicit between Vue, Pages Functions, n8n,
 
 All AI outputs must be valid JSON matching the relevant schema before any downstream consumer (n8n, D1, GitHub, or the frontend) uses them. Validation runs in n8n code nodes immediately after each AI call.
 
+Every JSON-output OpenAI node in the n8n workflows sets `responseFormat: "json_object"` (OpenAI `response_format: { type: "json_object" }`). This enforces valid JSON at the API level before validation runs, so the workflow never receives malformed non-JSON responses.
+
+The reusable validation logic for all AI output schemas is implemented in `app/src/utils/validateAiOutput.js`. It exports per-task `validate*` and `parseAndValidate*` functions that can be used in tests, scripts, and any JS consumer outside n8n.
+
 ### Schema list
 
 | File | AI step | Consumed by | Flow |

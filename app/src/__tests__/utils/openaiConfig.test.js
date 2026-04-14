@@ -20,6 +20,7 @@ import {
   PROVIDER_OPENAI,
   VALID_PROVIDERS,
   OPENAI_MODEL_DEFAULTS,
+  OPENAI_STRUCTURED_OUTPUT_TASKS,
   parseOpenAIConfig,
 } from '@/utils/openaiConfig.js'
 
@@ -54,6 +55,41 @@ describe('constants', () => {
     expect(OPENAI_MODEL_DEFAULTS.tomorrowOutlook).toBe('gpt-4o')
     expect(OPENAI_MODEL_DEFAULTS.videoScript).toBe('gpt-4o')
     expect(OPENAI_MODEL_DEFAULTS.youtubeMetadata).toBe('gpt-4o-mini')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Structured output tasks
+// ---------------------------------------------------------------------------
+
+describe('OPENAI_STRUCTURED_OUTPUT_TASKS', () => {
+  it('exports a config object for every JSON-output task', () => {
+    const expectedTasks = [
+      'alertClassification',
+      'timelineFormatting',
+      'dailySummary',
+      'expectationCheck',
+      'tomorrowOutlook',
+      'videoScript',
+      'youtubeMetadata',
+    ]
+    expectedTasks.forEach(task => {
+      expect(OPENAI_STRUCTURED_OUTPUT_TASKS).toHaveProperty(task)
+    })
+  })
+
+  it('sets responseFormat to "json_object" for all tasks', () => {
+    Object.values(OPENAI_STRUCTURED_OUTPUT_TASKS).forEach(cfg => {
+      expect(cfg.responseFormat).toBe('json_object')
+    })
+  })
+
+  it('does not include articleGeneration because it returns Markdown, not JSON', () => {
+    expect(OPENAI_STRUCTURED_OUTPUT_TASKS).not.toHaveProperty('articleGeneration')
+  })
+
+  it('covers exactly 7 tasks', () => {
+    expect(Object.keys(OPENAI_STRUCTURED_OUTPUT_TASKS)).toHaveLength(7)
   })
 })
 
