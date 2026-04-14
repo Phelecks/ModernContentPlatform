@@ -454,6 +454,59 @@ describe('validateAlertClassification', () => {
       expect(ok).toBe(true)
     }
   })
+
+  it('rejects a supporting_sources entry with a non-http source_url', () => {
+    const { ok, errors } = validateAlertClassification({
+      ...VALID_ALERT_CLASSIFICATION,
+      supporting_sources: [{ source_name: 'Test', source_url: 'ftp://example.com/data' }]
+    })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('source_url'))).toBe(true)
+  })
+
+  it('rejects a supporting_sources entry with a plain-string source_url', () => {
+    const { ok, errors } = validateAlertClassification({
+      ...VALID_ALERT_CLASSIFICATION,
+      supporting_sources: [{ source_name: 'Test', source_url: 'not-a-url' }]
+    })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('source_url'))).toBe(true)
+  })
+
+  it('accepts a supporting_sources entry with a valid https source_url', () => {
+    const { ok } = validateAlertClassification({
+      ...VALID_ALERT_CLASSIFICATION,
+      supporting_sources: [{ source_name: 'CoinGecko', source_url: 'https://api.coingecko.com' }]
+    })
+    expect(ok).toBe(true)
+  })
+
+  it('rejects a supporting_sources entry with an invalid source_type', () => {
+    const { ok, errors } = validateAlertClassification({
+      ...VALID_ALERT_CLASSIFICATION,
+      supporting_sources: [{ source_name: 'Test', source_type: 'bad-type' }]
+    })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('source_type'))).toBe(true)
+  })
+
+  it('accepts all valid source_type values', () => {
+    for (const type of ['rss', 'api', 'social', 'webhook', 'x_account', 'x_query']) {
+      const { ok } = validateAlertClassification({
+        ...VALID_ALERT_CLASSIFICATION,
+        supporting_sources: [{ source_name: 'Test', source_type: type }]
+      })
+      expect(ok).toBe(true)
+    }
+  })
+
+  it('accepts a supporting_sources entry with null source_type', () => {
+    const { ok } = validateAlertClassification({
+      ...VALID_ALERT_CLASSIFICATION,
+      supporting_sources: [{ source_name: 'Test', source_type: null }]
+    })
+    expect(ok).toBe(true)
+  })
 })
 
 // ---------------------------------------------------------------------------

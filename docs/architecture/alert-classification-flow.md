@@ -12,7 +12,7 @@ The flow is designed to:
 - return structured JSON that matches `schemas/ai/alert_classification.json`
 - propagate source trust context to calibrate confidence scores
 - extract supporting sources and compute source domain for rich attribution
-- fall back gracefully when the AI returns malformed output
+- fall back gracefully when the AI returns malformed or non-conforming output
 
 ---
 
@@ -84,6 +84,13 @@ classifier and instructs it to return a single JSON object matching the
 
 7. **`cluster_label`** — a short cluster label (max 100 chars) or `null`.
    Uses the existing cluster hint if provided by module 04.
+
+8. **`supporting_sources`** — an optional array (max 5) of additional sources
+   that corroborate or add context. Each entry carries `source_name` (required),
+   `source_url` (HTTP/HTTPS or null), `source_type` (canonical enum or null),
+   and `source_role` (`confirmation | data | commentary | official | null`).
+   The model is instructed to omit this field or set it to `null` when there
+   are no meaningful supporting sources.
 
 ### User prompt context
 

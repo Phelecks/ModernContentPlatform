@@ -166,6 +166,7 @@ export function validateAlertClassification(obj) {
     } else if (obj.supporting_sources.length > 5) {
       errors.push('supporting_sources must have at most 5 items.')
     } else {
+      const VALID_SS_SOURCE_TYPES = ['rss', 'api', 'social', 'webhook', 'x_account', 'x_query']
       const VALID_SS_ROLES = ['confirmation', 'data', 'commentary', 'official']
       obj.supporting_sources.forEach((ss, i) => {
         if (!ss || typeof ss !== 'object') {
@@ -174,6 +175,14 @@ export function validateAlertClassification(obj) {
         }
         if (typeof ss.source_name !== 'string' || ss.source_name.trim() === '') {
           errors.push(`supporting_sources[${i}].source_name must be a non-empty string.`)
+        }
+        if ('source_url' in ss && ss.source_url !== null) {
+          if (typeof ss.source_url !== 'string' || !/^https?:\/\//i.test(ss.source_url)) {
+            errors.push(`supporting_sources[${i}].source_url must be an HTTP or HTTPS URL or null.`)
+          }
+        }
+        if ('source_type' in ss && ss.source_type !== null && !VALID_SS_SOURCE_TYPES.includes(ss.source_type)) {
+          errors.push(`supporting_sources[${i}].source_type "${ss.source_type}" is not valid. Expected one of: ${VALID_SS_SOURCE_TYPES.join(', ')}, or null.`)
         }
         if ('source_role' in ss && ss.source_role !== null && !VALID_SS_ROLES.includes(ss.source_role)) {
           errors.push(`supporting_sources[${i}].source_role "${ss.source_role}" is not valid. Expected one of: ${VALID_SS_ROLES.join(', ')}, or null.`)
