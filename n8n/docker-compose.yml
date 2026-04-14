@@ -38,6 +38,11 @@ services:
 
       # -- AI ------------------------------------------------------------------
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      AI_PROVIDER: ${AI_PROVIDER:-openai}
+      OPENAI_MODEL_ALERT_CLASSIFICATION: ${OPENAI_MODEL_ALERT_CLASSIFICATION:-}
+      OPENAI_MODEL_DAILY_SUMMARY: ${OPENAI_MODEL_DAILY_SUMMARY:-}
+      OPENAI_MODEL_VIDEO_SCRIPT: ${OPENAI_MODEL_VIDEO_SCRIPT:-}
+      OPENAI_MODEL_YOUTUBE_METADATA: ${OPENAI_MODEL_YOUTUBE_METADATA:-}
 
       # -- Telegram ------------------------------------------------------------
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}

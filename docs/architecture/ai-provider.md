@@ -74,6 +74,28 @@ The `OPENAI_API_KEY` environment variable is passed to the n8n container via
 `n8n/docker-compose.yml`. n8n uses it to pre-populate credentials or make it
 available as a variable reference. Set it in `.env` (see `.env.example`).
 
+The following variables are also passed to the n8n container and are available
+as workflow variable references:
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `AI_PROVIDER` | No | `openai` | AI provider slug — only `openai` is supported in v1 |
+| `OPENAI_MODEL_ALERT_CLASSIFICATION` | No | `gpt-4o-mini` | Model for alert classification |
+| `OPENAI_MODEL_DAILY_SUMMARY` | No | `gpt-4o` | Model for daily summary generation |
+| `OPENAI_MODEL_VIDEO_SCRIPT` | No | `gpt-4o` | Model for video script generation |
+| `OPENAI_MODEL_YOUTUBE_METADATA` | No | `gpt-4o-mini` | Model for YouTube metadata generation |
+
+Omitting a model variable causes the platform to use the default for that task.
+Set a variable only when you want to override the default for a specific task.
+
+Config parsing and validation are handled by `app/src/utils/openaiConfig.js`,
+which exports `parseOpenAIConfig(env)`. It throws an `OPENAI_CONFIG_ERROR` when:
+- `OPENAI_API_KEY` is missing or empty
+- `AI_PROVIDER` is set to an unsupported value
+
+Per-task model overrides fall back to their defaults when absent or empty, so
+they are never a validation error.
+
 ---
 
 ## Structured output contract
