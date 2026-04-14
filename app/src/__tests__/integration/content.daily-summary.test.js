@@ -31,6 +31,9 @@ const AI_SUMMARY = JSON.parse(readContentFile('topics/ai/2025-01-15/summary.json
 const AI_ARTICLE = readContentFile('topics/ai/2025-01-15/article.md')
 const AI_METADATA = JSON.parse(readContentFile('topics/ai/2025-01-15/metadata.json'))
 
+const CRYPTO_SUMMARY = JSON.parse(readContentFile('topics/crypto/2025-01-15/summary.json'))
+const FINANCE_SUMMARY = JSON.parse(readContentFile('topics/finance/2025-01-15/summary.json'))
+
 // ---------------------------------------------------------------------------
 // Shared fixtures
 // ---------------------------------------------------------------------------
@@ -298,5 +301,134 @@ describe('Frontend state transition — placeholder → final summary', () => {
     const wrapper = mount(TopicDayPage, { global: { plugins: [router] } })
     await flushPromises()
     expect(wrapper.find('.alert-timeline').exists()).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Tests: example Crypto and Finance summary payloads
+// These validate that the committed example content files conform to the
+// full daily_summary schema (schemas/ai/daily_summary.json) and can serve
+// as reference payloads for the OpenAI daily summary generation flow.
+// ---------------------------------------------------------------------------
+
+describe('Example payload — crypto/2025-01-15 schema validation', () => {
+  it('summary.json has the required daily summary fields', () => {
+    expect(hasDailySummaryShape(CRYPTO_SUMMARY)).toBe(true)
+  })
+
+  it('summary.json topic_slug is crypto', () => {
+    expect(CRYPTO_SUMMARY.topic_slug).toBe('crypto')
+  })
+
+  it('summary.json date_key is in YYYY-MM-DD format', () => {
+    expect(CRYPTO_SUMMARY.date_key).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+
+  it('summary.json sentiment is bullish', () => {
+    expect(CRYPTO_SUMMARY.sentiment).toBe('bullish')
+  })
+
+  it('summary.json topic_score is between 0 and 100', () => {
+    expect(CRYPTO_SUMMARY.topic_score).toBeGreaterThanOrEqual(0)
+    expect(CRYPTO_SUMMARY.topic_score).toBeLessThanOrEqual(100)
+  })
+
+  it('summary.json key_events contains at least one event', () => {
+    expect(CRYPTO_SUMMARY.key_events.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('summary.json every key_event has required fields', () => {
+    for (const event of CRYPTO_SUMMARY.key_events) {
+      expect(hasKeyEventShape(event)).toBe(true)
+    }
+  })
+
+  it('summary.json key_events have section-level sources', () => {
+    for (const event of CRYPTO_SUMMARY.key_events) {
+      expect(Array.isArray(event.sources)).toBe(true)
+      expect(event.sources.length).toBeGreaterThanOrEqual(1)
+      for (const src of event.sources) {
+        expect(typeof src.source_name).toBe('string')
+        expect(src.source_name.length).toBeGreaterThan(0)
+      }
+    }
+  })
+
+  it('summary.json has an article-level sources array', () => {
+    expect(Array.isArray(CRYPTO_SUMMARY.sources)).toBe(true)
+    expect(CRYPTO_SUMMARY.sources.length).toBeGreaterThan(0)
+  })
+
+  it('summary.json sources contain valid source objects', () => {
+    for (const src of CRYPTO_SUMMARY.sources) {
+      expect(typeof src.source_name).toBe('string')
+      expect(src.source_name.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('summary.json has a source_confidence_note', () => {
+    expect(typeof CRYPTO_SUMMARY.source_confidence_note).toBe('string')
+    expect(CRYPTO_SUMMARY.source_confidence_note.length).toBeGreaterThan(0)
+  })
+})
+
+describe('Example payload — finance/2025-01-15 schema validation', () => {
+  it('summary.json has the required daily summary fields', () => {
+    expect(hasDailySummaryShape(FINANCE_SUMMARY)).toBe(true)
+  })
+
+  it('summary.json topic_slug is finance', () => {
+    expect(FINANCE_SUMMARY.topic_slug).toBe('finance')
+  })
+
+  it('summary.json date_key is in YYYY-MM-DD format', () => {
+    expect(FINANCE_SUMMARY.date_key).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+
+  it('summary.json sentiment is bearish', () => {
+    expect(FINANCE_SUMMARY.sentiment).toBe('bearish')
+  })
+
+  it('summary.json topic_score is between 0 and 100', () => {
+    expect(FINANCE_SUMMARY.topic_score).toBeGreaterThanOrEqual(0)
+    expect(FINANCE_SUMMARY.topic_score).toBeLessThanOrEqual(100)
+  })
+
+  it('summary.json key_events contains at least one event', () => {
+    expect(FINANCE_SUMMARY.key_events.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('summary.json every key_event has required fields', () => {
+    for (const event of FINANCE_SUMMARY.key_events) {
+      expect(hasKeyEventShape(event)).toBe(true)
+    }
+  })
+
+  it('summary.json key_events have section-level sources', () => {
+    for (const event of FINANCE_SUMMARY.key_events) {
+      expect(Array.isArray(event.sources)).toBe(true)
+      expect(event.sources.length).toBeGreaterThanOrEqual(1)
+      for (const src of event.sources) {
+        expect(typeof src.source_name).toBe('string')
+        expect(src.source_name.length).toBeGreaterThan(0)
+      }
+    }
+  })
+
+  it('summary.json has an article-level sources array', () => {
+    expect(Array.isArray(FINANCE_SUMMARY.sources)).toBe(true)
+    expect(FINANCE_SUMMARY.sources.length).toBeGreaterThan(0)
+  })
+
+  it('summary.json sources contain valid source objects', () => {
+    for (const src of FINANCE_SUMMARY.sources) {
+      expect(typeof src.source_name).toBe('string')
+      expect(src.source_name.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('summary.json has a source_confidence_note', () => {
+    expect(typeof FINANCE_SUMMARY.source_confidence_note).toBe('string')
+    expect(FINANCE_SUMMARY.source_confidence_note.length).toBeGreaterThan(0)
   })
 })
