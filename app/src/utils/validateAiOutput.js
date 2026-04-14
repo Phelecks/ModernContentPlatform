@@ -160,6 +160,28 @@ export function validateAlertClassification(obj) {
     errors.push('cluster_label must be a string of 1–100 characters or null.')
   }
 
+  if ('supporting_sources' in obj && obj.supporting_sources !== null) {
+    if (!Array.isArray(obj.supporting_sources)) {
+      errors.push('supporting_sources must be an array or null when present.')
+    } else if (obj.supporting_sources.length > 5) {
+      errors.push('supporting_sources must have at most 5 items.')
+    } else {
+      const VALID_SS_ROLES = ['confirmation', 'data', 'commentary', 'official']
+      obj.supporting_sources.forEach((ss, i) => {
+        if (!ss || typeof ss !== 'object') {
+          errors.push(`supporting_sources[${i}] must be an object.`)
+          return
+        }
+        if (typeof ss.source_name !== 'string' || ss.source_name.trim() === '') {
+          errors.push(`supporting_sources[${i}].source_name must be a non-empty string.`)
+        }
+        if ('source_role' in ss && ss.source_role !== null && !VALID_SS_ROLES.includes(ss.source_role)) {
+          errors.push(`supporting_sources[${i}].source_role "${ss.source_role}" is not valid. Expected one of: ${VALID_SS_ROLES.join(', ')}, or null.`)
+        }
+      })
+    }
+  }
+
   return { ok: errors.length === 0, errors }
 }
 
