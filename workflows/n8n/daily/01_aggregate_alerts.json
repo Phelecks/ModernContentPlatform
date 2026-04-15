@@ -33,7 +33,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ {\n  sql: \"SELECT id, headline, summary_text, source_url, source_name, importance_score, severity_score, cluster_id, event_at FROM alerts WHERE topic_slug = ? AND date_key = ? AND status = 'active' ORDER BY importance_score DESC, event_at DESC LIMIT 100\",\n  params: [$json.topic_slug, $json.date_key]\n} }}",
+        "jsonBody": "={{ {\n  sql: \"SELECT id, headline, summary_text, source_url, source_name, source_type, trust_tier, trust_score, importance_score, severity_score, cluster_id, event_at FROM alerts WHERE topic_slug = ? AND date_key = ? AND status = 'active' ORDER BY importance_score DESC, event_at DESC LIMIT 100\",\n  params: [$json.topic_slug, $json.date_key]\n} }}",
         "options": { "timeout": 15000 }
       },
       "id": "d1e2f3a4-0001-0001-0001-000000000003",
