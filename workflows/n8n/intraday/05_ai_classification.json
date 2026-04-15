@@ -15,14 +15,28 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Expand the items array into individual items for per-item AI classification.\nconst input = $input.first().json;\nconst items = Array.isArray(input.items) ? input.items : [];\nreturn items.map(item => ({ json: item }));"
+        "jsCode": "// Pre-filter items before sending to AI to control cost.\n// Drops items that carry too little content to classify and caps the batch\n// at AI_MAX_ITEMS_PER_BATCH (default 30, from config/openai-cost-controls.json).\nconst input = $input.first().json;\nconst items = Array.isArray(input.items) ? input.items : [];\n\nconst MAX_ITEMS = Number($vars.AI_MAX_ITEMS_PER_BATCH) > 0\n  ? Number($vars.AI_MAX_ITEMS_PER_BATCH)\n  : 30;\nconst MIN_CONTENT_LENGTH = 10;\n\n// Drop items that have neither a usable headline nor a body.\nconst filtered = items.filter(item => {\n  const headlineLen = (typeof item.headline === 'string') ? item.headline.trim().length : 0;\n  const bodyLen = (typeof item.body === 'string') ? item.body.trim().length : 0;\n  return (headlineLen + bodyLen) >= MIN_CONTENT_LENGTH;\n});\n\n// Cap at the maximum batch size, keeping the first MAX_ITEMS entries.\n// Items arrive in descending priority order from upstream clustering.\nconst capped = filtered.slice(0, MAX_ITEMS);\n\nreturn [{\n  json: {\n    ...input,\n    items: capped,\n    _prefilter_in: items.length,\n    _prefilter_out: capped.length\n  }\n}];"
+      },
+      "id": "f6a7b8c9-0006-0006-0006-000000000006",
+      "name": "Pre-filter Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Expand the pre-filtered items array into individual items for per-item AI classification.\nconst input = $input.first().json;\nconst items = Array.isArray(input.items) ? input.items : [];\nreturn items.map(item => ({ json: item }));"
       },
       "id": "f6a7b8c9-0006-0006-0006-000000000002",
       "name": "Expand Items",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        460,
+        680,
         300
       ]
     },
@@ -54,7 +68,7 @@
       "type": "n8n-nodes-base.openAi",
       "typeVersion": 1,
       "position": [
-        680,
+        900,
         300
       ],
       "credentials": {
@@ -77,7 +91,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        900,
+        1120,
         300
       ]
     },
@@ -91,13 +105,24 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1120,
+        1340,
         300
       ]
     }
   ],
   "connections": {
     "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Pre-filter Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pre-filter Items": {
       "main": [
         [
           {

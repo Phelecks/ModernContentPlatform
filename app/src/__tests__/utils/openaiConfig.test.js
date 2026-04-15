@@ -21,6 +21,7 @@ import {
   VALID_PROVIDERS,
   OPENAI_MODEL_DEFAULTS,
   OPENAI_STRUCTURED_OUTPUT_TASKS,
+  OPENAI_COST_CONTROLS,
   parseOpenAIConfig,
 } from '@/utils/openaiConfig.js'
 
@@ -90,6 +91,93 @@ describe('OPENAI_STRUCTURED_OUTPUT_TASKS', () => {
 
   it('covers exactly 7 tasks', () => {
     expect(Object.keys(OPENAI_STRUCTURED_OUTPUT_TASKS)).toHaveLength(7)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Cost controls
+// ---------------------------------------------------------------------------
+
+describe('OPENAI_COST_CONTROLS', () => {
+  it('exports a maxTokens object with an entry for all 8 tasks', () => {
+    const expectedTasks = [
+      'alertClassification',
+      'timelineFormatting',
+      'dailySummary',
+      'articleGeneration',
+      'expectationCheck',
+      'tomorrowOutlook',
+      'videoScript',
+      'youtubeMetadata',
+    ]
+    expectedTasks.forEach(task => {
+      expect(OPENAI_COST_CONTROLS.maxTokens).toHaveProperty(task)
+    })
+  })
+
+  it('all maxTokens values are positive integers', () => {
+    Object.entries(OPENAI_COST_CONTROLS.maxTokens).forEach(([task, limit]) => {
+      expect(typeof limit).toBe('number')
+      expect(Number.isInteger(limit)).toBe(true)
+      expect(limit).toBeGreaterThan(0)
+    })
+  })
+
+  it('fast-tier tasks have lower maxTokens than standard-tier tasks', () => {
+    expect(OPENAI_COST_CONTROLS.maxTokens.alertClassification)
+      .toBeLessThanOrEqual(OPENAI_COST_CONTROLS.maxTokens.dailySummary)
+    expect(OPENAI_COST_CONTROLS.maxTokens.youtubeMetadata)
+      .toBeLessThanOrEqual(OPENAI_COST_CONTROLS.maxTokens.articleGeneration)
+  })
+
+  it('exports a preFilter object with maxItemsPerBatch and minContentLength', () => {
+    expect(OPENAI_COST_CONTROLS.preFilter).toHaveProperty('maxItemsPerBatch')
+    expect(OPENAI_COST_CONTROLS.preFilter).toHaveProperty('minContentLength')
+  })
+
+  it('maxItemsPerBatch is a positive integer', () => {
+    const { maxItemsPerBatch } = OPENAI_COST_CONTROLS.preFilter
+    expect(typeof maxItemsPerBatch).toBe('number')
+    expect(Number.isInteger(maxItemsPerBatch)).toBe(true)
+    expect(maxItemsPerBatch).toBeGreaterThan(0)
+  })
+
+  it('minContentLength is a non-negative integer', () => {
+    const { minContentLength } = OPENAI_COST_CONTROLS.preFilter
+    expect(typeof minContentLength).toBe('number')
+    expect(Number.isInteger(minContentLength)).toBe(true)
+    expect(minContentLength).toBeGreaterThanOrEqual(0)
+  })
+
+  it('exports maxRetries as a non-negative integer', () => {
+    expect(typeof OPENAI_COST_CONTROLS.maxRetries).toBe('number')
+    expect(Number.isInteger(OPENAI_COST_CONTROLS.maxRetries)).toBe(true)
+    expect(OPENAI_COST_CONTROLS.maxRetries).toBeGreaterThanOrEqual(0)
+  })
+
+  it('exports an outputLimits object', () => {
+    expect(OPENAI_COST_CONTROLS).toHaveProperty('outputLimits')
+    expect(typeof OPENAI_COST_CONTROLS.outputLimits).toBe('object')
+  })
+
+  it('all outputLimits values are positive integers', () => {
+    Object.entries(OPENAI_COST_CONTROLS.outputLimits).forEach(([key, limit]) => {
+      expect(typeof limit).toBe('number')
+      expect(Number.isInteger(limit)).toBe(true)
+      expect(limit).toBeGreaterThan(0)
+    })
+  })
+
+  it('outputLimits.headline matches the classification schema max (250)', () => {
+    expect(OPENAI_COST_CONTROLS.outputLimits.headline).toBe(250)
+  })
+
+  it('outputLimits.summaryText matches the classification schema max (500)', () => {
+    expect(OPENAI_COST_CONTROLS.outputLimits.summaryText).toBe(500)
+  })
+
+  it('outputLimits.youtubeTitle matches the YouTube metadata schema max (100)', () => {
+    expect(OPENAI_COST_CONTROLS.outputLimits.youtubeTitle).toBe(100)
   })
 })
 

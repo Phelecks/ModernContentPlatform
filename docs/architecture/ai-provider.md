@@ -179,8 +179,16 @@ which sends a Telegram alert to the `FAILURE_ALERT_CHANNEL` chat.
   video script). YouTube metadata also runs once per day but on the fast tier.
   The total daily token spend per topic is bounded by the `maxTokens` cap in each
   node (400–1 500 tokens per call).
+- The intraday `05_ai_classification.json` workflow applies a **pre-filter** step
+  before any items reach the AI node. Items with too little content (headline +
+  body under 10 chars) are dropped, and the batch is capped at `AI_MAX_ITEMS_PER_BATCH`
+  (default 30) items per execution. This is the primary lever for controlling
+  intraday API call volume.
 - Both models can be changed to any OpenAI Chat Completions model that supports
   the same JSON output contract by updating the n8n variables.
+
+For the full cost control strategy, per-task guardrails, and monitoring queries,
+see [OpenAI Cost Controls and Usage Guardrails](./openai-cost-controls.md).
 
 ---
 
