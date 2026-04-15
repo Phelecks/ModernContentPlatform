@@ -251,7 +251,7 @@ Fixture: `fixtures/youtube-metadata/crypto-2025-01-15.json`
 
 Key characteristics:
 - Title leads with Bitcoin price milestone and record ETF inflows
-- Description bullets all three key events covered in the video
+- Description bullets the key events and watchpoints covered in the video
 - Tags mix broad terms (`"bitcoin"`, `"crypto"`) with specific terms
   (`"spot bitcoin etf"`, `"btc $50k"`)
 - Description closes with a subscribe CTA
@@ -265,7 +265,7 @@ Fixture: `fixtures/youtube-metadata/finance-2025-01-15.json`
 
 Key characteristics:
 - Title leads with the FOMC minutes message and the S&P decline
-- Description bullets the four key market moves covered in the video
+- Description bullets the key market moves covered in the video
 - Tags combine policy terms (`"fomc minutes"`, `"federal reserve"`) with
   market terms (`"sp500"`, `"bond yields"`)
 - Description closes with a subscribe CTA referencing the daily briefing cadence
