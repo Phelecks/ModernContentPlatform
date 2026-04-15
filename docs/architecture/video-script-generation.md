@@ -154,8 +154,10 @@ The **Parse and Validate Video Script** Code node (module 06, node 3):
    - `call_to_action` → `.slice(0, 200)` or null
 
 The same validation logic is available in `app/src/utils/validateAiOutput.js`
-as `validateVideoScript()` and `parseAndValidateVideoScript()` for use in
-tests and local tooling.
+as `validateVideoScript()` and `parseAndValidateVideoScript()` for basic
+structural validation and parsing. The workflow node above remains the source
+of truth for the full normalisation/clamping behaviour described in this
+section.
 
 ---
 
@@ -189,14 +191,22 @@ The `video.json` file contains:
 
 ```json
 {
-  "video_script": { ... },
+  "topic_slug": "crypto",
+  "date_key": "2025-01-15",
+  "title": "Crypto Daily — January 15, 2025: ...",
+  "video_id": null,
+  "script": { ... },
   "youtube_metadata": { ... },
-  "youtube_video_id": null
+  "youtube_video_id": null,
+  "generated_at": "2025-01-15T23:30:00.000Z"
 }
 ```
 
-`youtube_video_id` is null at publish time. A future YouTube upload module can
-update this field after the video is uploaded without changing the script data.
+Key field notes:
+- `script` — the `video_script` object produced by module 06
+- `title` — the YouTube title from `youtube_metadata.title` (null before module 07 runs)
+- `video_id` and `youtube_video_id` — both null at publish time; a future YouTube upload module sets these after the video is uploaded
+- `generated_at` — server-side ISO timestamp set by module 09 at write time
 
 ---
 
