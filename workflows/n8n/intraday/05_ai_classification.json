@@ -15,14 +15,28 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Expand the items array into individual items for per-item AI classification.\nconst input = $input.first().json;\nconst items = Array.isArray(input.items) ? input.items : [];\nreturn items.map(item => ({ json: item }));"
+        "jsCode": "// Pre-filter items before sending to AI to control cost.\n// Drops items that carry too little content to classify and caps the batch\n// at AI_MAX_ITEMS_PER_BATCH (default 30, from config/openai-cost-controls.json).\nconst input = $input.first().json;\nconst items = Array.isArray(input.items) ? input.items : [];\n\nconst MAX_ITEMS = Number($vars.AI_MAX_ITEMS_PER_BATCH) > 0\n  ? Number($vars.AI_MAX_ITEMS_PER_BATCH)\n  : 30;\nconst MIN_CONTENT_LENGTH = 10;\n\nfunction getContentLength(item) {\n  const headlineLen = (typeof item.headline === 'string') ? item.headline.trim().length : 0;\n  const bodyLen = (typeof item.body === 'string') ? item.body.trim().length : 0;\n  return headlineLen + bodyLen;\n}\n\nfunction getPublishedAtMs(item) {\n  const raw = item.published_at || item.publishedAt || item.created_at || item.createdAt;\n  const value = Date.parse(raw);\n  return Number.isFinite(value) ? value : 0;\n}\n\nfunction getTrustTier(item) {\n  const raw = item.source_trust_tier\n    ?? item.trust_tier\n    ?? item.source?.trust_tier\n    ?? item.source?.trustTier;\n\n  if (typeof raw === 'number' && Number.isFinite(raw)) {\n    return raw;\n  }\n\n  if (typeof raw === 'string') {\n    const normalized = raw.trim().toLowerCase();\n    if (normalized === 'high') return 3;\n    if (normalized === 'medium') return 2;\n    if (normalized === 'low') return 1;\n\n    const numeric = Number(normalized);\n    if (Number.isFinite(numeric)) {\n      return numeric;\n    }\n  }\n\n  return 0;\n}\n\n// Drop items that have neither a usable headline nor a body.\nconst filtered = items.filter(item => getContentLength(item) >= MIN_CONTENT_LENGTH);\n\n// Apply a deterministic usefulness ordering before capping the batch.\n// Prefer newer items first, then higher-trust sources, then richer content.\nconst sorted = [...filtered].sort((a, b) => {\n  const publishedAtDiff = getPublishedAtMs(b) - getPublishedAtMs(a);\n  if (publishedAtDiff !== 0) {\n    return publishedAtDiff;\n  }\n\n  const trustTierDiff = getTrustTier(b) - getTrustTier(a);\n  if (trustTierDiff !== 0) {\n    return trustTierDiff;\n  }\n\n  return getContentLength(b) - getContentLength(a);\n});\n\nconst capped = sorted.slice(0, MAX_ITEMS);\n\nreturn [{\n  json: {\n    ...input,\n    items: capped,\n    _prefilter_in: items.length,\n    _prefilter_out: capped.length\n  }\n}];"
+      },
+      "id": "f6a7b8c9-0006-0006-0006-000000000006",
+      "name": "Pre-filter Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Expand the pre-filtered items array into individual items for per-item AI classification.\nconst input = $input.first().json;\nconst items = Array.isArray(input.items) ? input.items : [];\nreturn items.map(item => ({ json: item }));"
       },
       "id": "f6a7b8c9-0006-0006-0006-000000000002",
       "name": "Expand Items",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        460,
+        680,
         300
       ]
     },
@@ -54,7 +68,7 @@
       "type": "n8n-nodes-base.openAi",
       "typeVersion": 1,
       "position": [
-        680,
+        900,
         300
       ],
       "credentials": {
@@ -77,7 +91,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        900,
+        1120,
         300
       ]
     },
@@ -91,13 +105,24 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1120,
+        1340,
         300
       ]
     }
   ],
   "connections": {
     "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Pre-filter Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pre-filter Items": {
       "main": [
         [
           {

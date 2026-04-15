@@ -1,0 +1,52 @@
+{
+  "_comment": "OpenAI cost controls and usage guardrails for Modern Content Platform v1. Canonical reference: app/src/utils/openaiConfig.js OPENAI_COST_CONTROLS. See docs/architecture/openai-cost-controls.md for the full guide.",
+
+  "preFilter": {
+    "_comment": "Applied before items reach the AI classification step. Set AI_MAX_ITEMS_PER_BATCH in n8n variables to override maxItemsPerBatch at runtime.",
+    "maxItemsPerBatch": 30,
+    "minContentLength": 10
+  },
+
+  "maxRetries": 2,
+
+  "maxTokens": {
+    "_comment": "Hard cap on OpenAI completion tokens per call. Maps to maxTokens in each n8n OpenAI node.",
+    "alertClassification": 400,
+    "timelineFormatting": 300,
+    "dailySummary": 1000,
+    "articleGeneration": 1500,
+    "expectationCheck": 700,
+    "tomorrowOutlook": 700,
+    "videoScript": 1500,
+    "youtubeMetadata": 800
+  },
+
+  "dailyCallBudgets": {
+    "_comment": "Informational soft limits on AI calls per topic per day. Not enforced automatically — use these as alerting thresholds in your monitoring dashboard.",
+    "alertClassification": 200,
+    "dailySummary": 10,
+    "articleGeneration": 10,
+    "expectationCheck": 10,
+    "tomorrowOutlook": 10,
+    "videoScript": 10,
+    "youtubeMetadata": 10
+  },
+
+  "outputLimits": {
+    "_comment": "Maximum character lengths enforced by the validation Code node after each AI call.",
+    "headline": 250,
+    "summaryText": 500,
+    "alertReason": 200,
+    "clusterLabel": 100,
+    "sourceConfidenceNote": 300,
+    "overviewText": 1000,
+    "marketContext": 500,
+    "articleMarkdown": 8000,
+    "outlookSummary": 600,
+    "videoIntro": 500,
+    "videoOutro": 400,
+    "videoSegmentScript": 1500,
+    "youtubeTitle": 100,
+    "youtubeDescription": 5000
+  }
+}

@@ -32,6 +32,7 @@
  * All functions are side-effect-free and do not depend on any runtime globals.
  *
  * See docs/architecture/ai-provider.md for the full AI provider guide.
+ * See docs/architecture/openai-cost-controls.md for cost controls and guardrails.
  * See app/src/utils/validateAiOutput.js for per-task output validation.
  */
 
@@ -107,6 +108,117 @@ export const OPENAI_STRUCTURED_OUTPUT_TASKS = {
   videoScript: { responseFormat: 'json_object' },
   /** YouTube metadata generation — must return JSON matching youtube_metadata schema. */
   youtubeMetadata: { responseFormat: 'json_object' },
+}
+
+// ---------------------------------------------------------------------------
+// Cost controls and usage guardrails
+// ---------------------------------------------------------------------------
+
+/**
+ * Per-task cost controls and usage guardrails.
+ *
+ * These are the canonical v1 defaults for all OpenAI cost controls across
+ * the platform.  The same values are mirrored in config/openai-cost-controls.json
+ * for n8n workflow consumption.
+ *
+ * maxTokens
+ *   Hard cap on the number of completion tokens the OpenAI API may return per
+ *   call.  Maps to the `max_tokens` / `maxTokens` parameter in the API.
+ *   Setting this prevents runaway output that inflates cost unexpectedly.
+ *
+ * preFilter
+ *   Controls applied *before* items are sent to AI, reducing the number of
+ *   API calls made.  Applied inside the intraday pre-filter Code node.
+ *   - maxItemsPerBatch: maximum number of items that may be sent to AI in
+ *     one workflow execution.  Excess items are dropped before the AI call.
+ *   - minContentLength: items whose combined headline + body character count
+ *     is shorter than this threshold are dropped (nothing meaningful to classify).
+ *
+ * maxRetries
+ *   Maximum retry attempts on transient AI failures before the workflow
+ *   gives up and fires the failure notifier.  Maps to `maxTries` in n8n
+ *   OpenAI nodes.
+ *
+ * outputLimits
+ *   Maximum character lengths enforced by the validation Code nodes after
+ *   each AI call.  These bounds are already applied by the workflows; this
+ *   object documents them as a single canonical reference so that new tasks
+ *   can be added consistently.
+ */
+export const OPENAI_COST_CONTROLS = {
+  /**
+   * Maximum completion tokens per AI call, by task.
+   * Keeping these tight reduces cost without sacrificing quality when the
+   * prompt schema defines bounded output lengths.
+   */
+  maxTokens: {
+    /** High-volume intraday classification.  Short structured JSON output. */
+    alertClassification: 400,
+    /** Per-alert timeline entry formatting.  Short structured JSON output. */
+    timelineFormatting: 300,
+    /** Daily summary JSON.  Medium-length structured output. */
+    dailySummary: 1000,
+    /** Long-form Markdown article.  Longest editorial output. */
+    articleGeneration: 1500,
+    /** Expectation check JSON.  Moderate structured output. */
+    expectationCheck: 700,
+    /** Tomorrow outlook JSON.  Moderate structured output. */
+    tomorrowOutlook: 700,
+    /** Video script JSON with multiple segments.  Longest structured output. */
+    videoScript: 1500,
+    /** YouTube metadata JSON.  Short structured output. */
+    youtubeMetadata: 800,
+  },
+
+  /**
+   * Pre-filter settings applied before items reach the AI classification step.
+   * Reduces unnecessary API calls by dropping items that carry no useful
+   * signal and by capping the batch size per workflow execution.
+   */
+  preFilter: {
+    /**
+     * Maximum items sent to AI per intraday batch execution.
+     * Items beyond this cap are dropped before the Classify node.
+     * Overridable via the n8n variable AI_MAX_ITEMS_PER_BATCH.
+     */
+    maxItemsPerBatch: 30,
+    /**
+     * Combined minimum character length for an item's headline + body.
+     * Items whose headline and body together have fewer than this many
+     * characters are dropped — they carry too little text to classify.
+     */
+    minContentLength: 10,
+  },
+
+  /**
+   * Maximum retry attempts per AI node before the workflow fails.
+   * Retries cover transient rate-limit (429) and network errors.
+   * Set to 2 (not 3) so that three total attempts (1 + 2 retries) are made,
+   * matching the current n8n maxTries: 3 setting in all AI nodes.
+   */
+  maxRetries: 2,
+
+  /**
+   * Maximum output string lengths enforced by validation Code nodes after
+   * each AI call.  These match the slice() calls already in the workflows and
+   * serve as the canonical reference for any future tasks.
+   */
+  outputLimits: {
+    headline: 250,
+    summaryText: 500,
+    alertReason: 200,
+    clusterLabel: 100,
+    sourceConfidenceNote: 300,
+    overviewText: 1000,
+    marketContext: 500,
+    articleMarkdown: 8000,
+    outlookSummary: 600,
+    videoIntro: 500,
+    videoOutro: 400,
+    videoSegmentScript: 1500,
+    youtubeTitle: 100,
+    youtubeDescription: 5000,
+  },
 }
 
 // ---------------------------------------------------------------------------
