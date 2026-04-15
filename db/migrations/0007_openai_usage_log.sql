@@ -7,10 +7,12 @@
 -- ============================================================
 -- openai_usage_log
 -- One row per OpenAI API call made by an n8n workflow node.
--- Written by n8n workflows (after each AI call) via the
--- POST /api/internal/workflow-logs endpoint or a dedicated
--- Code node, using metadata_json on workflow_logs as the
--- carrier until a dedicated endpoint is wired.
+-- Intended to be written by n8n workflows (after each AI call)
+-- via either a dedicated write endpoint for openai_usage_log
+-- or a direct D1 insert from n8n. The existing
+-- POST /api/internal/workflow-logs endpoint writes workflow_logs,
+-- not openai_usage_log. A dedicated write endpoint is required
+-- before this table receives data.
 --
 -- Used for:
 --   - monitoring token spend per task and model

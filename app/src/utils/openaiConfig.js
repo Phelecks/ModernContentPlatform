@@ -131,8 +131,8 @@ export const OPENAI_STRUCTURED_OUTPUT_TASKS = {
  *   API calls made.  Applied inside the intraday pre-filter Code node.
  *   - maxItemsPerBatch: maximum number of items that may be sent to AI in
  *     one workflow execution.  Excess items are dropped before the AI call.
- *   - minHeadlineOrBodyLength: items whose headline AND body are both shorter
- *     than this character count are dropped (nothing meaningful to classify).
+ *   - minContentLength: items whose combined headline + body character count
+ *     is shorter than this threshold are dropped (nothing meaningful to classify).
  *
  * maxRetries
  *   Maximum retry attempts on transient AI failures before the workflow

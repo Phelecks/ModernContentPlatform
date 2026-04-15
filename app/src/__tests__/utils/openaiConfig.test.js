@@ -16,6 +16,8 @@
  *   - OPENAI_MODEL_DEFAULTS — correct default values exported for all 8 tasks
  */
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import {
   PROVIDER_OPENAI,
   VALID_PROVIDERS,
@@ -24,6 +26,15 @@ import {
   OPENAI_COST_CONTROLS,
   parseOpenAIConfig,
 } from '@/utils/openaiConfig.js'
+
+// ---------------------------------------------------------------------------
+// Helper — load the n8n-readable JSON mirror from config/
+// ---------------------------------------------------------------------------
+
+const REPO_ROOT = join(process.cwd(), '..')
+const costControlsJson = JSON.parse(
+  readFileSync(join(REPO_ROOT, 'config', 'openai-cost-controls.json'), 'utf8')
+)
 
 // ---------------------------------------------------------------------------
 // Minimal valid env fixture
@@ -178,6 +189,46 @@ describe('OPENAI_COST_CONTROLS', () => {
 
   it('outputLimits.youtubeTitle matches the YouTube metadata schema max (100)', () => {
     expect(OPENAI_COST_CONTROLS.outputLimits.youtubeTitle).toBe(100)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// config/openai-cost-controls.json parity check
+// ---------------------------------------------------------------------------
+
+describe('config/openai-cost-controls.json parity with OPENAI_COST_CONTROLS', () => {
+  it('JSON file preFilter.maxItemsPerBatch matches JS export', () => {
+    expect(costControlsJson.preFilter.maxItemsPerBatch)
+      .toBe(OPENAI_COST_CONTROLS.preFilter.maxItemsPerBatch)
+  })
+
+  it('JSON file preFilter.minContentLength matches JS export', () => {
+    expect(costControlsJson.preFilter.minContentLength)
+      .toBe(OPENAI_COST_CONTROLS.preFilter.minContentLength)
+  })
+
+  it('JSON file maxRetries matches JS export', () => {
+    expect(costControlsJson.maxRetries).toBe(OPENAI_COST_CONTROLS.maxRetries)
+  })
+
+  it('JSON file maxTokens values all match JS export', () => {
+    const jsTokens = OPENAI_COST_CONTROLS.maxTokens
+    const jsonTokens = { ...costControlsJson.maxTokens }
+    delete jsonTokens._comment
+    expect(Object.keys(jsonTokens).sort()).toEqual(Object.keys(jsTokens).sort())
+    Object.keys(jsTokens).forEach(task => {
+      expect(jsonTokens[task]).toBe(jsTokens[task])
+    })
+  })
+
+  it('JSON file outputLimits values all match JS export', () => {
+    const jsLimits = OPENAI_COST_CONTROLS.outputLimits
+    const jsonLimits = { ...costControlsJson.outputLimits }
+    delete jsonLimits._comment
+    expect(Object.keys(jsonLimits).sort()).toEqual(Object.keys(jsLimits).sort())
+    Object.keys(jsLimits).forEach(key => {
+      expect(jsonLimits[key]).toBe(jsLimits[key])
+    })
   })
 })
 

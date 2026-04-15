@@ -128,8 +128,15 @@ The canonical per-field limits are documented in `OPENAI_COST_CONTROLS.outputLim
 
 ### openai_usage_log table
 
-The D1 migration `0007_openai_usage_log.sql` creates an `openai_usage_log` table
-for per-call usage tracking:
+> **Status: schema only — not yet wired.** The `0007_openai_usage_log.sql`
+> migration creates the table structure, but no workflow step or Pages Function
+> endpoint currently writes to `openai_usage_log`. The existing
+> `POST /api/internal/workflow-logs` endpoint writes to `workflow_logs`, not
+> this table. A dedicated write endpoint (e.g.
+> `POST /api/internal/openai-usage-log`) is required before the monitoring
+> queries below will return data.
+
+Once wired, the `openai_usage_log` table provides per-call usage tracking:
 
 ```sql
 SELECT task, model, SUM(total_tokens) AS total_tokens, COUNT(*) AS call_count
