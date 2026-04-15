@@ -15,6 +15,7 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import TopicDayPage from '@/pages/TopicDayPage.vue'
+import { validateDailySummary, VALID_SOURCE_ROLES_SUMMARY } from '@/utils/validateAiOutput.js'
 
 // ---------------------------------------------------------------------------
 // Load generated content files from the repository content directory.
@@ -30,6 +31,9 @@ function readContentFile(relPath) {
 const AI_SUMMARY = JSON.parse(readContentFile('topics/ai/2025-01-15/summary.json'))
 const AI_ARTICLE = readContentFile('topics/ai/2025-01-15/article.md')
 const AI_METADATA = JSON.parse(readContentFile('topics/ai/2025-01-15/metadata.json'))
+
+const CRYPTO_SUMMARY = JSON.parse(readContentFile('topics/crypto/2025-01-15/summary.json'))
+const FINANCE_SUMMARY = JSON.parse(readContentFile('topics/finance/2025-01-15/summary.json'))
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
@@ -298,5 +302,130 @@ describe('Frontend state transition — placeholder → final summary', () => {
     const wrapper = mount(TopicDayPage, { global: { plugins: [router] } })
     await flushPromises()
     expect(wrapper.find('.alert-timeline').exists()).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Tests: example Crypto and Finance summary payloads
+//
+// Validates that the committed content/topics/ example payloads conform to the
+// AI output fields defined in schemas/ai/daily_summary.json by calling the
+// same validateDailySummary() helper used by the n8n parse-and-validate step.
+// The published content files also carry extra envelope fields (topic_slug,
+// date_key, generated_at) that are intentionally outside the AI schema; those
+// are checked separately below.
+// ---------------------------------------------------------------------------
+
+describe('Example payload — crypto/2025-01-15 schema validation', () => {
+  it('AI output fields pass validateDailySummary()', () => {
+    const { ok, errors } = validateDailySummary(CRYPTO_SUMMARY)
+    expect(errors).toEqual([])
+    expect(ok).toBe(true)
+  })
+
+  it('summary.json topic_slug is crypto', () => {
+    expect(CRYPTO_SUMMARY.topic_slug).toBe('crypto')
+  })
+
+  it('summary.json date_key is in YYYY-MM-DD format', () => {
+    expect(CRYPTO_SUMMARY.date_key).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+
+  it('summary.json sentiment is bullish', () => {
+    expect(CRYPTO_SUMMARY.sentiment).toBe('bullish')
+  })
+
+  it('summary.json key_events have section-level sources with valid shape', () => {
+    for (const event of CRYPTO_SUMMARY.key_events) {
+      expect(Array.isArray(event.sources)).toBe(true)
+      expect(event.sources.length).toBeGreaterThanOrEqual(1)
+      for (const src of event.sources) {
+        expect(typeof src.source_name).toBe('string')
+        expect(src.source_name.length).toBeGreaterThan(0)
+        if (src.source_url !== null && src.source_url !== undefined) {
+          expect(src.source_url).toMatch(/^https?:\/\//)
+        }
+        if (src.source_role !== null && src.source_role !== undefined) {
+          expect(VALID_SOURCE_ROLES_SUMMARY).toContain(src.source_role)
+        }
+      }
+    }
+  })
+
+  it('summary.json has an article-level sources array with valid shape', () => {
+    expect(Array.isArray(CRYPTO_SUMMARY.sources)).toBe(true)
+    expect(CRYPTO_SUMMARY.sources.length).toBeGreaterThan(0)
+    for (const src of CRYPTO_SUMMARY.sources) {
+      expect(typeof src.source_name).toBe('string')
+      expect(src.source_name.length).toBeGreaterThan(0)
+      if (src.source_url !== null && src.source_url !== undefined) {
+        expect(src.source_url).toMatch(/^https?:\/\//)
+      }
+      if (src.source_role !== null && src.source_role !== undefined) {
+        expect(VALID_SOURCE_ROLES_SUMMARY).toContain(src.source_role)
+      }
+    }
+  })
+
+  it('summary.json has a source_confidence_note', () => {
+    expect(typeof CRYPTO_SUMMARY.source_confidence_note).toBe('string')
+    expect(CRYPTO_SUMMARY.source_confidence_note.length).toBeGreaterThan(0)
+  })
+})
+
+describe('Example payload — finance/2025-01-15 schema validation', () => {
+  it('AI output fields pass validateDailySummary()', () => {
+    const { ok, errors } = validateDailySummary(FINANCE_SUMMARY)
+    expect(errors).toEqual([])
+    expect(ok).toBe(true)
+  })
+
+  it('summary.json topic_slug is finance', () => {
+    expect(FINANCE_SUMMARY.topic_slug).toBe('finance')
+  })
+
+  it('summary.json date_key is in YYYY-MM-DD format', () => {
+    expect(FINANCE_SUMMARY.date_key).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+
+  it('summary.json sentiment is bearish', () => {
+    expect(FINANCE_SUMMARY.sentiment).toBe('bearish')
+  })
+
+  it('summary.json key_events have section-level sources with valid shape', () => {
+    for (const event of FINANCE_SUMMARY.key_events) {
+      expect(Array.isArray(event.sources)).toBe(true)
+      expect(event.sources.length).toBeGreaterThanOrEqual(1)
+      for (const src of event.sources) {
+        expect(typeof src.source_name).toBe('string')
+        expect(src.source_name.length).toBeGreaterThan(0)
+        if (src.source_url !== null && src.source_url !== undefined) {
+          expect(src.source_url).toMatch(/^https?:\/\//)
+        }
+        if (src.source_role !== null && src.source_role !== undefined) {
+          expect(VALID_SOURCE_ROLES_SUMMARY).toContain(src.source_role)
+        }
+      }
+    }
+  })
+
+  it('summary.json has an article-level sources array with valid shape', () => {
+    expect(Array.isArray(FINANCE_SUMMARY.sources)).toBe(true)
+    expect(FINANCE_SUMMARY.sources.length).toBeGreaterThan(0)
+    for (const src of FINANCE_SUMMARY.sources) {
+      expect(typeof src.source_name).toBe('string')
+      expect(src.source_name.length).toBeGreaterThan(0)
+      if (src.source_url !== null && src.source_url !== undefined) {
+        expect(src.source_url).toMatch(/^https?:\/\//)
+      }
+      if (src.source_role !== null && src.source_role !== undefined) {
+        expect(VALID_SOURCE_ROLES_SUMMARY).toContain(src.source_role)
+      }
+    }
+  })
+
+  it('summary.json has a source_confidence_note', () => {
+    expect(typeof FINANCE_SUMMARY.source_confidence_note).toBe('string')
+    expect(FINANCE_SUMMARY.source_confidence_note.length).toBeGreaterThan(0)
   })
 })

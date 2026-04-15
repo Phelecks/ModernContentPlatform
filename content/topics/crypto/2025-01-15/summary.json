@@ -1,12 +1,71 @@
 {
   "topic_slug": "crypto",
   "date_key": "2025-01-15",
-  "headline": "Bitcoin ETF Inflows Drive Broad Crypto Rally",
-  "key_points": [
-    "Spot Bitcoin ETFs attracted more than $500 million in net inflows — the largest single-day figure since launch.",
-    "Bitcoin briefly touched $50,000 before pulling back to $49,400 on sustained institutional demand.",
-    "Ethereum ETFs recorded their second-highest inflow day, confirming broad institutional appetite for crypto exposure."
+  "headline": "Bitcoin ETF Inflows Hit Record High as BTC Briefly Touches $50K",
+  "overview": "Crypto markets rallied on January 15 as spot Bitcoin ETFs attracted their largest single-day inflow on record, surpassing $500 million. Bitcoin briefly crossed the $50,000 level during Asian trading hours before settling slightly lower. Ethereum ETFs recorded their second-highest inflow day since approval, reflecting broad institutional appetite across the crypto asset class. On-chain data showed continued accumulation by long-term holders, reinforcing the bullish near-term narrative.",
+  "key_events": [
+    {
+      "title": "Spot Bitcoin ETF Inflows Exceed $500M",
+      "significance": "Record single-day inflows into spot Bitcoin ETF products signal accelerating institutional demand and further legitimise Bitcoin as an investable asset class.",
+      "importance_score": 82,
+      "sources": [
+        {
+          "source_name": "CryptoNews",
+          "source_url": "https://example.com/crypto/btc-etf-inflows",
+          "source_role": "primary"
+        }
+      ]
+    },
+    {
+      "title": "Bitcoin Briefly Crosses $50,000",
+      "significance": "Touching a key psychological price level attracts media attention and may draw additional retail and institutional interest, reinforcing momentum.",
+      "importance_score": 74,
+      "sources": [
+        {
+          "source_name": "BlockDesk",
+          "source_url": "https://example.com/crypto/btc-50k",
+          "source_role": "primary"
+        }
+      ]
+    },
+    {
+      "title": "Ethereum ETFs See Parallel Inflow Surge",
+      "significance": "Strong Ethereum ETF inflows on the same day as Bitcoin confirm that institutional appetite extends across the major crypto assets, not just Bitcoin.",
+      "importance_score": 68,
+      "sources": [
+        {
+          "source_name": "CoinWire",
+          "source_url": "https://example.com/crypto/eth-etf-inflows",
+          "source_role": "primary"
+        }
+      ]
+    }
   ],
+  "market_context": "Broader risk appetite was supported by stable US equity markets. The DXY dollar index held near recent highs, which typically creates a mild headwind for crypto; the resilience of inflows despite this context underlines conviction among buyers.",
   "sentiment": "bullish",
+  "topic_score": 78,
+  "sources": [
+    {
+      "source_name": "CryptoNews",
+      "source_url": "https://example.com/crypto/btc-etf-inflows",
+      "source_role": "primary"
+    },
+    {
+      "source_name": "BlockDesk",
+      "source_url": "https://example.com/crypto/btc-50k",
+      "source_role": "primary"
+    },
+    {
+      "source_name": "CoinWire",
+      "source_url": "https://example.com/crypto/eth-etf-inflows",
+      "source_role": "primary"
+    },
+    {
+      "source_name": "CoinGecko API",
+      "source_url": "https://api.coingecko.com/api/v3/simple/price",
+      "source_role": "data"
+    }
+  ],
+  "source_confidence_note": "High confidence: multiple specialist outlets corroborated by real-time market data.",
   "generated_at": "2025-01-15T23:30:00Z"
 }
