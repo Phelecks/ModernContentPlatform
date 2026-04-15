@@ -113,6 +113,7 @@
   "additionalProperties": false,
   "examples": [
     {
+      "_topic": "crypto",
       "key_watchpoints": [
         {
           "title": "Bitcoin $120K Support Hold",
@@ -153,6 +154,57 @@
       ],
       "outlook_summary": "Bitcoin enters Friday's session at all-time highs with strong momentum. The key risk tomorrow is macro: the FOMC minutes could introduce volatility if language around rate cuts shifts. ETF flows will be closely watched for any sign of profit-taking by institutional players.",
       "risk_level": "medium"
+    },
+    {
+      "_topic": "finance",
+      "key_watchpoints": [
+        {
+          "title": "Fed Chair Speech — Rate Guidance Tone",
+          "description": "After a hotter-than-expected CPI print, Chair Powell's remarks tomorrow could move markets materially if he signals a shift in rate-cut timing.",
+          "source": {
+            "source_name": "Federal Reserve",
+            "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+          }
+        },
+        {
+          "title": "US 10-Year Yield Direction",
+          "description": "The 10-year yield rose sharply after the CPI beat. Whether it holds above 4.5% may influence equity valuations, particularly in rate-sensitive sectors.",
+          "source": {
+            "source_name": "Reuters Markets",
+            "source_url": null
+          }
+        },
+        {
+          "title": "Services Inflation Follow-Through",
+          "description": "The re-acceleration in services CPI could prompt repricing across fixed income. Watch for analyst revisions to the Fed's projected rate path.",
+          "source": {
+            "source_name": "Bureau of Labor Statistics",
+            "source_url": "https://www.bls.gov/cpi/"
+          }
+        }
+      ],
+      "scheduled_events": [
+        {
+          "title": "Fed Chair Powell Speech",
+          "time_hint": "10:00 ET",
+          "impact": "high",
+          "source": {
+            "source_name": "Federal Reserve",
+            "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+          }
+        },
+        {
+          "title": "US Retail Sales (December)",
+          "time_hint": "08:30 ET",
+          "impact": "medium",
+          "source": {
+            "source_name": "US Census Bureau",
+            "source_url": null
+          }
+        }
+      ],
+      "outlook_summary": "Markets may remain cautious ahead of the Fed Chair's speech, with the hotter CPI print raising questions about the pace of rate cuts. Treasury yields and the US dollar could see continued volatility. Retail sales data may offer additional clues on consumer resilience, though the primary focus is likely to remain on Fed communication.",
+      "risk_level": "high"
     }
   ]
 }

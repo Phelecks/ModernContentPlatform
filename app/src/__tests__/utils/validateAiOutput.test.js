@@ -8,8 +8,8 @@
  *   validateAlertClassification — required fields, enum values, secondary_topics, cluster_label type, integer ranges, boolean type
  *   validateTimelineEntry       — required fields, severity_level enum, label_color enum, source_url pattern, source_attribution length
  *   validateDailySummary        — required fields, nested key_events, sentiment enum, topic_score
- *   validateExpectationCheck    — required fields, outcome enum, alignment_score range, array maxItems, surprise_events length bounds
- *   validateTomorrowOutlook     — required fields, key_watchpoints, scheduled_events maxItems, time_hint length, risk_level enum
+ *   validateExpectationCheck    — required fields, outcome enum, alignment_score range, array maxItems, surprise_events length bounds, source field validation
+ *   validateTomorrowOutlook     — required fields, key_watchpoints, scheduled_events maxItems, time_hint length, risk_level enum, source field validation on watchpoints and events
  *   validateVideoScript         — required fields, segments array, duration ranges
  *   validateYoutubeMetadata     — required fields, tags array, visibility enum
  *   parseAndValidate* functions — parse + validate integration, error propagation
@@ -816,6 +816,88 @@ describe('validateExpectationCheck', () => {
     expect(ok).toBe(false)
     expect(errors.some(e => e.includes('surprise_events[0]'))).toBe(true)
   })
+
+  it('accepts expectations_checked with a valid source object', () => {
+    const check = {
+      ...VALID_EXPECTATION_CHECK,
+      expectations_checked: [
+        {
+          expectation: 'Bitcoin would test resistance near $115K before moving higher',
+          outcome: 'missed',
+          note: null,
+          source: { source_name: 'CoinDesk RSS', source_url: 'https://www.coindesk.com/markets/test' },
+        },
+      ],
+    }
+    const { ok } = validateExpectationCheck(check)
+    expect(ok).toBe(true)
+  })
+
+  it('accepts expectations_checked with source as null', () => {
+    const check = {
+      ...VALID_EXPECTATION_CHECK,
+      expectations_checked: [
+        {
+          expectation: 'Bitcoin would test resistance near $115K before moving higher',
+          outcome: 'missed',
+          note: null,
+          source: null,
+        },
+      ],
+    }
+    const { ok } = validateExpectationCheck(check)
+    expect(ok).toBe(true)
+  })
+
+  it('reports an error when expectations_checked[].source.source_name is empty', () => {
+    const check = {
+      ...VALID_EXPECTATION_CHECK,
+      expectations_checked: [
+        {
+          expectation: 'Bitcoin would test resistance near $115K before moving higher',
+          outcome: 'missed',
+          note: null,
+          source: { source_name: '', source_url: null },
+        },
+      ],
+    }
+    const { ok, errors } = validateExpectationCheck(check)
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('source.source_name'))).toBe(true)
+  })
+
+  it('reports an error when expectations_checked[].source.source_url is not a valid URL', () => {
+    const check = {
+      ...VALID_EXPECTATION_CHECK,
+      expectations_checked: [
+        {
+          expectation: 'Bitcoin would test resistance near $115K before moving higher',
+          outcome: 'missed',
+          note: null,
+          source: { source_name: 'CoinDesk', source_url: 'not-a-url' },
+        },
+      ],
+    }
+    const { ok, errors } = validateExpectationCheck(check)
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('source.source_url'))).toBe(true)
+  })
+
+  it('accepts expectations_checked[].source.source_url as null', () => {
+    const check = {
+      ...VALID_EXPECTATION_CHECK,
+      expectations_checked: [
+        {
+          expectation: 'Bitcoin would test resistance near $115K before moving higher',
+          outcome: 'missed',
+          note: null,
+          source: { source_name: 'CoinDesk', source_url: null },
+        },
+      ],
+    }
+    const { ok } = validateExpectationCheck(check)
+    expect(ok).toBe(true)
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -927,6 +1009,93 @@ describe('validateTomorrowOutlook', () => {
     const event = [{ title: 'FOMC Meeting Minutes Release', impact: 'high' }]
     const { ok } = validateTomorrowOutlook({ ...VALID_TOMORROW_OUTLOOK, scheduled_events: event })
     expect(ok).toBe(true)
+  })
+
+  it('accepts key_watchpoints with a valid source object', () => {
+    const watchpoints = [
+      {
+        title: 'Bitcoin $120K Support Hold',
+        description: 'After breaking above $120K, holding this level as support is critical for continued momentum.',
+        source: { source_name: 'CoinDesk RSS', source_url: 'https://www.coindesk.com/markets/test' },
+      },
+    ]
+    const { ok } = validateTomorrowOutlook({ ...VALID_TOMORROW_OUTLOOK, key_watchpoints: watchpoints })
+    expect(ok).toBe(true)
+  })
+
+  it('accepts key_watchpoints with source as null', () => {
+    const watchpoints = [
+      {
+        title: 'Bitcoin $120K Support Hold',
+        description: 'After breaking above $120K, holding this level as support is critical for continued momentum.',
+        source: null,
+      },
+    ]
+    const { ok } = validateTomorrowOutlook({ ...VALID_TOMORROW_OUTLOOK, key_watchpoints: watchpoints })
+    expect(ok).toBe(true)
+  })
+
+  it('reports an error when key_watchpoints[].source.source_name is empty', () => {
+    const watchpoints = [
+      {
+        title: 'Bitcoin $120K Support Hold',
+        description: 'After breaking above $120K, holding this level as support is critical for continued momentum.',
+        source: { source_name: '', source_url: null },
+      },
+    ]
+    const { ok, errors } = validateTomorrowOutlook({ ...VALID_TOMORROW_OUTLOOK, key_watchpoints: watchpoints })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('key_watchpoints[0].source.source_name'))).toBe(true)
+  })
+
+  it('reports an error when key_watchpoints[].source.source_url is not a valid URL', () => {
+    const watchpoints = [
+      {
+        title: 'Bitcoin $120K Support Hold',
+        description: 'After breaking above $120K, holding this level as support is critical for continued momentum.',
+        source: { source_name: 'CoinDesk', source_url: 'ftp://invalid' },
+      },
+    ]
+    const { ok, errors } = validateTomorrowOutlook({ ...VALID_TOMORROW_OUTLOOK, key_watchpoints: watchpoints })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('key_watchpoints[0].source.source_url'))).toBe(true)
+  })
+
+  it('accepts scheduled_events with a valid source object', () => {
+    const events = [
+      {
+        title: 'FOMC Meeting Minutes Release',
+        impact: 'high',
+        time_hint: '14:00 ET',
+        source: { source_name: 'Federal Reserve', source_url: 'https://www.federalreserve.gov/' },
+      },
+    ]
+    const { ok } = validateTomorrowOutlook({ ...VALID_TOMORROW_OUTLOOK, scheduled_events: events })
+    expect(ok).toBe(true)
+  })
+
+  it('accepts scheduled_events with source as null', () => {
+    const events = [{ title: 'FOMC Meeting Minutes Release', impact: 'high', source: null }]
+    const { ok } = validateTomorrowOutlook({ ...VALID_TOMORROW_OUTLOOK, scheduled_events: events })
+    expect(ok).toBe(true)
+  })
+
+  it('reports an error when scheduled_events[].source.source_name is empty', () => {
+    const events = [
+      { title: 'FOMC Meeting Minutes Release', impact: 'high', source: { source_name: '', source_url: null } },
+    ]
+    const { ok, errors } = validateTomorrowOutlook({ ...VALID_TOMORROW_OUTLOOK, scheduled_events: events })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('scheduled_events[0].source.source_name'))).toBe(true)
+  })
+
+  it('reports an error when scheduled_events[].source.source_url is not a valid URL', () => {
+    const events = [
+      { title: 'FOMC Meeting Minutes Release', impact: 'high', source: { source_name: 'Fed', source_url: 'not-a-url' } },
+    ]
+    const { ok, errors } = validateTomorrowOutlook({ ...VALID_TOMORROW_OUTLOOK, scheduled_events: events })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('scheduled_events[0].source.source_url'))).toBe(true)
   })
 })
 

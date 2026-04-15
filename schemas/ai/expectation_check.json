@@ -81,6 +81,7 @@
   "additionalProperties": false,
   "examples": [
     {
+      "_topic": "crypto",
       "expectations_checked": [
         {
           "expectation": "Bitcoin would test resistance near $115K before moving higher",
@@ -106,7 +107,42 @@
         "Ethereum underperformed despite the bullish crypto environment, diverging from usual correlation."
       ],
       "alignment_score": 65,
-      "analyst_note": "Today's session was broadly in line with the bullish bias anticipated, though the magnitude of the move and the sovereign disclosure exceeded expectations."
+      "analyst_note": "Today's session appears broadly in line with the bullish bias anticipated, though the magnitude of the move and the sovereign disclosure exceeded what most observers would have forecast."
+    },
+    {
+      "_topic": "finance",
+      "expectations_checked": [
+        {
+          "expectation": "US CPI to print close to the 2.9% consensus estimate",
+          "outcome": "missed",
+          "note": "CPI came in at 3.1%, above the 2.9% consensus, suggesting disinflation may be stalling at the margin.",
+          "source": {
+            "source_name": "Bureau of Labor Statistics",
+            "source_url": "https://www.bls.gov/cpi/"
+          }
+        },
+        {
+          "expectation": "Equity markets to hold gains ahead of the CPI release",
+          "outcome": "partial",
+          "note": "Markets traded cautiously in the morning session and sold off modestly after the print, though losses appeared contained.",
+          "source": {
+            "source_name": "Reuters Markets",
+            "source_url": null
+          }
+        },
+        {
+          "expectation": "Fed officials to reiterate a data-dependent stance",
+          "outcome": "met",
+          "note": "Two Fed speakers maintained their cautious tone, with no surprise pivot signals.",
+          "source": null
+        }
+      ],
+      "surprise_events": [
+        "Services inflation re-accelerated to 4.4%, well above the prior month's reading, catching many analysts off guard.",
+        "The US dollar surged 0.8% intraday — an unusually sharp move for a single CPI release."
+      ],
+      "alignment_score": 42,
+      "analyst_note": "The above-consensus CPI print introduced meaningful uncertainty around the Fed's rate path. While equity resilience suggests markets may be pricing a transitory effect, the services re-acceleration could warrant caution in the near term."
     }
   ]
 }
