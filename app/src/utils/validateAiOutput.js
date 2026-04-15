@@ -377,6 +377,17 @@ export function validateExpectationCheck(obj) {
       if (!VALID_EXPECTATION_OUTCOMES.includes(e.outcome)) {
         errors.push(`expectations_checked[${i}].outcome "${e.outcome}" is invalid. Expected: ${VALID_EXPECTATION_OUTCOMES.join(', ')}.`)
       }
+      if ('source' in e && e.source !== null) {
+        if (typeof e.source !== 'object' || Array.isArray(e.source)) {
+          errors.push(`expectations_checked[${i}].source must be an object or null.`)
+        } else if (typeof e.source.source_name !== 'string' || e.source.source_name.trim() === '') {
+          errors.push(`expectations_checked[${i}].source.source_name must be a non-empty string.`)
+        } else if ('source_url' in e.source && e.source.source_url !== null) {
+          if (typeof e.source.source_url !== 'string' || !/^https?:\/\//i.test(e.source.source_url)) {
+            errors.push(`expectations_checked[${i}].source.source_url must be an HTTP or HTTPS URL or null.`)
+          }
+        }
+      }
     })
   }
   if (!Array.isArray(obj.surprise_events)) {
@@ -446,6 +457,17 @@ export function validateTomorrowOutlook(obj) {
       if (!isString(w.description, 20, 300)) {
         errors.push(`key_watchpoints[${i}].description must be a string of 20–300 characters.`)
       }
+      if ('source' in w && w.source !== null) {
+        if (typeof w.source !== 'object' || Array.isArray(w.source)) {
+          errors.push(`key_watchpoints[${i}].source must be an object or null.`)
+        } else if (typeof w.source.source_name !== 'string' || w.source.source_name.trim() === '') {
+          errors.push(`key_watchpoints[${i}].source.source_name must be a non-empty string.`)
+        } else if ('source_url' in w.source && w.source.source_url !== null) {
+          if (typeof w.source.source_url !== 'string' || !/^https?:\/\//i.test(w.source.source_url)) {
+            errors.push(`key_watchpoints[${i}].source.source_url must be an HTTP or HTTPS URL or null.`)
+          }
+        }
+      }
     })
   }
   if (!Array.isArray(obj.scheduled_events)) {
@@ -462,6 +484,17 @@ export function validateTomorrowOutlook(obj) {
       }
       if ('time_hint' in e && e.time_hint !== null && !isString(e.time_hint, 1, 50)) {
         errors.push(`scheduled_events[${i}].time_hint must be a string of 1–50 characters or null.`)
+      }
+      if ('source' in e && e.source !== null) {
+        if (typeof e.source !== 'object' || Array.isArray(e.source)) {
+          errors.push(`scheduled_events[${i}].source must be an object or null.`)
+        } else if (typeof e.source.source_name !== 'string' || e.source.source_name.trim() === '') {
+          errors.push(`scheduled_events[${i}].source.source_name must be a non-empty string.`)
+        } else if ('source_url' in e.source && e.source.source_url !== null) {
+          if (typeof e.source.source_url !== 'string' || !/^https?:\/\//i.test(e.source.source_url)) {
+            errors.push(`scheduled_events[${i}].source.source_url must be an HTTP or HTTPS URL or null.`)
+          }
+        }
       }
     })
   }
