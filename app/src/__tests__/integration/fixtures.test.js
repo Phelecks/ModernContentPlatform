@@ -22,6 +22,8 @@ import {
   AI_CLASSIFIED_ALERTS,
   CRYPTO_DAILY_SUMMARY,
   FINANCE_DAILY_SUMMARY,
+  CRYPTO_VIDEO_SCRIPT,
+  FINANCE_VIDEO_SCRIPT,
   CRYPTO_SOURCE_EVENT_BTC_ETF,
   FINANCE_SOURCE_EVENT_FED_MINUTES,
   AI_SOURCE_EVENT_OPEN_WEIGHT_MODEL,
@@ -118,6 +120,35 @@ function assertSourceEvent(item, label) {
   expect(SOURCE_TYPES, `${label}: source_type must be a known type`).toContain(item.source_type)
   expect(item.title, `${label}: title`).toBeTypeOf('string')
   expect(item.fetched_at, `${label}: fetched_at`).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+}
+
+function assertVideoScript(script, label) {
+  expect(script.intro, `${label}: intro`).toBeTypeOf('string')
+  expect(script.intro.length, `${label}: intro min length`).toBeGreaterThanOrEqual(30)
+  expect(script.intro.length, `${label}: intro max length`).toBeLessThanOrEqual(500)
+  expect(Array.isArray(script.segments), `${label}: segments is array`).toBe(true)
+  expect(script.segments.length, `${label}: at least 2 segments`).toBeGreaterThanOrEqual(2)
+  expect(script.segments.length, `${label}: at most 5 segments`).toBeLessThanOrEqual(5)
+  for (const seg of script.segments) {
+    expect(seg.title, `${label}: segment.title`).toBeTypeOf('string')
+    expect(seg.script, `${label}: segment.script`).toBeTypeOf('string')
+    expect(seg.duration_seconds, `${label}: segment.duration_seconds`).toBeTypeOf('number')
+    expect(seg.duration_seconds, `${label}: duration_seconds 15–120`).toBeGreaterThanOrEqual(15)
+    expect(seg.duration_seconds, `${label}: duration_seconds 15–120`).toBeLessThanOrEqual(120)
+    if (seg.sources !== undefined && seg.sources !== null) {
+      expect(Array.isArray(seg.sources), `${label}: segment.sources is array`).toBe(true)
+      for (const src of seg.sources) {
+        expect(src.source_name, `${label}: segment source.source_name`).toBeTypeOf('string')
+        expect(src.source_name.length, `${label}: segment source.source_name non-empty`).toBeGreaterThan(0)
+      }
+    }
+  }
+  expect(script.outro, `${label}: outro`).toBeTypeOf('string')
+  expect(script.outro.length, `${label}: outro min length`).toBeGreaterThanOrEqual(30)
+  expect(script.outro.length, `${label}: outro max length`).toBeLessThanOrEqual(400)
+  expect(script.total_duration_seconds, `${label}: total_duration_seconds`).toBeTypeOf('number')
+  expect(script.total_duration_seconds, `${label}: total_duration_seconds 60–600`).toBeGreaterThanOrEqual(60)
+  expect(script.total_duration_seconds, `${label}: total_duration_seconds 60–600`).toBeLessThanOrEqual(600)
 }
 
 function assertNormalizedItem(item, label) {
@@ -307,6 +338,66 @@ describe('fixtures/daily-summaries', () => {
           }
         }
       }
+    }
+  })
+})
+
+// ---- Video script fixture tests ----
+
+describe('fixtures/video-scripts', () => {
+  it('crypto-2025-01-15 has required video script fields', () => {
+    assertVideoScript(CRYPTO_VIDEO_SCRIPT, 'crypto-video-script')
+  })
+
+  it('crypto-2025-01-15 segments have source grounding', () => {
+    for (const seg of CRYPTO_VIDEO_SCRIPT.segments) {
+      if (seg.sources !== undefined && seg.sources !== null) {
+        expect(seg.sources.length, 'at least one source per grounded segment').toBeGreaterThan(0)
+        for (const src of seg.sources) {
+          expect(src.source_name).toBeTypeOf('string')
+        }
+      }
+    }
+  })
+
+  it('finance-2025-01-15 has required video script fields', () => {
+    assertVideoScript(FINANCE_VIDEO_SCRIPT, 'finance-video-script')
+  })
+
+  it('finance-2025-01-15 segments have source grounding', () => {
+    for (const seg of FINANCE_VIDEO_SCRIPT.segments) {
+      if (seg.sources !== undefined && seg.sources !== null) {
+        expect(seg.sources.length, 'at least one source per grounded segment').toBeGreaterThan(0)
+        for (const src of seg.sources) {
+          expect(src.source_name).toBeTypeOf('string')
+        }
+      }
+    }
+  })
+
+  it('video scripts have valid source_role values when present', () => {
+    const validRoles = ['primary', 'data', 'commentary', null]
+    for (const script of [CRYPTO_VIDEO_SCRIPT, FINANCE_VIDEO_SCRIPT]) {
+      for (const seg of script.segments) {
+        if (seg.sources) {
+          for (const src of seg.sources) {
+            if (src.source_role !== undefined) {
+              expect(validRoles, `source_role "${src.source_role}" must be valid`).toContain(src.source_role)
+            }
+          }
+        }
+      }
+    }
+  })
+
+  it('video scripts do not embed raw source URLs in spoken script text', () => {
+    for (const script of [CRYPTO_VIDEO_SCRIPT, FINANCE_VIDEO_SCRIPT]) {
+      const allText = [
+        script.intro,
+        ...script.segments.map(s => s.script),
+        script.outro
+      ].join(' ')
+      expect(allText, 'spoken text must not contain raw http:// URLs').not.toMatch(/https?:\/\//)
     }
   })
 })

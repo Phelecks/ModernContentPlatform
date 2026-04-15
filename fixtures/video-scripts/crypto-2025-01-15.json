@@ -1,0 +1,49 @@
+{
+  "intro": "Spot Bitcoin ETFs just recorded their largest single-day inflow ever — over $500 million in one session. And that's not all: Bitcoin briefly crossed the $50,000 mark during Asian trading hours. Today I'm breaking down exactly what happened, why it matters for the market, and what you need to watch heading into tomorrow.",
+  "segments": [
+    {
+      "title": "Spot Bitcoin ETF Record Inflows",
+      "script": "Let's start with the headline. Spot Bitcoin ETFs attracted more than $500 million in a single day — the largest inflow since these products launched. To put that in context: this isn't just a big number. It signals that traditional finance institutions are not waiting on the sidelines anymore. They are actively moving capital into Bitcoin through regulated wrappers. When you see that kind of allocation in one session, it shifts the supply-demand picture in a meaningful way.",
+      "duration_seconds": 50,
+      "sources": [
+        {
+          "source_name": "CryptoNews",
+          "source_url": "https://example.com/crypto/btc-etf-inflows",
+          "source_role": "primary"
+        }
+      ]
+    },
+    {
+      "title": "Bitcoin Briefly Touches $50,000",
+      "script": "Bitcoin crossed $50,000 during the Asian session — a key psychological level that had acted as resistance for weeks. The move was short-lived, pulling back slightly by the US open, but the fact that it touched that level on the back of record ETF inflows is meaningful. Markets watched $50,000 as a test of buyer conviction. The intraday hold was enough to confirm that conviction is there, even if the price didn't close above it.",
+      "duration_seconds": 45,
+      "sources": [
+        {
+          "source_name": "BlockDesk",
+          "source_url": "https://example.com/crypto/btc-50k",
+          "source_role": "primary"
+        }
+      ]
+    },
+    {
+      "title": "Ethereum ETFs Join the Rally",
+      "script": "It wasn't just Bitcoin. Ethereum ETFs recorded their second-best inflow day since approval. That parallel move matters because it tells us institutional demand is broad — it's not a single-asset story. When money flows into both Bitcoin and Ethereum ETFs on the same day, you're seeing structural allocation, not just a tactical trade. Long-term holders on-chain were also accumulating, which reinforces the bullish near-term picture.",
+      "duration_seconds": 45,
+      "sources": [
+        {
+          "source_name": "CoinWire",
+          "source_url": "https://example.com/crypto/eth-etf-inflows",
+          "source_role": "primary"
+        },
+        {
+          "source_name": "CoinGecko API",
+          "source_url": "https://api.coingecko.com/api/v3/simple/price",
+          "source_role": "data"
+        }
+      ]
+    }
+  ],
+  "outro": "So to wrap up: record ETF inflows, Bitcoin touching $50,000, and parallel Ethereum demand all pointing in the same direction. Tomorrow, keep an eye on whether Bitcoin can close above $50,000 — that confirmation would open the door to the next leg. Stay disciplined, manage your risk, and I'll see you in tomorrow's briefing.",
+  "total_duration_seconds": 185,
+  "call_to_action": "If today's breakdown was useful, subscribe for the daily crypto briefing and hit the bell so you don't miss tomorrow's update."
+}

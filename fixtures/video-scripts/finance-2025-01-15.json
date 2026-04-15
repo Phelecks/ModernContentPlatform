@@ -1,0 +1,49 @@
+{
+  "intro": "The Federal Reserve just made its position crystal clear: no rate cuts in Q1. Minutes released today from the December FOMC meeting showed officials broadly agreed there was no urgency to ease policy. Markets did not like the message. The S&P 500 dropped 1.2%, the dollar climbed to a two-month high, and bond yields rose across the curve. Here's the full picture.",
+  "segments": [
+    {
+      "title": "FOMC Minutes: No Urgency to Cut Rates",
+      "script": "The core of today's market move was the December FOMC minutes. Officials agreed that the economy remains resilient enough that rushing into rate cuts would be premature. They specifically flagged persistent services inflation and a still-tight labor market as reasons to stay patient. This is not a surprise in isolation — the Fed has been signalling caution for months — but seeing it spelled out in the official minutes removes any remaining ambiguity about a Q1 cut. The market had been pricing a small chance of a March cut. That probability is now effectively zero.",
+      "duration_seconds": 55,
+      "sources": [
+        {
+          "source_name": "Federal Reserve",
+          "source_url": "https://www.federalreserve.gov/monetarypolicy/fomcminutes20241218.htm",
+          "source_role": "primary"
+        },
+        {
+          "source_name": "MarketWatch",
+          "source_url": "https://example.com/finance/fed-minutes",
+          "source_role": "commentary"
+        }
+      ]
+    },
+    {
+      "title": "S&P 500 Falls 1.2%",
+      "script": "The equity reaction was broad and orderly. The S&P 500 fell 1.2%, with rate-sensitive sectors leading the decline — real estate, utilities, and growth tech all underperformed. What's notable is how calm the sell-off was. There was no sign of panic or forced liquidation, just a steady repricing of earnings multiples to reflect a higher-for-longer rate environment. That kind of orderly move often means the market has absorbed the information rather than overreacted to it.",
+      "duration_seconds": 45,
+      "sources": [
+        {
+          "source_name": "Bloomberg",
+          "source_url": "https://example.com/finance/sp500-decline",
+          "source_role": "primary"
+        }
+      ]
+    },
+    {
+      "title": "US Dollar Climbs to Two-Month High",
+      "script": "As rates-higher expectations solidified, the dollar strengthened sharply. The DXY index hit its highest level in two months, EUR/USD briefly dipped below 1.09, and yields rose across the treasury curve. A stronger dollar matters beyond FX. It compresses earnings for US multinationals, tightens financial conditions for emerging market borrowers, and typically acts as a headwind for dollar-denominated commodities. This is the ripple effect of the Fed's message — it doesn't stay in treasuries.",
+      "duration_seconds": 45,
+      "sources": [
+        {
+          "source_name": "Reuters",
+          "source_url": "https://example.com/finance/dxy-two-month-high",
+          "source_role": "primary"
+        }
+      ]
+    }
+  ],
+  "outro": "The takeaway today is simple: the Fed is not in a hurry, and markets are adjusting to that reality. Equities are lower, the dollar is stronger, and yields are higher. Tomorrow, watch for any Fed speaker commentary that could either reinforce or soften today's message — any deviation from the hawkish tone could trigger a quick reversal. Stay patient, and I'll see you tomorrow.",
+  "total_duration_seconds": 200,
+  "call_to_action": "Subscribe for the daily finance briefing and hit the bell to stay ahead of the next Fed move."
+}
