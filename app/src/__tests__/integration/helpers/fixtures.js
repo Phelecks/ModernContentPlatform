@@ -31,6 +31,11 @@ export { default as AI_CLASSIFIED_ALERTS } from '@fixtures/classified-alerts/ai-
 export { default as CRYPTO_DAILY_SUMMARY } from '@fixtures/daily-summaries/crypto-2025-01-15.json'
 export { default as FINANCE_DAILY_SUMMARY } from '@fixtures/daily-summaries/finance-2025-01-15.json'
 
+// ---- Video scripts (video_script AI output, per topic/day) ----
+
+export { default as CRYPTO_VIDEO_SCRIPT } from '@fixtures/video-scripts/crypto-2025-01-15.json'
+export { default as FINANCE_VIDEO_SCRIPT } from '@fixtures/video-scripts/finance-2025-01-15.json'
+
 // ---- Source events (intraday_source_item, individual items) ----
 
 export { default as CRYPTO_SOURCE_EVENT_BTC_ETF } from '@fixtures/source-events/crypto-2025-01-15-btc-etf-inflows.json'
