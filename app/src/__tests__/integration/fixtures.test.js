@@ -24,6 +24,8 @@ import {
   FINANCE_DAILY_SUMMARY,
   CRYPTO_VIDEO_SCRIPT,
   FINANCE_VIDEO_SCRIPT,
+  CRYPTO_YOUTUBE_METADATA,
+  FINANCE_YOUTUBE_METADATA,
   CRYPTO_SOURCE_EVENT_BTC_ETF,
   FINANCE_SOURCE_EVENT_FED_MINUTES,
   AI_SOURCE_EVENT_OPEN_WEIGHT_MODEL,
@@ -149,6 +151,26 @@ function assertVideoScript(script, label) {
   expect(script.total_duration_seconds, `${label}: total_duration_seconds`).toBeTypeOf('number')
   expect(script.total_duration_seconds, `${label}: total_duration_seconds 60–600`).toBeGreaterThanOrEqual(60)
   expect(script.total_duration_seconds, `${label}: total_duration_seconds 60–600`).toBeLessThanOrEqual(600)
+}
+
+function assertYoutubeMetadata(metadata, label) {
+  expect(metadata.title, `${label}: title`).toBeTypeOf('string')
+  expect(metadata.title.length, `${label}: title min length`).toBeGreaterThanOrEqual(10)
+  expect(metadata.title.length, `${label}: title max length`).toBeLessThanOrEqual(100)
+  expect(metadata.description, `${label}: description`).toBeTypeOf('string')
+  expect(metadata.description.length, `${label}: description min length`).toBeGreaterThanOrEqual(100)
+  expect(metadata.description.length, `${label}: description max length`).toBeLessThanOrEqual(5000)
+  expect(Array.isArray(metadata.tags), `${label}: tags is array`).toBe(true)
+  expect(metadata.tags.length, `${label}: at least 5 tags`).toBeGreaterThanOrEqual(5)
+  expect(metadata.tags.length, `${label}: at most 15 tags`).toBeLessThanOrEqual(15)
+  for (const tag of metadata.tags) {
+    expect(tag, `${label}: tag`).toBeTypeOf('string')
+    expect(tag.length, `${label}: tag min length`).toBeGreaterThanOrEqual(2)
+    expect(tag.length, `${label}: tag max length`).toBeLessThanOrEqual(100)
+  }
+  if ('visibility' in metadata) {
+    expect(['public', 'unlisted', 'private'], `${label}: visibility`).toContain(metadata.visibility)
+  }
 }
 
 function assertNormalizedItem(item, label) {
@@ -398,6 +420,54 @@ describe('fixtures/video-scripts', () => {
         script.outro
       ].join(' ')
       expect(allText, 'spoken text must not contain raw http:// URLs').not.toMatch(/https?:\/\//)
+    }
+  })
+})
+
+// ---- YouTube metadata fixture tests ----
+
+describe('fixtures/youtube-metadata', () => {
+  it('crypto-2025-01-15 has required youtube metadata fields', () => {
+    assertYoutubeMetadata(CRYPTO_YOUTUBE_METADATA, 'crypto-youtube-metadata')
+  })
+
+  it('crypto-2025-01-15 title includes topic and date context', () => {
+    expect(CRYPTO_YOUTUBE_METADATA.title.toLowerCase()).toMatch(/crypto|bitcoin|btc/)
+    expect(CRYPTO_YOUTUBE_METADATA.title).toMatch(/Jan\s+15\s+2025|2025/)
+  })
+
+  it('finance-2025-01-15 has required youtube metadata fields', () => {
+    assertYoutubeMetadata(FINANCE_YOUTUBE_METADATA, 'finance-youtube-metadata')
+  })
+
+  it('finance-2025-01-15 title includes topic and date context', () => {
+    expect(FINANCE_YOUTUBE_METADATA.title.toLowerCase()).toMatch(/finance|fed|fomc|s&p/)
+    expect(FINANCE_YOUTUBE_METADATA.title).toMatch(/Jan\s+15\s+2025|2025/)
+  })
+
+  it('youtube metadata fixtures have public visibility', () => {
+    for (const metadata of [CRYPTO_YOUTUBE_METADATA, FINANCE_YOUTUBE_METADATA]) {
+      expect(metadata.visibility).toBe('public')
+    }
+  })
+
+  it('youtube metadata fixtures have News & Politics category', () => {
+    for (const metadata of [CRYPTO_YOUTUBE_METADATA, FINANCE_YOUTUBE_METADATA]) {
+      expect(metadata.category).toBe('News & Politics')
+    }
+  })
+
+  it('youtube metadata tags are all lowercase', () => {
+    for (const metadata of [CRYPTO_YOUTUBE_METADATA, FINANCE_YOUTUBE_METADATA]) {
+      for (const tag of metadata.tags) {
+        expect(tag, `tag "${tag}" should be lowercase`).toBe(tag.toLowerCase())
+      }
+    }
+  })
+
+  it('youtube metadata descriptions include a subscribe call to action', () => {
+    for (const metadata of [CRYPTO_YOUTUBE_METADATA, FINANCE_YOUTUBE_METADATA]) {
+      expect(metadata.description.toLowerCase()).toMatch(/subscribe/)
     }
   })
 })

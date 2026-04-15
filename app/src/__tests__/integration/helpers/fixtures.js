@@ -36,6 +36,11 @@ export { default as FINANCE_DAILY_SUMMARY } from '@fixtures/daily-summaries/fina
 export { default as CRYPTO_VIDEO_SCRIPT } from '@fixtures/video-scripts/crypto-2025-01-15.json'
 export { default as FINANCE_VIDEO_SCRIPT } from '@fixtures/video-scripts/finance-2025-01-15.json'
 
+// ---- YouTube metadata (youtube_metadata AI output, per topic/day) ----
+
+export { default as CRYPTO_YOUTUBE_METADATA } from '@fixtures/youtube-metadata/crypto-2025-01-15.json'
+export { default as FINANCE_YOUTUBE_METADATA } from '@fixtures/youtube-metadata/finance-2025-01-15.json'
+
 // ---- Source events (intraday_source_item, individual items) ----
 
 export { default as CRYPTO_SOURCE_EVENT_BTC_ETF } from '@fixtures/source-events/crypto-2025-01-15-btc-etf-inflows.json'
