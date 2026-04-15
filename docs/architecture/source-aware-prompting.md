@@ -234,18 +234,28 @@ Reports suggest — based on on-chain monitoring signals — that a large Bitcoi
 
 ## Validation
 
-Source fields in AI outputs are validated in the Parse and Validate Code
-nodes within each n8n workflow module, and in `app/src/utils/validateAiOutput.js`
-for local CI use.
+Source-field enforcement is task-specific rather than uniform across all AI
+output types.
 
-Key validation rules applied to source references:
-- `source_url` must be an HTTP or HTTPS URL or null
-- `source_type` must be a valid enum value or null
-- `source_role` must be a valid enum value or null
-- `source_name` must be a non-empty string
+**What is validated today:**
 
-Invalid entries are silently dropped (for arrays) or set to null rather than
-causing workflow failures.
+| Task | Validated source fields |
+|------|------------------------|
+| Alert classification (`validateAlertClassification`) | `supporting_sources[].source_name` (non-empty string); `supporting_sources[].source_url` (HTTP/HTTPS or null); `supporting_sources[].source_type` (enum or null); `supporting_sources[].source_role` (enum or null) |
+| Timeline entry (`validateTimelineEntry`) | `source_url` (HTTP/HTTPS or null); `source_attribution` (string length) |
+| Expectation check (`validateExpectationCheck`) | `expectations_checked[].source.source_name` (non-empty string); `expectations_checked[].source.source_url` (HTTP/HTTPS or null) |
+| Tomorrow outlook (`validateTomorrowOutlook`) | `key_watchpoints[].source.source_name` (non-empty string); `key_watchpoints[].source.source_url` (HTTP/HTTPS or null); `scheduled_events[].source.source_name`; `scheduled_events[].source.source_url` |
+| Daily summary (`validateDailySummary`) | Core text/score fields only — `key_events[].sources` and top-level `sources` are **not** validated in the local CI helper |
+| Video script (`validateVideoScript`) | Core structural fields only — `segments[].sources` are **not** validated in the local CI helper |
+
+The n8n workflow Parse and Validate Code nodes apply additional normalization
+at runtime (e.g., dropping entries with empty `source_name`, coercing invalid
+`source_url` values to null, capping array lengths), so invalid entries are
+gracefully degraded rather than causing workflow failures.
+
+`source_type` and `source_role` for daily summary and video script source
+arrays are schema-documented fields but are not enforced in current local CI
+or workflow gate validators.
 
 ---
 
