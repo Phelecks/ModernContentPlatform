@@ -18,7 +18,8 @@ import {
   validateAlertPayload,
   validateDailyStatusPayload,
   validatePublishJobPayload,
-  validateSourcePayload
+  validateSourcePayload,
+  validateOpenAiUsagePayload
 } from '@functions/lib/validate.js'
 
 // ---------------------------------------------------------------------------
@@ -768,5 +769,106 @@ describe('validateSourcePayload', () => {
     const result = validateSourcePayload(validSource({ extra_field: 'value' }))
     expect(result.valid).toBe(false)
     expect(result.error).toMatch(/Unknown/)
+  })
+})
+
+function validOpenAiUsage(overrides = {}) {
+  return {
+    task: 'dailySummary',
+    model: 'gpt-4o',
+    workflow_name: 'Daily — 02 Generate Summary',
+    execution_id: 'exec-123',
+    topic_slug: 'finance',
+    date_key: '2026-04-16',
+    prompt_tokens: 1200,
+    completion_tokens: 600,
+    total_tokens: 1800,
+    status: 'ok',
+    retry_count: 0,
+    request_latency_ms: 3200,
+    estimated_cost_usd: 0.018,
+    metadata_json: '{"node":"Generate Summary with AI"}',
+    ...overrides
+  }
+}
+
+describe('validateOpenAiUsagePayload', () => {
+  it('returns valid=true for a complete valid payload', () => {
+    const result = validateOpenAiUsagePayload(validOpenAiUsage())
+    expect(result.valid).toBe(true)
+    expect(result.data.task).toBe('dailySummary')
+  })
+
+  it('defaults status and token fields when omitted', () => {
+    const result = validateOpenAiUsagePayload({
+      task: 'youtubeMetadata',
+      model: 'gpt-4o-mini'
+    })
+    expect(result.valid).toBe(true)
+    expect(result.data.status).toBe('ok')
+    expect(result.data.prompt_tokens).toBe(0)
+    expect(result.data.completion_tokens).toBe(0)
+    expect(result.data.total_tokens).toBe(0)
+  })
+
+  it('derives total_tokens from prompt + completion when total is omitted', () => {
+    const result = validateOpenAiUsagePayload(validOpenAiUsage({
+      total_tokens: undefined,
+      prompt_tokens: 100,
+      completion_tokens: 45
+    }))
+    expect(result.valid).toBe(true)
+    expect(result.data.total_tokens).toBe(145)
+  })
+
+  it('returns valid=false for invalid task', () => {
+    const result = validateOpenAiUsagePayload(validOpenAiUsage({ task: 'unknownTask' }))
+    expect(result.valid).toBe(false)
+    expect(result.error).toMatch(/task/i)
+  })
+
+  it('returns valid=false when status is retry and error_message is missing', () => {
+    const result = validateOpenAiUsagePayload(validOpenAiUsage({
+      status: 'retry',
+      error_message: undefined
+    }))
+    expect(result.valid).toBe(false)
+    expect(result.error).toMatch(/error_message/i)
+  })
+
+  it('returns valid=false for negative estimated_cost_usd', () => {
+    const result = validateOpenAiUsagePayload(validOpenAiUsage({ estimated_cost_usd: -0.1 }))
+    expect(result.valid).toBe(false)
+    expect(result.error).toMatch(/estimated_cost_usd/i)
+  })
+
+  it('accepts null request_latency_ms', () => {
+    const result = validateOpenAiUsagePayload(validOpenAiUsage({ request_latency_ms: null }))
+    expect(result.valid).toBe(true)
+    expect(result.data.request_latency_ms).toBeNull()
+  })
+
+  it('returns valid=false when prompt_tokens exceeds maximum', () => {
+    const result = validateOpenAiUsagePayload(validOpenAiUsage({ prompt_tokens: 12001 }))
+    expect(result.valid).toBe(false)
+    expect(result.error).toMatch(/prompt_tokens/i)
+  })
+
+  it('returns valid=false when completion_tokens exceeds task maximum', () => {
+    const result = validateOpenAiUsagePayload(validOpenAiUsage({ completion_tokens: 1001 }))
+    expect(result.valid).toBe(false)
+    expect(result.error).toMatch(/completion_tokens/i)
+  })
+
+  it('returns valid=false when retry_count exceeds maximum', () => {
+    const result = validateOpenAiUsagePayload(validOpenAiUsage({ retry_count: 3 }))
+    expect(result.valid).toBe(false)
+    expect(result.error).toMatch(/retry_count/i)
+  })
+
+  it('returns valid=false when request_latency_ms exceeds maximum', () => {
+    const result = validateOpenAiUsagePayload(validOpenAiUsage({ request_latency_ms: 300001 }))
+    expect(result.valid).toBe(false)
+    expect(result.error).toMatch(/request_latency_ms/i)
   })
 })
