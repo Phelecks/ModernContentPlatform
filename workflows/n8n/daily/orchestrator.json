@@ -16,7 +16,10 @@
       "name": "Schedule Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
@@ -26,19 +29,27 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={ \"sql\": \"SELECT topic_slug FROM topics WHERE is_active = 1 ORDER BY sort_order ASC\", \"params\": [] }",
-        "options": { "timeout": 10000 }
+        "options": {
+          "timeout": 10000
+        }
       },
       "id": "d0e0f1a2-0000-0000-0000-000000000002",
       "name": "Fetch Active Topics",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [460, 300],
+      "position": [
+        460,
+        300
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "cloudflare-d1-credentials",
@@ -58,7 +69,10 @@
       "name": "Expand Topics",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [680, 300]
+      "position": [
+        680,
+        300
+      ]
     },
     {
       "parameters": {
@@ -69,7 +83,10 @@
       "name": "Process Topics",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [900, 300]
+      "position": [
+        900,
+        300
+      ]
     },
     {
       "parameters": {
@@ -80,7 +97,10 @@
       "name": "Build Topic Context",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1120, 300]
+      "position": [
+        1120,
+        300
+      ]
     },
     {
       "parameters": {
@@ -90,19 +110,27 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ {\n  sql: \"SELECT id, status, attempt, started_at FROM publish_jobs WHERE topic_slug = ? AND date_key = ? ORDER BY created_at DESC LIMIT 1\",\n  params: [$json.topic_slug, $json.date_key]\n} }}",
-        "options": { "timeout": 10000 }
+        "options": {
+          "timeout": 10000
+        }
       },
       "id": "d0e0f1a2-0000-0000-0000-000000000006",
       "name": "Check Existing Job",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1340, 300],
+      "position": [
+        1340,
+        300
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "cloudflare-d1-credentials",
@@ -119,17 +147,25 @@
       "name": "Merge Job Context",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1560, 300]
+      "position": [
+        1560,
+        300
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": false },
+          "options": {
+            "caseSensitive": false
+          },
           "conditions": [
             {
               "leftValue": "={{ $json.should_skip }}",
               "rightValue": true,
-              "operator": { "type": "boolean", "operation": "equals" }
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
             }
           ]
         }
@@ -138,7 +174,10 @@
       "name": "Already Succeeded Today?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1780, 300]
+      "position": [
+        1780,
+        300
+      ]
     },
     {
       "parameters": {},
@@ -146,7 +185,10 @@
       "name": "Skip Topic",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [2000, 200]
+      "position": [
+        2000,
+        200
+      ]
     },
     {
       "parameters": {
@@ -156,19 +198,27 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ {\n  sql: \"INSERT INTO publish_jobs (topic_slug, date_key, status, attempt, triggered_by, started_at, workflow_run_id) VALUES (?, ?, 'running', ?, 'schedule', strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), ?) RETURNING id\",\n  params: [\n    $json.topic_slug,\n    $json.date_key,\n    ($json.existing_job_attempt || 0) + 1,\n    $execution.id\n  ]\n} }}",
-        "options": { "timeout": 10000 }
+        "options": {
+          "timeout": 10000
+        }
       },
       "id": "d0e0f1a2-0000-0000-0000-000000000010",
       "name": "Create Publish Job",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [2000, 400],
+      "position": [
+        2000,
+        400
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "cloudflare-d1-credentials",
@@ -188,7 +238,10 @@
       "name": "Extract Publish Job ID",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2220, 400]
+      "position": [
+        2220,
+        400
+      ]
     },
     {
       "parameters": {
@@ -203,7 +256,10 @@
       "name": "01 Aggregate Alerts",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [2440, 400]
+      "position": [
+        2440,
+        400
+      ]
     },
     {
       "parameters": {
@@ -218,7 +274,10 @@
       "name": "02 Generate Summary",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [2660, 400]
+      "position": [
+        2660,
+        400
+      ]
     },
     {
       "parameters": {
@@ -233,7 +292,10 @@
       "name": "03 Generate Article",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [2880, 400]
+      "position": [
+        2880,
+        400
+      ]
     },
     {
       "parameters": {
@@ -248,7 +310,10 @@
       "name": "04 Expectation Check",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [3100, 400]
+      "position": [
+        3100,
+        400
+      ]
     },
     {
       "parameters": {
@@ -263,7 +328,10 @@
       "name": "05 Tomorrow Outlook",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [3320, 400]
+      "position": [
+        3320,
+        400
+      ]
     },
     {
       "parameters": {
@@ -278,7 +346,10 @@
       "name": "06 Video Script",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [3540, 400]
+      "position": [
+        3540,
+        400
+      ]
     },
     {
       "parameters": {
@@ -293,7 +364,11 @@
       "name": "06b Generate Images",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [3760, 400]
+      "position": [
+        3760,
+        400
+      ],
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -308,7 +383,10 @@
       "name": "07 YouTube Metadata",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [3980, 400]
+      "position": [
+        3980,
+        400
+      ]
     },
     {
       "parameters": {
@@ -323,7 +401,10 @@
       "name": "08 Validate Outputs",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [3980, 400]
+      "position": [
+        3980,
+        400
+      ]
     },
     {
       "parameters": {
@@ -338,7 +419,10 @@
       "name": "09 Publish to GitHub",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [4200, 400]
+      "position": [
+        4200,
+        400
+      ]
     },
     {
       "parameters": {
@@ -353,7 +437,10 @@
       "name": "10 Update D1 State",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [4420, 400]
+      "position": [
+        4420,
+        400
+      ]
     },
     {
       "parameters": {},
@@ -361,120 +448,267 @@
       "name": "All Topics Done",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [900, 500]
+      "position": [
+        900,
+        500
+      ]
     }
   ],
   "connections": {
     "Schedule Trigger": {
       "main": [
-        [{ "node": "Fetch Active Topics", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Fetch Active Topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Fetch Active Topics": {
       "main": [
-        [{ "node": "Expand Topics", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Expand Topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Expand Topics": {
       "main": [
-        [{ "node": "Process Topics", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Process Topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Process Topics": {
       "main": [
-        [{ "node": "Build Topic Context", "type": "main", "index": 0 }],
-        [{ "node": "All Topics Done", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Build Topic Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "All Topics Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Build Topic Context": {
       "main": [
-        [{ "node": "Check Existing Job", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Check Existing Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Check Existing Job": {
       "main": [
-        [{ "node": "Merge Job Context", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Merge Job Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Merge Job Context": {
       "main": [
-        [{ "node": "Already Succeeded Today?", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Already Succeeded Today?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Already Succeeded Today?": {
       "main": [
-        [{ "node": "Skip Topic", "type": "main", "index": 0 }],
-        [{ "node": "Create Publish Job", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Skip Topic",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Publish Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Skip Topic": {
       "main": [
-        [{ "node": "Process Topics", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Process Topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Create Publish Job": {
       "main": [
-        [{ "node": "Extract Publish Job ID", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Extract Publish Job ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Extract Publish Job ID": {
       "main": [
-        [{ "node": "01 Aggregate Alerts", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "01 Aggregate Alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "01 Aggregate Alerts": {
       "main": [
-        [{ "node": "02 Generate Summary", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "02 Generate Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "02 Generate Summary": {
       "main": [
-        [{ "node": "03 Generate Article", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "03 Generate Article",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "03 Generate Article": {
       "main": [
-        [{ "node": "04 Expectation Check", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "04 Expectation Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "04 Expectation Check": {
       "main": [
-        [{ "node": "05 Tomorrow Outlook", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "05 Tomorrow Outlook",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "05 Tomorrow Outlook": {
       "main": [
-        [{ "node": "06 Video Script", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "06 Video Script",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "06 Video Script": {
       "main": [
-        [{ "node": "06b Generate Images", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "06b Generate Images",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "06b Generate Images": {
       "main": [
-        [{ "node": "07 YouTube Metadata", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "07 YouTube Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "07 YouTube Metadata": {
       "main": [
-        [{ "node": "08 Validate Outputs", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "08 Validate Outputs",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "08 Validate Outputs": {
       "main": [
-        [{ "node": "09 Publish to GitHub", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "09 Publish to GitHub",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "09 Publish to GitHub": {
       "main": [
-        [{ "node": "10 Update D1 State", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "10 Update D1 State",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "10 Update D1 State": {
       "main": [
-        [{ "node": "Process Topics", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Process Topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -487,5 +721,10 @@
     "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
   },
   "id": "daily-orchestrator-v1",
-  "tags": ["daily", "editorial", "orchestrator", "v1"]
+  "tags": [
+    "daily",
+    "editorial",
+    "orchestrator",
+    "v1"
+  ]
 }

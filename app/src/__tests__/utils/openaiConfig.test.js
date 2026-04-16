@@ -146,8 +146,8 @@ describe('AI task contracts and support matrix', () => {
   it('falls back from google to openai when task support differs (imageGeneration)', () => {
     const resolved = resolveTaskProvider('imageGeneration', 'google')
     expect(resolved.requestedProvider).toBe('google')
-    expect(resolved.provider).toBe('openai')
-    expect(resolved.usedFallback).toBe(true)
+    expect(resolved.provider).toBe('google')
+    expect(resolved.usedFallback).toBe(false)
   })
 
   it('resolves task AI config with fallback-aware provider/key/model for imageGeneration', () => {
@@ -155,14 +155,14 @@ describe('AI task contracts and support matrix', () => {
       AI_PROVIDER: 'google',
       GOOGLE_API_KEY: 'google-key',
       OPENAI_API_KEY: 'openai-key',
-      OPENAI_MODEL_IMAGE_GENERATION: 'gpt-image-custom',
+      GOOGLE_MODEL_IMAGE_GENERATION: 'imagen-custom',
     }, 'imageGeneration')
 
     expect(resolved.requestedProvider).toBe('google')
-    expect(resolved.provider).toBe('openai')
-    expect(resolved.usedFallback).toBe(true)
-    expect(resolved.apiKey).toBe('openai-key')
-    expect(resolved.model).toBe('gpt-image-custom')
+    expect(resolved.provider).toBe('google')
+    expect(resolved.usedFallback).toBe(false)
+    expect(resolved.apiKey).toBe('google-key')
+    expect(resolved.model).toBe('imagen-custom')
   })
 
   it('throws when fallback provider credentials are missing for a fallback-only task', () => {

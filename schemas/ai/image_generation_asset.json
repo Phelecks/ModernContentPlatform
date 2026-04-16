@@ -5,6 +5,7 @@
   "description": "Shared internal asset contract for the image generation step. Produced by the 06b_generate_images workflow after normalizing the provider-specific API response. Used by downstream media pipeline steps and committed to GitHub as images.json.",
   "type": "object",
   "required": ["images", "image_count", "provider", "model", "generated_at"],
+  "additionalProperties": false,
   "properties": {
     "images": {
       "type": "array",
@@ -14,6 +15,7 @@
       "items": {
         "type": "object",
         "required": ["index", "prompt", "provider", "model", "format", "generated_at"],
+        "additionalProperties": false,
         "properties": {
           "index": {
             "type": "integer",

@@ -7,7 +7,10 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
@@ -18,7 +21,10 @@
       "name": "Build Image Prompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
@@ -26,12 +32,17 @@
           "values": [
             {
               "conditions": {
-                "options": { "caseSensitive": false },
+                "options": {
+                  "caseSensitive": false
+                },
                 "conditions": [
                   {
                     "leftValue": "={{ $json._image_provider }}",
                     "rightValue": "google",
-                    "operator": { "type": "string", "operation": "equals" }
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
                   }
                 ]
               },
@@ -40,12 +51,17 @@
             },
             {
               "conditions": {
-                "options": { "caseSensitive": false },
+                "options": {
+                  "caseSensitive": false
+                },
                 "conditions": [
                   {
                     "leftValue": "={{ $json._image_provider }}",
                     "rightValue": "openai",
-                    "operator": { "type": "string", "operation": "equals" }
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
                   }
                 ]
               },
@@ -62,7 +78,10 @@
       "name": "Route by Provider",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
-      "position": [680, 300]
+      "position": [
+        680,
+        300
+      ]
     },
     {
       "parameters": {
@@ -73,19 +92,27 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ {\n  instances: [{ prompt: $json._image_prompt }],\n  parameters: {\n    sampleCount: $json._image_count,\n    aspectRatio: '1:1',\n    safetyFilterLevel: 'block_some',\n    personGeneration: 'dont_allow'\n  }\n} }}",
-        "options": { "timeout": 60000 }
+        "options": {
+          "timeout": 60000
+        }
       },
       "id": "d1e2f3a4-006b-006b-006b-000000000004",
       "name": "Generate Image — Google Imagen",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [900, 200],
+      "position": [
+        900,
+        200
+      ],
       "credentials": {
         "httpQueryAuth": {
           "id": "google-api-key-credentials",
@@ -94,7 +121,8 @@
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 5000
+      "waitBetweenTries": 5000,
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -105,19 +133,27 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ {\n  model: $json._image_model,\n  prompt: $json._image_prompt,\n  n: $json._image_count,\n  size: '1024x1024',\n  response_format: 'url'\n} }}",
-        "options": { "timeout": 60000 }
+        "options": {
+          "timeout": 60000
+        }
       },
       "id": "d1e2f3a4-006b-006b-006b-000000000005",
       "name": "Generate Image — OpenAI",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [900, 400],
+      "position": [
+        900,
+        400
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "openai-api-credentials",
@@ -126,29 +162,36 @@
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 5000
+      "waitBetweenTries": 5000,
+      "continueOnFail": true
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Normalize Google Imagen API response to the shared image generation asset contract.\n// Google returns: { predictions: [{ bytesBase64Encoded: '...', mimeType: 'image/png' }] }\n\nconst raw = $input.first().json;\nconst ctx = $('Build Image Prompt').first().json;\nconst ts = new Date().toISOString();\n\nconst predictions = raw?.predictions || [];\nif (predictions.length === 0) {\n  throw new Error(\n    `Google Imagen returned no predictions for ${ctx.topic_slug}/${ctx.date_key}. ` +\n    `Response: ${JSON.stringify(raw).slice(0, 300)}`\n  );\n}\n\nconst images = predictions.map((pred, i) => ({\n  index: i,\n  prompt: ctx._image_prompt,\n  revised_prompt: null,\n  provider: 'google',\n  model: ctx._image_model,\n  size: '1024x1024',\n  format: 'b64_json',\n  url: null,\n  b64_json: pred.bytesBase64Encoded || null,\n  mime_type: pred.mimeType || 'image/png',\n  generated_at: ts,\n}));\n\nconst image_assets = {\n  images,\n  image_count: images.length,\n  provider: 'google',\n  model: ctx._image_model,\n  generated_at: ts,\n};\n\n// Strip internal underscore-prefixed keys from ctx before merging\nconst { _image_prompt, _image_count, _image_provider, _image_model, ...cleanCtx } = ctx;\n\nreturn [{ json: { ...cleanCtx, image_assets } }];"
+        "jsCode": "// Normalize Google Imagen API response to the shared image generation asset contract.\n// Non-blocking: if the API returned an error or no predictions, return ctx with image_asset_warnings.\n// Google returns: { predictions: [{ bytesBase64Encoded: '...', mimeType: 'image/png' }] }\n\nconst raw = $input.first().json;\nconst ctx = $('Build Image Prompt').first().json;\nconst ts = new Date().toISOString();\n\n// Strip internal underscore-prefixed keys from ctx before merging\nconst { _image_prompt, _image_count, _image_provider, _image_model, ...cleanCtx } = ctx;\n\n// Check for HTTP/API errors from the upstream node (continueOnFail passes errors as json)\nconst apiError = raw?.error || raw?.message || null;\nconst predictions = raw?.predictions || [];\n\nif (apiError || predictions.length === 0) {\n  const reason = apiError\n    ? `Google Imagen API error: ${JSON.stringify(apiError).slice(0, 200)}`\n    : `Google Imagen returned no predictions for ${ctx.topic_slug}/${ctx.date_key}`;\n  return [{ json: { ...cleanCtx, image_assets: null, image_asset_warnings: [reason] } }];\n}\n\nconst images = predictions.map((pred, i) => ({\n  index: i,\n  prompt: ctx._image_prompt,\n  revised_prompt: null,\n  provider: 'google',\n  model: ctx._image_model,\n  size: '1024x1024',\n  format: 'b64_json',\n  url: null,\n  b64_json: pred.bytesBase64Encoded || null,\n  mime_type: pred.mimeType || 'image/png',\n  generated_at: ts,\n}));\n\nconst image_assets = {\n  images,\n  image_count: images.length,\n  provider: 'google',\n  model: ctx._image_model,\n  generated_at: ts,\n};\n\nreturn [{ json: { ...cleanCtx, image_assets } }];"
       },
       "id": "d1e2f3a4-006b-006b-006b-000000000006",
       "name": "Normalize Google Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1120, 200]
+      "position": [
+        1120,
+        200
+      ]
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Normalize OpenAI images/generations response to the shared image generation asset contract.\n// OpenAI returns: { created: ..., data: [{ url: '...', revised_prompt: '...' }] }\n\nconst raw = $input.first().json;\nconst ctx = $('Build Image Prompt').first().json;\nconst ts = new Date().toISOString();\n\nconst data = raw?.data || [];\nif (data.length === 0) {\n  throw new Error(\n    `OpenAI images/generations returned no data for ${ctx.topic_slug}/${ctx.date_key}. ` +\n    `Response: ${JSON.stringify(raw).slice(0, 300)}`\n  );\n}\n\nconst images = data.map((item, i) => ({\n  index: i,\n  prompt: ctx._image_prompt,\n  revised_prompt: item.revised_prompt || null,\n  provider: 'openai',\n  model: ctx._image_model,\n  size: '1024x1024',\n  format: 'url',\n  url: item.url || null,\n  b64_json: null,\n  mime_type: null,\n  generated_at: ts,\n}));\n\nconst image_assets = {\n  images,\n  image_count: images.length,\n  provider: 'openai',\n  model: ctx._image_model,\n  generated_at: ts,\n};\n\n// Strip internal underscore-prefixed keys from ctx before merging\nconst { _image_prompt, _image_count, _image_provider, _image_model, ...cleanCtx } = ctx;\n\nreturn [{ json: { ...cleanCtx, image_assets } }];"
+        "jsCode": "// Normalize OpenAI images/generations response to the shared image generation asset contract.\n// Non-blocking: if the API returned an error or no data, return ctx with image_asset_warnings.\n// OpenAI returns: { created: ..., data: [{ url: '...', revised_prompt: '...' }] }\n\nconst raw = $input.first().json;\nconst ctx = $('Build Image Prompt').first().json;\nconst ts = new Date().toISOString();\n\n// Strip internal underscore-prefixed keys from ctx before merging\nconst { _image_prompt, _image_count, _image_provider, _image_model, ...cleanCtx } = ctx;\n\n// Check for HTTP/API errors from the upstream node (continueOnFail passes errors as json)\nconst apiError = raw?.error || null;\nconst data = raw?.data || [];\n\nif (apiError || data.length === 0) {\n  const reason = apiError\n    ? `OpenAI images/generations API error: ${JSON.stringify(apiError).slice(0, 200)}`\n    : `OpenAI images/generations returned no data for ${ctx.topic_slug}/${ctx.date_key}`;\n  return [{ json: { ...cleanCtx, image_assets: null, image_asset_warnings: [reason] } }];\n}\n\nconst images = data.map((item, i) => ({\n  index: i,\n  prompt: ctx._image_prompt,\n  revised_prompt: item.revised_prompt || null,\n  provider: 'openai',\n  model: ctx._image_model,\n  size: '1024x1024',\n  format: 'url',\n  url: item.url || null,\n  b64_json: null,\n  mime_type: null,\n  generated_at: ts,\n}));\n\nconst image_assets = {\n  images,\n  image_count: images.length,\n  provider: 'openai',\n  model: ctx._image_model,\n  generated_at: ts,\n};\n\nreturn [{ json: { ...cleanCtx, image_assets } }];"
       },
       "id": "d1e2f3a4-006b-006b-006b-000000000007",
       "name": "Normalize OpenAI Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1120, 400]
+      "position": [
+        1120,
+        400
+      ]
     },
     {
       "parameters": {
@@ -159,49 +202,106 @@
       "name": "Validate Image Asset",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1340, 300]
+      "position": [
+        1340,
+        300
+      ]
     }
   ],
   "connections": {
     "Execute Workflow Trigger": {
       "main": [
-        [{ "node": "Build Image Prompt", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Build Image Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Build Image Prompt": {
       "main": [
-        [{ "node": "Route by Provider", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Route by Provider",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Route by Provider": {
       "google": [
-        [{ "node": "Generate Image — Google Imagen", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Generate Image — Google Imagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ],
       "openai": [
-        [{ "node": "Generate Image — OpenAI", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Generate Image — OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ],
       "extra": [
-        [{ "node": "Generate Image — OpenAI", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Generate Image — OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Generate Image — Google Imagen": {
       "main": [
-        [{ "node": "Normalize Google Response", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Normalize Google Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Generate Image — OpenAI": {
       "main": [
-        [{ "node": "Normalize OpenAI Response", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Normalize OpenAI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Normalize Google Response": {
       "main": [
-        [{ "node": "Validate Image Asset", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Validate Image Asset",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Normalize OpenAI Response": {
       "main": [
-        [{ "node": "Validate Image Asset", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Validate Image Asset",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },

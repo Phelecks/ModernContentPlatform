@@ -700,7 +700,7 @@ export function validateImageGenerationAsset(obj) {
         return
       }
 
-      if (typeof img.index !== 'number' || img.index < 0) {
+      if (!Number.isInteger(img.index) || img.index < 0) {
         errors.push(`${prefix}.index must be a non-negative integer.`)
       }
 
@@ -737,7 +737,7 @@ export function validateImageGenerationAsset(obj) {
     })
   }
 
-  if (typeof obj.image_count !== 'number' || obj.image_count < 1 || obj.image_count > 4) {
+  if (!Number.isInteger(obj.image_count) || obj.image_count < 1 || obj.image_count > 4) {
     errors.push('image_count must be an integer between 1 and 4.')
   } else if (Array.isArray(obj.images) && obj.image_count !== obj.images.length) {
     errors.push(`image_count (${obj.image_count}) must equal images.length (${obj.images.length}).`)
