@@ -1,29 +1,22 @@
 /**
  * openaiConfig.js
  *
- * OpenAI configuration parsing and validation for Modern Content Platform.
+ * Provider-agnostic AI configuration for Modern Content Platform.
  *
  * Reads environment variables and resolves per-task model overrides, falling
  * back to per-task defaults when a task-specific override is not set.
  *
  * Required variable:
- *   OPENAI_API_KEY — OpenAI API key.  Missing or empty value triggers a
- *                    OPENAI_CONFIG_ERROR at validation time.
+ *   OPENAI_API_KEY (when AI_PROVIDER=openai)
+ *   GOOGLE_API_KEY (when AI_PROVIDER=google)
  *
  * Optional variables (defaults shown):
  *   AI_PROVIDER                          — AI provider slug (default: 'openai')
- *   OPENAI_MODEL_ALERT_CLASSIFICATION    — model for alert classification (default: 'gpt-4o-mini')
- *   OPENAI_MODEL_TIMELINE_FORMATTING     — model for timeline entry formatting (default: 'gpt-4o-mini')
- *   OPENAI_MODEL_DAILY_SUMMARY           — model for daily summary generation (default: 'gpt-4o')
- *   OPENAI_MODEL_ARTICLE_GENERATION      — model for article generation (default: 'gpt-4o')
- *   OPENAI_MODEL_EXPECTATION_CHECK       — model for expectation check (default: 'gpt-4o')
- *   OPENAI_MODEL_TOMORROW_OUTLOOK        — model for tomorrow outlook generation (default: 'gpt-4o')
- *   OPENAI_MODEL_VIDEO_SCRIPT            — model for video script generation (default: 'gpt-4o')
- *   OPENAI_MODEL_YOUTUBE_METADATA        — model for YouTube metadata generation (default: 'gpt-4o-mini')
+ *   OPENAI_MODEL_* and GOOGLE_MODEL_*    — per-task model overrides
  *
  * Usage:
- *   import { parseOpenAIConfig } from '@/utils/openaiConfig.js'
- *   const config = parseOpenAIConfig(import.meta.env)   // throws on invalid config
+ *   import { parseAIProviderConfig } from '@/utils/openaiConfig.js'
+ *   const config = parseAIProviderConfig(import.meta.env)   // throws on invalid config
  *
  * The function accepts any plain object with the relevant keys so that it can
  * be called with process.env, import.meta.env, Vite env, or test fixtures
@@ -40,11 +33,12 @@
 // Supported providers
 // ---------------------------------------------------------------------------
 
-/** The only AI provider supported in v1. */
+/** First-class AI providers in v1. */
 export const PROVIDER_OPENAI = 'openai'
+export const PROVIDER_GOOGLE = 'google'
 
 /** All valid AI_PROVIDER values. */
-export const VALID_PROVIDERS = [PROVIDER_OPENAI]
+export const VALID_PROVIDERS = [PROVIDER_OPENAI, PROVIDER_GOOGLE]
 
 // ---------------------------------------------------------------------------
 // Default model values
@@ -74,6 +68,36 @@ export const OPENAI_MODEL_DEFAULTS = {
   videoScript: 'gpt-4o',
   /** Short structured YouTube metadata generation. Cost-sensitive. */
   youtubeMetadata: 'gpt-4o-mini',
+}
+
+/**
+ * Default Google models per task.
+ * Fast tier  (gemini-2.5-flash) — high-volume or short-output tasks.
+ * Standard tier (gemini-2.5-pro) — longer editorial tasks.
+ */
+export const GOOGLE_MODEL_DEFAULTS = {
+  alertClassification: 'gemini-2.5-flash',
+  timelineFormatting: 'gemini-2.5-flash',
+  dailySummary: 'gemini-2.5-pro',
+  articleGeneration: 'gemini-2.5-pro',
+  expectationCheck: 'gemini-2.5-pro',
+  tomorrowOutlook: 'gemini-2.5-pro',
+  videoScript: 'gemini-2.5-pro',
+  youtubeMetadata: 'gemini-2.5-flash',
+}
+
+/** Provider capability flags used for explicit task fallback behavior. */
+export const PROVIDER_CAPABILITIES = {
+  [PROVIDER_OPENAI]: {
+    nativeJsonObjectMode: true,
+    imageGeneration: true,
+    tts: true,
+  },
+  [PROVIDER_GOOGLE]: {
+    nativeJsonObjectMode: false,
+    imageGeneration: false,
+    tts: false,
+  },
 }
 
 // ---------------------------------------------------------------------------
@@ -108,6 +132,219 @@ export const OPENAI_STRUCTURED_OUTPUT_TASKS = {
   videoScript: { responseFormat: 'json_object' },
   /** YouTube metadata generation — must return JSON matching youtube_metadata schema. */
   youtubeMetadata: { responseFormat: 'json_object' },
+}
+
+/**
+ * Google structured output handling for JSON-output tasks.
+ * Uses prompt-enforced JSON + deterministic validator fallback in v1.
+ */
+export const GOOGLE_STRUCTURED_OUTPUT_TASKS = {
+  alertClassification: { responseFormat: 'prompt_and_validate' },
+  timelineFormatting: { responseFormat: 'prompt_and_validate' },
+  dailySummary: { responseFormat: 'prompt_and_validate' },
+  expectationCheck: { responseFormat: 'prompt_and_validate' },
+  tomorrowOutlook: { responseFormat: 'prompt_and_validate' },
+  videoScript: { responseFormat: 'prompt_and_validate' },
+  youtubeMetadata: { responseFormat: 'prompt_and_validate' },
+}
+
+function getStructuredTaskResponseFormat(provider, task) {
+  const source = provider === PROVIDER_GOOGLE
+    ? GOOGLE_STRUCTURED_OUTPUT_TASKS
+    : OPENAI_STRUCTURED_OUTPUT_TASKS
+  return source[task]?.responseFormat
+}
+
+/**
+ * Internal task contracts and per-provider support/fallback handling.
+ */
+export const AI_TASK_CONTRACTS = {
+  alertClassification: {
+    output: 'json',
+    providers: {
+      [PROVIDER_OPENAI]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_OPENAI, 'alertClassification'),
+      },
+      [PROVIDER_GOOGLE]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_GOOGLE, 'alertClassification'),
+      },
+    },
+  },
+  timelineFormatting: {
+    output: 'json',
+    providers: {
+      [PROVIDER_OPENAI]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_OPENAI, 'timelineFormatting'),
+      },
+      [PROVIDER_GOOGLE]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_GOOGLE, 'timelineFormatting'),
+      },
+    },
+  },
+  dailySummary: {
+    output: 'json',
+    providers: {
+      [PROVIDER_OPENAI]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_OPENAI, 'dailySummary'),
+      },
+      [PROVIDER_GOOGLE]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_GOOGLE, 'dailySummary'),
+      },
+    },
+  },
+  articleGeneration: {
+    output: 'markdown',
+    providers: {
+      [PROVIDER_OPENAI]: { supported: true },
+      [PROVIDER_GOOGLE]: { supported: true },
+    },
+  },
+  expectationCheck: {
+    output: 'json',
+    providers: {
+      [PROVIDER_OPENAI]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_OPENAI, 'expectationCheck'),
+      },
+      [PROVIDER_GOOGLE]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_GOOGLE, 'expectationCheck'),
+      },
+    },
+  },
+  tomorrowOutlook: {
+    output: 'json',
+    providers: {
+      [PROVIDER_OPENAI]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_OPENAI, 'tomorrowOutlook'),
+      },
+      [PROVIDER_GOOGLE]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_GOOGLE, 'tomorrowOutlook'),
+      },
+    },
+  },
+  videoScript: {
+    output: 'json',
+    providers: {
+      [PROVIDER_OPENAI]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_OPENAI, 'videoScript'),
+      },
+      [PROVIDER_GOOGLE]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_GOOGLE, 'videoScript'),
+      },
+    },
+  },
+  youtubeMetadata: {
+    output: 'json',
+    providers: {
+      [PROVIDER_OPENAI]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_OPENAI, 'youtubeMetadata'),
+      },
+      [PROVIDER_GOOGLE]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_GOOGLE, 'youtubeMetadata'),
+      },
+    },
+  },
+  imageGeneration: {
+    output: 'binary',
+    providers: {
+      [PROVIDER_OPENAI]: { supported: true },
+      [PROVIDER_GOOGLE]: {
+        supported: false,
+        fallbackProvider: PROVIDER_OPENAI,
+        reason: 'google image generation is not wired in v1',
+      },
+    },
+  },
+  tts: {
+    output: 'binary',
+    providers: {
+      [PROVIDER_OPENAI]: { supported: true },
+      [PROVIDER_GOOGLE]: {
+        supported: false,
+        fallbackProvider: PROVIDER_OPENAI,
+        reason: 'google tts is not wired in v1',
+      },
+    },
+  },
+}
+
+/** Flattened per-task support matrix for docs/tests and orchestration logic. */
+export const TASK_SUPPORT_MATRIX = Object.fromEntries(
+  Object.entries(AI_TASK_CONTRACTS).map(([task, cfg]) => ([task, cfg.providers]))
+)
+
+/**
+ * Resolve the effective provider for a task and return explicit fallback info.
+ *
+ * @param {string} task
+ * @param {string} requestedProvider
+ * @returns {{
+ *   task: string,
+ *   requestedProvider: string,
+ *   provider: string,
+ *   usedFallback: boolean,
+ *   support: Object
+ * }}
+ */
+export function resolveTaskProvider(task, requestedProvider = PROVIDER_OPENAI) {
+  if (!VALID_PROVIDERS.includes(requestedProvider)) {
+    throw new Error(
+      `AI_PROVIDER_ERROR: Unsupported provider "${requestedProvider}". ` +
+      `Supported values: ${VALID_PROVIDERS.join(', ')}.`
+    )
+  }
+
+  const taskConfig = AI_TASK_CONTRACTS[task]
+  if (!taskConfig) {
+    throw new Error(`AI_PROVIDER_ERROR: Unknown AI task "${task}".`)
+  }
+
+  const support = taskConfig.providers?.[requestedProvider]
+  if (support?.supported) {
+    if (taskConfig.output === 'json' && !support.responseFormat) {
+      throw new Error(
+        `AI_PROVIDER_CONFIG_ERROR: Missing structured output mapping for task "${task}" on provider "${requestedProvider}".`
+      )
+    }
+    return {
+      task,
+      requestedProvider,
+      provider: requestedProvider,
+      usedFallback: false,
+      support,
+    }
+  }
+
+  const fallbackProvider = support?.fallbackProvider
+  if (fallbackProvider && VALID_PROVIDERS.includes(fallbackProvider)) {
+    const fallbackSupport = taskConfig.providers?.[fallbackProvider]
+    if (fallbackSupport?.supported) {
+      return {
+        task,
+        requestedProvider,
+        provider: fallbackProvider,
+        usedFallback: true,
+        support: fallbackSupport,
+      }
+    }
+  }
+
+  throw new Error(
+    `AI_PROVIDER_ERROR: Task "${task}" is not supported for provider "${requestedProvider}" and has no valid fallback.`
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -271,31 +508,77 @@ function resolveModel(envValue, defaultValue) {
  *   }
  * }}
  *
- * @throws {Error} OPENAI_CONFIG_ERROR  when OPENAI_API_KEY is missing or empty
- * @throws {Error} OPENAI_CONFIG_ERROR  when AI_PROVIDER is set to an unsupported value
+ * @throws {Error} AI_PROVIDER_CONFIG_ERROR  when provider-specific API key is missing
+ * @throws {Error} AI_PROVIDER_CONFIG_ERROR  when AI_PROVIDER is set to an unsupported value
  */
-export function parseOpenAIConfig(env = {}) {
-  const apiKey = typeof env.OPENAI_API_KEY === 'string' ? env.OPENAI_API_KEY.trim() : ''
+function buildModels(env, provider) {
+  const defaults = provider === PROVIDER_GOOGLE ? GOOGLE_MODEL_DEFAULTS : OPENAI_MODEL_DEFAULTS
+  const prefix = provider === PROVIDER_GOOGLE ? 'GOOGLE_MODEL_' : 'OPENAI_MODEL_'
+  return {
+    alertClassification: resolveModel(
+      env[`${prefix}ALERT_CLASSIFICATION`],
+      defaults.alertClassification
+    ),
+    timelineFormatting: resolveModel(
+      env[`${prefix}TIMELINE_FORMATTING`],
+      defaults.timelineFormatting
+    ),
+    dailySummary: resolveModel(
+      env[`${prefix}DAILY_SUMMARY`],
+      defaults.dailySummary
+    ),
+    articleGeneration: resolveModel(
+      env[`${prefix}ARTICLE_GENERATION`],
+      defaults.articleGeneration
+    ),
+    expectationCheck: resolveModel(
+      env[`${prefix}EXPECTATION_CHECK`],
+      defaults.expectationCheck
+    ),
+    tomorrowOutlook: resolveModel(
+      env[`${prefix}TOMORROW_OUTLOOK`],
+      defaults.tomorrowOutlook
+    ),
+    videoScript: resolveModel(
+      env[`${prefix}VIDEO_SCRIPT`],
+      defaults.videoScript
+    ),
+    youtubeMetadata: resolveModel(
+      env[`${prefix}YOUTUBE_METADATA`],
+      defaults.youtubeMetadata
+    ),
+  }
+}
+
+/**
+ * Parses and validates provider-agnostic AI configuration.
+ *
+ * @param {Object} env
+ * @returns {{apiKey: string, provider: string, models: Object}}
+ */
+export function parseAIProviderConfig(env = {}) {
   const provider = (typeof env.AI_PROVIDER === 'string' && env.AI_PROVIDER.trim() !== '')
     ? env.AI_PROVIDER.trim()
     : PROVIDER_OPENAI
 
   const errors = []
 
-  if (!apiKey) {
-    errors.push('OPENAI_API_KEY is required but is missing or empty.')
+  if (!VALID_PROVIDERS.includes(provider)) {
+    throw new Error(
+      `AI_PROVIDER_CONFIG_ERROR: Invalid AI provider configuration. AI_PROVIDER "${provider}" is not supported. Supported values: ${VALID_PROVIDERS.join(', ')}.`
+    )
   }
 
-  if (!VALID_PROVIDERS.includes(provider)) {
-    errors.push(
-      `AI_PROVIDER "${provider}" is not supported. ` +
-      `Supported values: ${VALID_PROVIDERS.join(', ')}.`
-    )
+  const apiKeyVarName = provider === PROVIDER_GOOGLE ? 'GOOGLE_API_KEY' : 'OPENAI_API_KEY'
+  const apiKey = typeof env[apiKeyVarName] === 'string' ? env[apiKeyVarName].trim() : ''
+
+  if (!apiKey) {
+    errors.push(`${apiKeyVarName} is required but is missing or empty.`)
   }
 
   if (errors.length > 0) {
     throw new Error(
-      'OPENAI_CONFIG_ERROR: Invalid OpenAI configuration.\n' +
+      'AI_PROVIDER_CONFIG_ERROR: Invalid AI provider configuration.\n' +
       errors.join('\n')
     )
   }
@@ -303,39 +586,11 @@ export function parseOpenAIConfig(env = {}) {
   return {
     apiKey,
     provider,
-    models: {
-      alertClassification: resolveModel(
-        env.OPENAI_MODEL_ALERT_CLASSIFICATION,
-        OPENAI_MODEL_DEFAULTS.alertClassification
-      ),
-      timelineFormatting: resolveModel(
-        env.OPENAI_MODEL_TIMELINE_FORMATTING,
-        OPENAI_MODEL_DEFAULTS.timelineFormatting
-      ),
-      dailySummary: resolveModel(
-        env.OPENAI_MODEL_DAILY_SUMMARY,
-        OPENAI_MODEL_DEFAULTS.dailySummary
-      ),
-      articleGeneration: resolveModel(
-        env.OPENAI_MODEL_ARTICLE_GENERATION,
-        OPENAI_MODEL_DEFAULTS.articleGeneration
-      ),
-      expectationCheck: resolveModel(
-        env.OPENAI_MODEL_EXPECTATION_CHECK,
-        OPENAI_MODEL_DEFAULTS.expectationCheck
-      ),
-      tomorrowOutlook: resolveModel(
-        env.OPENAI_MODEL_TOMORROW_OUTLOOK,
-        OPENAI_MODEL_DEFAULTS.tomorrowOutlook
-      ),
-      videoScript: resolveModel(
-        env.OPENAI_MODEL_VIDEO_SCRIPT,
-        OPENAI_MODEL_DEFAULTS.videoScript
-      ),
-      youtubeMetadata: resolveModel(
-        env.OPENAI_MODEL_YOUTUBE_METADATA,
-        OPENAI_MODEL_DEFAULTS.youtubeMetadata
-      ),
-    },
+    models: buildModels(env, provider),
   }
+}
+
+/** Backward-compatible alias retained for existing imports. */
+export function parseOpenAIConfig(env = {}) {
+  return parseAIProviderConfig(env)
 }
