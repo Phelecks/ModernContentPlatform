@@ -70,15 +70,22 @@ import {
 import { OPENAI_STRUCTURED_OUTPUT_TASKS } from '@/utils/openaiConfig.js'
 
 // ---------------------------------------------------------------------------
-// Helpers — load schema example fixtures from schemas/ai/
+// Helpers — load schema example fixtures and required fields from schemas/ai/
 // ---------------------------------------------------------------------------
 
 const SCHEMAS_DIR = join(process.cwd(), '..', 'schemas', 'ai')
 
-function loadSchemaExamples(schemaFile) {
+function loadSchema(schemaFile) {
   const raw = readFileSync(join(SCHEMAS_DIR, schemaFile), 'utf8')
-  const schema = JSON.parse(raw)
-  return schema.examples ?? []
+  return JSON.parse(raw)
+}
+
+function loadSchemaExamples(schemaFile) {
+  return loadSchema(schemaFile).examples ?? []
+}
+
+function loadSchemaRequired(schemaFile) {
+  return loadSchema(schemaFile).required ?? []
 }
 
 // Strip non-validator keys that exist only as schema metadata (e.g. `_topic`)
@@ -331,7 +338,7 @@ describe('schema example fixtures — YouTube metadata', () => {
 // ---------------------------------------------------------------------------
 
 describe('required-field enforcement — alert classification', () => {
-  const REQUIRED = ['topic_slug', 'headline', 'summary_text', 'severity_score', 'importance_score', 'confidence_score', 'send_alert', 'cluster_label']
+  const REQUIRED = loadSchemaRequired('alert_classification.json')
 
   REQUIRED.forEach(field => {
     it(`removing "${field}" produces a validation error`, () => {
@@ -357,14 +364,15 @@ describe('required-field enforcement — alert classification', () => {
   })
 
   it('error message for missing headline mentions "headline"', () => {
-    const obj = { ...MINIMAL_ALERT_CLASSIFICATION, headline: '' }
+    const obj = { ...MINIMAL_ALERT_CLASSIFICATION }
+    delete obj.headline
     const { errors } = validateAlertClassification(obj)
     expect(errors.some(e => e.includes('headline'))).toBe(true)
   })
 })
 
 describe('required-field enforcement — timeline entry', () => {
-  const REQUIRED = ['headline', 'summary_text', 'severity_level', 'label']
+  const REQUIRED = loadSchemaRequired('timeline_entry.json')
 
   REQUIRED.forEach(field => {
     it(`removing "${field}" produces a validation error`, () => {
@@ -390,7 +398,7 @@ describe('required-field enforcement — timeline entry', () => {
 })
 
 describe('required-field enforcement — daily summary', () => {
-  const REQUIRED = ['headline', 'overview', 'key_events', 'sentiment', 'topic_score']
+  const REQUIRED = loadSchemaRequired('daily_summary.json')
 
   REQUIRED.forEach(field => {
     it(`removing "${field}" produces a validation error`, () => {
@@ -421,7 +429,7 @@ describe('required-field enforcement — daily summary', () => {
 })
 
 describe('required-field enforcement — expectation check', () => {
-  const REQUIRED = ['expectations_checked', 'surprise_events', 'alignment_score']
+  const REQUIRED = loadSchemaRequired('expectation_check.json')
 
   REQUIRED.forEach(field => {
     it(`removing "${field}" produces a validation error`, () => {
@@ -447,7 +455,7 @@ describe('required-field enforcement — expectation check', () => {
 })
 
 describe('required-field enforcement — tomorrow outlook', () => {
-  const REQUIRED = ['key_watchpoints', 'scheduled_events', 'outlook_summary', 'risk_level']
+  const REQUIRED = loadSchemaRequired('tomorrow_outlook.json')
 
   REQUIRED.forEach(field => {
     it(`removing "${field}" produces a validation error`, () => {
@@ -472,7 +480,7 @@ describe('required-field enforcement — tomorrow outlook', () => {
 })
 
 describe('required-field enforcement — video script', () => {
-  const REQUIRED = ['intro', 'segments', 'outro', 'total_duration_seconds']
+  const REQUIRED = loadSchemaRequired('video_script.json')
 
   REQUIRED.forEach(field => {
     it(`removing "${field}" produces a validation error`, () => {
@@ -503,7 +511,7 @@ describe('required-field enforcement — video script', () => {
 })
 
 describe('required-field enforcement — YouTube metadata', () => {
-  const REQUIRED = ['title', 'description', 'tags']
+  const REQUIRED = loadSchemaRequired('youtube_metadata.json')
 
   REQUIRED.forEach(field => {
     it(`removing "${field}" produces a validation error`, () => {
@@ -849,7 +857,7 @@ describe('task registry completeness', () => {
   it('every task in OPENAI_STRUCTURED_OUTPUT_TASKS has a corresponding validate* function exported', () => {
     const VALIDATORS = {
       alertClassification: validateAlertClassification,
-      timelineFormatting: null, // timeline formatting uses validateTimelineEntry
+      timelineFormatting: validateTimelineEntry,
       dailySummary: validateDailySummary,
       expectationCheck: validateExpectationCheck,
       tomorrowOutlook: validateTomorrowOutlook,
@@ -859,6 +867,7 @@ describe('task registry completeness', () => {
 
     Object.keys(OPENAI_STRUCTURED_OUTPUT_TASKS).forEach(task => {
       expect(VALIDATORS).toHaveProperty(task)
+      expect(typeof VALIDATORS[task]).toBe('function')
     })
   })
 
