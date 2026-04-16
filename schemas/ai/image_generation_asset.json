@@ -1,0 +1,145 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "image_generation_asset",
+  "title": "Image Generation Asset",
+  "description": "Shared internal asset contract for the image generation step. Produced by the 06b_generate_images workflow after normalizing the provider-specific API response. Used by downstream media pipeline steps and committed to GitHub as images.json.",
+  "type": "object",
+  "required": ["images", "image_count", "provider", "model", "generated_at"],
+  "properties": {
+    "images": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4,
+      "description": "Generated image records. Each entry corresponds to one image returned by the provider.",
+      "items": {
+        "type": "object",
+        "required": ["index", "prompt", "provider", "model", "format", "generated_at"],
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Zero-based position in the generated image array."
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 2000,
+            "description": "The prompt submitted to the provider for this image."
+          },
+          "revised_prompt": {
+            "type": ["string", "null"],
+            "maxLength": 2000,
+            "description": "Revised prompt returned by the provider (OpenAI DALL-E rewrites prompts for safety). Null when not provided."
+          },
+          "provider": {
+            "type": "string",
+            "enum": ["openai", "google"],
+            "description": "The provider that generated this image."
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "The model identifier used to generate this image."
+          },
+          "size": {
+            "type": ["string", "null"],
+            "description": "Image dimensions (e.g. '1024x1024'). Null when not tracked.",
+            "pattern": "^[0-9]+x[0-9]+$"
+          },
+          "format": {
+            "type": "string",
+            "enum": ["url", "b64_json"],
+            "description": "Format of the returned image data. OpenAI returns 'url' (temporary); Google returns 'b64_json'."
+          },
+          "url": {
+            "type": ["string", "null"],
+            "description": "Temporary image URL returned by OpenAI. Valid for approximately 1 hour after generation. Null for Google."
+          },
+          "b64_json": {
+            "type": ["string", "null"],
+            "description": "Base64-encoded PNG/JPEG image data returned by Google Imagen. Null for OpenAI."
+          },
+          "mime_type": {
+            "type": ["string", "null"],
+            "description": "MIME type of the image (e.g. 'image/png'). Populated for Google b64_json responses. Null for OpenAI URL responses.",
+            "enum": ["image/png", "image/jpeg", "image/webp", null]
+          },
+          "generated_at": {
+            "type": "string",
+            "description": "ISO 8601 timestamp when the image was generated.",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}"
+          }
+        }
+      }
+    },
+    "image_count": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4,
+      "description": "Number of images generated. Must equal images.length."
+    },
+    "provider": {
+      "type": "string",
+      "enum": ["openai", "google"],
+      "description": "The provider that fulfilled the image generation request."
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "The model identifier used for the generation request."
+    },
+    "generated_at": {
+      "type": "string",
+      "description": "ISO 8601 timestamp when the batch was generated.",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}"
+    }
+  },
+  "examples": [
+    {
+      "_topic": "finance",
+      "images": [
+        {
+          "index": 0,
+          "prompt": "Professional finance news thumbnail, rising candlestick charts with golden upward trend, global financial data streams, clean modern aesthetic, deep blue and gold color palette, photorealistic style, no text",
+          "revised_prompt": "A professional finance news thumbnail featuring rising golden candlestick charts against a dark blue background with streams of financial data flowing across the scene. Modern, clean, photorealistic style without any text overlays.",
+          "provider": "openai",
+          "model": "gpt-image-1",
+          "size": "1024x1024",
+          "format": "url",
+          "url": "https://oaidalleapiprodscus.blob.core.windows.net/private/example-image-url",
+          "b64_json": null,
+          "mime_type": null,
+          "generated_at": "2025-01-15T10:00:00.000Z"
+        }
+      ],
+      "image_count": 1,
+      "provider": "openai",
+      "model": "gpt-image-1",
+      "generated_at": "2025-01-15T10:00:00.000Z"
+    },
+    {
+      "_topic": "crypto",
+      "images": [
+        {
+          "index": 0,
+          "prompt": "Cryptocurrency market visualization, Bitcoin and Ethereum symbols glowing in a blockchain network, digital currency flows, dark background with neon blue accents, cinematic lighting, no text",
+          "revised_prompt": null,
+          "provider": "google",
+          "model": "imagen-3.0-generate-001",
+          "size": "1024x1024",
+          "format": "b64_json",
+          "url": null,
+          "b64_json": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+          "mime_type": "image/png",
+          "generated_at": "2025-01-15T10:00:00.000Z"
+        }
+      ],
+      "image_count": 1,
+      "provider": "google",
+      "model": "imagen-3.0-generate-001",
+      "generated_at": "2025-01-15T10:00:00.000Z"
+    }
+  ]
+}

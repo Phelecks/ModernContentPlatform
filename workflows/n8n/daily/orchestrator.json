@@ -285,6 +285,21 @@
         "workflowId": {
           "__rl": true,
           "mode": "id",
+          "value": "={{ $vars.DAILY_GENERATE_IMAGES_WORKFLOW_ID }}"
+        },
+        "options": {}
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000023",
+      "name": "06b Generate Images",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [3760, 400]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
           "value": "={{ $vars.DAILY_YOUTUBE_METADATA_WORKFLOW_ID }}"
         },
         "options": {}
@@ -293,7 +308,7 @@
       "name": "07 YouTube Metadata",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [3760, 400]
+      "position": [3980, 400]
     },
     {
       "parameters": {
@@ -433,6 +448,11 @@
       ]
     },
     "06 Video Script": {
+      "main": [
+        [{ "node": "06b Generate Images", "type": "main", "index": 0 }]
+      ]
+    },
+    "06b Generate Images": {
       "main": [
         [{ "node": "07 YouTube Metadata", "type": "main", "index": 0 }]
       ]

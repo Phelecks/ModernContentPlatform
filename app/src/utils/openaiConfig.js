@@ -78,6 +78,7 @@ export const OPENAI_MODEL_DEFAULTS = {
  * Default Google models per task.
  * Fast tier  (gemini-2.5-flash) — high-volume or short-output tasks.
  * Standard tier (gemini-2.5-pro) — longer editorial tasks.
+ * Image generation uses Imagen 3 via the Gemini REST API.
  */
 export const GOOGLE_MODEL_DEFAULTS = {
   alertClassification: 'gemini-2.5-flash',
@@ -88,8 +89,8 @@ export const GOOGLE_MODEL_DEFAULTS = {
   tomorrowOutlook: 'gemini-2.5-pro',
   videoScript: 'gemini-2.5-pro',
   youtubeMetadata: 'gemini-2.5-flash',
-  /** Reserved for future Google image generation wiring. */
-  imageGeneration: 'gemini-2.5-flash',
+  /** Imagen 3 via the Gemini REST API for daily media asset generation. */
+  imageGeneration: 'imagen-3.0-generate-001',
   /** Reserved for future Google TTS wiring. */
   tts: 'gemini-2.5-flash',
 }
@@ -103,7 +104,7 @@ export const PROVIDER_CAPABILITIES = {
   },
   [PROVIDER_GOOGLE]: {
     nativeJsonObjectMode: false,
-    imageGeneration: false,
+    imageGeneration: true,
     tts: false,
   },
 }
@@ -270,9 +271,8 @@ export const AI_TASK_CONTRACTS = {
     providers: {
       [PROVIDER_OPENAI]: { supported: true },
       [PROVIDER_GOOGLE]: {
-        supported: false,
-        fallbackProvider: PROVIDER_OPENAI,
-        reason: 'google image generation is not wired in v1',
+        supported: true,
+        note: 'uses Imagen 3 via the Gemini REST API (imagen-3.0-generate-001)',
       },
     },
   },
