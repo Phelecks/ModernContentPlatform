@@ -24,6 +24,7 @@ import {
   validateTomorrowOutlook,
   validateVideoScript,
   validateYoutubeMetadata,
+  validateNarrationAsset,
   parseAndValidateAlertClassification,
   parseAndValidateTimelineEntry,
   parseAndValidateDailySummary,
@@ -31,11 +32,15 @@ import {
   parseAndValidateTomorrowOutlook,
   parseAndValidateVideoScript,
   parseAndValidateYoutubeMetadata,
+  parseAndValidateNarrationAsset,
   VALID_TOPICS,
   VALID_SENTIMENTS,
   VALID_SEVERITY_LEVELS,
   VALID_RISK_LEVELS,
   VALID_EXPECTATION_OUTCOMES,
+  VALID_NARRATION_PROVIDERS,
+  VALID_NARRATION_FORMATS,
+  VALID_NARRATION_AUDIO_ENCODINGS,
 } from '@/utils/validateAiOutput.js'
 
 // ---------------------------------------------------------------------------
@@ -164,6 +169,15 @@ describe('exported constants', () => {
   })
   it('VALID_EXPECTATION_OUTCOMES contains met, missed, partial', () => {
     expect(VALID_EXPECTATION_OUTCOMES).toEqual(['met', 'missed', 'partial'])
+  })
+  it('VALID_NARRATION_PROVIDERS contains openai and google', () => {
+    expect(VALID_NARRATION_PROVIDERS).toEqual(['openai', 'google'])
+  })
+  it('VALID_NARRATION_FORMATS contains b64_json', () => {
+    expect(VALID_NARRATION_FORMATS).toEqual(['b64_json'])
+  })
+  it('VALID_NARRATION_AUDIO_ENCODINGS contains all supported encodings', () => {
+    expect(VALID_NARRATION_AUDIO_ENCODINGS).toEqual(['mp3', 'opus', 'aac', 'flac', 'wav', 'pcm'])
   })
 })
 
@@ -1369,5 +1383,154 @@ describe('parseAndValidate* — failure paths', () => {
       expect(e.message).toContain('AI_VALIDATION_ERROR')
       expect(e.message).toContain('Alert classification')
     }
+  })
+})
+
+// ---------------------------------------------------------------------------
+// validateNarrationAsset
+// ---------------------------------------------------------------------------
+
+const VALID_NARRATION_ASSET_OPENAI = {
+  provider: 'openai',
+  model: 'gpt-4o-mini-tts',
+  voice: 'alloy',
+  format: 'b64_json',
+  audio_encoding: 'mp3',
+  audio_b64: 'SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEwMAAAAAAAAAAAAAAA',
+  char_count: 842,
+  duration_seconds: null,
+  generated_at: '2025-01-15T10:00:00.000Z',
+  warning: null,
+}
+
+const VALID_NARRATION_ASSET_GOOGLE = {
+  provider: 'google',
+  model: 'en-US-Chirp3-HD-Aoede',
+  voice: 'en-US-Chirp3-HD-Aoede',
+  format: 'b64_json',
+  audio_encoding: 'mp3',
+  audio_b64: 'SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEwMAAAAAAAAAAAAAAA',
+  char_count: 934,
+  duration_seconds: null,
+  generated_at: '2025-01-15T10:00:00.000Z',
+  warning: null,
+}
+
+describe('validateNarrationAsset', () => {
+  it('returns ok=true for a valid OpenAI narration asset', () => {
+    const { ok, errors } = validateNarrationAsset(VALID_NARRATION_ASSET_OPENAI)
+    expect(ok).toBe(true)
+    expect(errors).toEqual([])
+  })
+
+  it('returns ok=true for a valid Google narration asset', () => {
+    const { ok, errors } = validateNarrationAsset(VALID_NARRATION_ASSET_GOOGLE)
+    expect(ok).toBe(true)
+    expect(errors).toEqual([])
+  })
+
+  it('returns ok=true when audio_b64 is null (failed generation with warning)', () => {
+    const asset = { ...VALID_NARRATION_ASSET_OPENAI, audio_b64: null, warning: 'OpenAI TTS API error: upstream timeout' }
+    const { ok } = validateNarrationAsset(asset)
+    expect(ok).toBe(true)
+  })
+
+  it('returns ok=true when duration_seconds is a positive number', () => {
+    const asset = { ...VALID_NARRATION_ASSET_OPENAI, duration_seconds: 62.4 }
+    const { ok } = validateNarrationAsset(asset)
+    expect(ok).toBe(true)
+  })
+
+  it('returns ok=false when input is not an object', () => {
+    const { ok, errors } = validateNarrationAsset(null)
+    expect(ok).toBe(false)
+    expect(errors[0]).toMatch(/not an object/)
+  })
+
+  it('reports an error for an invalid provider', () => {
+    const { ok, errors } = validateNarrationAsset({ ...VALID_NARRATION_ASSET_OPENAI, provider: 'anthropic' })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('provider'))).toBe(true)
+  })
+
+  it('reports an error when model is missing', () => {
+    const { ok, errors } = validateNarrationAsset({ ...VALID_NARRATION_ASSET_OPENAI, model: '' })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('model'))).toBe(true)
+  })
+
+  it('reports an error when voice is missing', () => {
+    const { ok, errors } = validateNarrationAsset({ ...VALID_NARRATION_ASSET_OPENAI, voice: '' })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('voice'))).toBe(true)
+  })
+
+  it('reports an error for an invalid format', () => {
+    const { ok, errors } = validateNarrationAsset({ ...VALID_NARRATION_ASSET_OPENAI, format: 'url' })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('format'))).toBe(true)
+  })
+
+  it('reports an error for an invalid audio_encoding', () => {
+    const { ok, errors } = validateNarrationAsset({ ...VALID_NARRATION_ASSET_OPENAI, audio_encoding: 'ogg' })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('audio_encoding'))).toBe(true)
+  })
+
+  it('accepts all valid audio_encoding values', () => {
+    for (const enc of VALID_NARRATION_AUDIO_ENCODINGS) {
+      const { ok } = validateNarrationAsset({ ...VALID_NARRATION_ASSET_OPENAI, audio_encoding: enc })
+      expect(ok).toBe(true)
+    }
+  })
+
+  it('reports an error when char_count is zero', () => {
+    const { ok, errors } = validateNarrationAsset({ ...VALID_NARRATION_ASSET_OPENAI, char_count: 0 })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('char_count'))).toBe(true)
+  })
+
+  it('reports an error when char_count is not an integer', () => {
+    const { ok, errors } = validateNarrationAsset({ ...VALID_NARRATION_ASSET_OPENAI, char_count: 1.5 })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('char_count'))).toBe(true)
+  })
+
+  it('reports an error when duration_seconds is negative', () => {
+    const { ok, errors } = validateNarrationAsset({ ...VALID_NARRATION_ASSET_OPENAI, duration_seconds: -1 })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('duration_seconds'))).toBe(true)
+  })
+
+  it('reports an error when generated_at is missing', () => {
+    const { ok, errors } = validateNarrationAsset({ ...VALID_NARRATION_ASSET_OPENAI, generated_at: '' })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('generated_at'))).toBe(true)
+  })
+
+  it('reports an error when warning exceeds 500 characters', () => {
+    const { ok, errors } = validateNarrationAsset({ ...VALID_NARRATION_ASSET_OPENAI, warning: 'x'.repeat(501) })
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('warning'))).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// parseAndValidateNarrationAsset
+// ---------------------------------------------------------------------------
+
+describe('parseAndValidateNarrationAsset', () => {
+  it('returns the validated object on a valid asset', () => {
+    const result = parseAndValidateNarrationAsset(VALID_NARRATION_ASSET_OPENAI)
+    expect(result).toBe(VALID_NARRATION_ASSET_OPENAI)
+  })
+
+  it('throws AI_VALIDATION_ERROR on an invalid asset', () => {
+    expect(() => parseAndValidateNarrationAsset({ ...VALID_NARRATION_ASSET_OPENAI, provider: 'bad' }))
+      .toThrow('AI_VALIDATION_ERROR')
+  })
+
+  it('throws AI_VALIDATION_ERROR when the input is null', () => {
+    expect(() => parseAndValidateNarrationAsset(null)).toThrow('AI_VALIDATION_ERROR')
   })
 })

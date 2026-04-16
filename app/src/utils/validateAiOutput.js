@@ -781,3 +781,109 @@ export function parseAndValidateImageGenerationAsset(obj) {
   }
   return obj
 }
+
+// ---------------------------------------------------------------------------
+// Narration asset
+// ---------------------------------------------------------------------------
+
+export const VALID_NARRATION_PROVIDERS = ['openai', 'google']
+export const VALID_NARRATION_FORMATS = ['b64_json']
+export const VALID_NARRATION_AUDIO_ENCODINGS = ['mp3', 'opus', 'aac', 'flac', 'wav', 'pcm']
+
+/**
+ * Validates a normalized narration asset object.
+ *
+ * This is not a direct AI JSON output — it is the normalized asset record
+ * produced by the 06c_generate_narration workflow Code node after consuming
+ * the provider-specific TTS API response (OpenAI /v1/audio/speech or Google
+ * Cloud Text-to-Speech /v1/text:synthesize).  Validation confirms that the
+ * normalization step produced a consistent contract for downstream media
+ * pipeline steps.
+ *
+ * Required fields: provider, model, voice, format, audio_encoding,
+ * char_count, generated_at.
+ *
+ * audio_b64 may be null when the asset carries only warning metadata (i.e.
+ * the TTS step produced a non-fatal error and the pipeline continues without
+ * audio).
+ *
+ * @param {unknown} obj - Parsed narration asset object.
+ * @returns {{ ok: boolean, errors: string[] }}
+ */
+export function validateNarrationAsset(obj) {
+  const errors = []
+
+  if (!obj || typeof obj !== 'object') {
+    return { ok: false, errors: ['Output is not an object.'] }
+  }
+
+  if (!VALID_NARRATION_PROVIDERS.includes(obj.provider)) {
+    errors.push(`provider "${obj.provider}" is invalid. Expected: ${VALID_NARRATION_PROVIDERS.join(', ')}.`)
+  }
+
+  if (!isString(obj.model, 1, 100)) {
+    errors.push('model must be a non-empty string up to 100 characters.')
+  }
+
+  if (!isString(obj.voice, 1, 100)) {
+    errors.push('voice must be a non-empty string up to 100 characters.')
+  }
+
+  if (!VALID_NARRATION_FORMATS.includes(obj.format)) {
+    errors.push(`format "${obj.format}" is invalid. Expected: ${VALID_NARRATION_FORMATS.join(', ')}.`)
+  }
+
+  if (!VALID_NARRATION_AUDIO_ENCODINGS.includes(obj.audio_encoding)) {
+    errors.push(`audio_encoding "${obj.audio_encoding}" is invalid. Expected: ${VALID_NARRATION_AUDIO_ENCODINGS.join(', ')}.`)
+  }
+
+  if (obj.audio_b64 !== null && obj.audio_b64 !== undefined && !isString(obj.audio_b64, 1)) {
+    errors.push('audio_b64 must be a non-empty string or null.')
+  }
+
+  if (!Number.isInteger(obj.char_count) || obj.char_count < 1) {
+    errors.push('char_count must be a positive integer.')
+  }
+
+  if (obj.duration_seconds !== null && obj.duration_seconds !== undefined) {
+    if (typeof obj.duration_seconds !== 'number' || obj.duration_seconds < 0) {
+      errors.push('duration_seconds must be a non-negative number or null.')
+    }
+  }
+
+  if (!isString(obj.generated_at, 10)) {
+    errors.push('generated_at must be a non-empty ISO 8601 timestamp string.')
+  }
+
+  if (obj.warning !== null && obj.warning !== undefined) {
+    if (typeof obj.warning !== 'string' || obj.warning.length > 500) {
+      errors.push('warning must be a string of up to 500 characters or null.')
+    }
+  }
+
+  return { ok: errors.length === 0, errors }
+}
+
+/**
+ * Validates a narration asset object.
+ *
+ * Unlike most other parseAndValidate* functions this does not call
+ * parseJsonOutput() because the narration asset is produced by the workflow
+ * Code node rather than returned as raw JSON text by an AI model.
+ * Callers pass a pre-parsed object directly.
+ *
+ * Throws AI_VALIDATION_ERROR when required fields are absent or invalid.
+ *
+ * @param {object} obj - Pre-parsed narration asset object.
+ * @returns {object} The validated object (unmodified).
+ * @throws {Error} AI_VALIDATION_ERROR.
+ */
+export function parseAndValidateNarrationAsset(obj) {
+  const { ok, errors } = validateNarrationAsset(obj)
+  if (!ok) {
+    throw new Error(
+      `AI_VALIDATION_ERROR: Narration asset is invalid.\n${errors.join('\n')}`
+    )
+  }
+  return obj
+}

@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "narration_asset",
+  "title": "Narration Asset",
+  "description": "Shared internal asset contract for the TTS narration step. Produced by the 06c_generate_narration workflow after normalizing the provider-specific API response. Used by downstream media pipeline steps (video rendering, audio publishing) and committed to GitHub as narration.json.",
+  "type": "object",
+  "required": ["provider", "model", "voice", "format", "audio_encoding", "char_count", "generated_at"],
+  "additionalProperties": false,
+  "properties": {
+    "provider": {
+      "type": "string",
+      "enum": ["openai", "google"],
+      "description": "The provider that generated this narration audio."
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "The model identifier used for TTS generation."
+    },
+    "voice": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "The voice name used for generation (e.g. 'alloy' for OpenAI, 'en-US-Chirp3-HD-Aoede' for Google)."
+    },
+    "format": {
+      "type": "string",
+      "enum": ["b64_json"],
+      "description": "Format of the returned audio data. Always 'b64_json' after normalization — both providers return or are converted to base64-encoded audio."
+    },
+    "audio_encoding": {
+      "type": "string",
+      "enum": ["mp3", "opus", "aac", "flac", "wav", "pcm"],
+      "description": "Audio encoding/container format of the generated audio."
+    },
+    "audio_b64": {
+      "type": ["string", "null"],
+      "description": "Base64-encoded audio data. Null when generation failed and the asset carries only warning metadata."
+    },
+    "char_count": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Character count of the input text submitted to TTS."
+    },
+    "duration_seconds": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "description": "Estimated or actual duration of the audio in seconds. Null when not reported by the provider."
+    },
+    "generated_at": {
+      "type": "string",
+      "description": "ISO 8601 timestamp when the narration was generated.",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}"
+    },
+    "warning": {
+      "type": ["string", "null"],
+      "maxLength": 500,
+      "description": "Optional warning message set when generation succeeded with caveats or partially failed. Null on clean success."
+    }
+  },
+  "examples": [
+    {
+      "_topic": "crypto",
+      "provider": "openai",
+      "model": "gpt-4o-mini-tts",
+      "voice": "alloy",
+      "format": "b64_json",
+      "audio_encoding": "mp3",
+      "audio_b64": "SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEwMAAAAAAAAAAAAAAA",
+      "char_count": 842,
+      "duration_seconds": null,
+      "generated_at": "2025-01-15T10:00:00.000Z",
+      "warning": null
+    },
+    {
+      "_topic": "finance",
+      "provider": "google",
+      "model": "en-US-Chirp3-HD-Aoede",
+      "voice": "en-US-Chirp3-HD-Aoede",
+      "format": "b64_json",
+      "audio_encoding": "mp3",
+      "audio_b64": "SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEwMAAAAAAAAAAAAAAA",
+      "char_count": 934,
+      "duration_seconds": null,
+      "generated_at": "2025-01-15T10:00:00.000Z",
+      "warning": null
+    }
+  ]
+}
