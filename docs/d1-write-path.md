@@ -166,6 +166,51 @@ Schema: `schemas/workflow/write_publish_job.json`
 
 ---
 
+### POST /api/internal/openai-usage-log
+
+Creates one `openai_usage_log` row for each OpenAI task attempt.
+
+Use this endpoint from n8n immediately after each OpenAI node (success and failure paths)
+to capture:
+- task + model
+- success/failure status
+- retry count
+- token usage
+- optional cost and latency estimates
+
+**Request:**
+```json
+{
+  "task": "dailySummary",
+  "model": "gpt-4o",
+  "workflow_name": "Daily — 02 Generate Summary",
+  "execution_id": "199248",
+  "topic_slug": "finance",
+  "date_key": "2026-04-16",
+  "prompt_tokens": 1420,
+  "completion_tokens": 680,
+  "total_tokens": 2100,
+  "status": "ok",
+  "retry_count": 0,
+  "request_latency_ms": 3420,
+  "estimated_cost_usd": 0.0184
+}
+```
+
+**Response (201):**
+```json
+{
+  "id": 101,
+  "task": "dailySummary",
+  "model": "gpt-4o",
+  "status": "ok"
+}
+```
+
+Schema: `schemas/workflow/write_openai_usage_log.json`
+
+---
+
 ## Authentication
 
 All internal write endpoints require the `X-Write-Key` header:
@@ -232,6 +277,8 @@ Invalid payloads return HTTP 400 with a descriptive error message.
 | `daily_status` | `POST /api/internal/alerts` (incremental) | Intraday alert flow |
 | `daily_status` | `POST /api/internal/daily-status` (full upsert) | Daily editorial flow |
 | `publish_jobs` | `POST /api/internal/publish-jobs` | Daily editorial flow |
+| `workflow_logs` | `POST /api/internal/workflow-logs` | Intraday + daily + shared workflows |
+| `openai_usage_log` | `POST /api/internal/openai-usage-log` | Intraday + daily OpenAI task nodes |
 
 ---
 
@@ -245,9 +292,13 @@ Invalid payloads return HTTP 400 with a descriptive error message.
 | `functions/api/internal/alerts.js` | Alert write endpoint |
 | `functions/api/internal/daily-status.js` | Daily status write endpoint |
 | `functions/api/internal/publish-jobs.js` | Publish job write endpoint |
+| `functions/api/internal/workflow-logs.js` | Workflow execution log endpoint |
+| `functions/api/internal/openai-usage-log.js` | OpenAI usage telemetry endpoint |
 | `schemas/workflow/write_alert.json` | Alert payload schema |
 | `schemas/workflow/write_daily_status.json` | Daily status payload schema |
 | `schemas/workflow/write_publish_job.json` | Publish job payload schema |
+| `schemas/workflow/write_workflow_log.json` | Workflow log payload schema |
+| `schemas/workflow/write_openai_usage_log.json` | OpenAI usage payload schema |
 
 ---
 

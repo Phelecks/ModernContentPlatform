@@ -6,6 +6,7 @@ Structured schemas shared across the platform live here.
 - `api/` — Pages Functions response contracts
 - `content/` — editorial content shape definitions
 - `workflow/` — workflow step payload contracts
+  - includes internal write payloads such as `write_alert`, `write_daily_status`, `write_publish_job`, `write_workflow_log`, and `write_openai_usage_log`
 
 Use these schemas to keep boundaries explicit between Vue, Pages Functions, n8n, and AI steps.
 

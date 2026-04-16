@@ -128,13 +128,37 @@ The canonical per-field limits are documented in `OPENAI_COST_CONTROLS.outputLim
 
 ### openai_usage_log table
 
-> **Status: schema only — not yet wired.** The `0007_openai_usage_log.sql`
-> migration creates the table structure, but no workflow step or Pages Function
-> endpoint currently writes to `openai_usage_log`. The existing
-> `POST /api/internal/workflow-logs` endpoint writes to `workflow_logs`, not
-> this table. A dedicated write endpoint (e.g.
-> `POST /api/internal/openai-usage-log`) is required before the monitoring
-> queries below will return data.
+OpenAI task telemetry is written through:
+- `POST /api/internal/openai-usage-log` (Pages Function write endpoint)
+- `openai_usage_log` table (`0007` + `0008` migrations)
+
+Recommended n8n pattern per OpenAI task node:
+1. Keep OpenAI node retries enabled (`maxTries: 3`).
+2. Add a downstream HTTP Request node to write one usage row.
+3. Include `status = ok` on success path and `status = retry|error` on failure paths.
+4. Increment `retry_count` with the current attempt index.
+5. Include `prompt_tokens`, `completion_tokens`, `total_tokens` when OpenAI usage metadata is available.
+6. Optionally include `estimated_cost_usd` and `request_latency_ms` for cost/perf tuning.
+
+Example payload:
+
+```json
+{
+  "task": "dailySummary",
+  "model": "gpt-4o",
+  "workflow_name": "Daily — 02 Generate Summary",
+  "execution_id": "199248",
+  "topic_slug": "finance",
+  "date_key": "2026-04-16",
+  "prompt_tokens": 1420,
+  "completion_tokens": 680,
+  "total_tokens": 2100,
+  "status": "ok",
+  "retry_count": 0,
+  "request_latency_ms": 3420,
+  "estimated_cost_usd": 0.0184
+}
+```
 
 Once wired, the `openai_usage_log` table provides per-call usage tracking:
 
@@ -160,7 +184,12 @@ Fields captured per call:
 | `completion_tokens` | Tokens in the completion |
 | `total_tokens` | prompt + completion |
 | `status` | ok / error / retry |
+| `retry_count` | Retry attempt count for this logged event |
 | `error_code` | OpenAI error code on failure |
+| `error_message` | Human-readable failure reason (required for error/retry) |
+| `request_latency_ms` | Optional API latency in milliseconds |
+| `estimated_cost_usd` | Optional approximate cost per call |
+| `metadata_json` | Optional extra context (JSON string) |
 
 ### Suggested monitoring queries
 
@@ -231,6 +260,17 @@ in v1. Use them as alerting thresholds in your monitoring dashboard.
 To enforce a budget: add a check at the start of the relevant workflow that
 queries `openai_usage_log` for today's call count and aborts if it exceeds
 the budget for that task and topic.
+
+### Local and staging observability guidance
+
+- **Local:** run `wrangler pages dev ... --d1=DB` and POST sample records to
+  `/api/internal/openai-usage-log` using a `.dev.vars` `WRITE_API_KEY`.
+- **Staging:** enable the same endpoint + key, then wire all OpenAI n8n nodes
+  to emit usage rows before promoting changes to production.
+- Start with dashboard tiles for:
+  - daily tokens by task/model
+  - retry/error rate by task
+  - estimated cost by topic/day
 
 ---
 

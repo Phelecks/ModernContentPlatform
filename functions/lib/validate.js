@@ -254,6 +254,17 @@ export function validateDailyStatusPayload(body) {
 }
 
 const VALID_EVENT_TYPES = ['info', 'warning', 'error', 'retry', 'completed']
+const VALID_OPENAI_TASKS = [
+  'alertClassification',
+  'timelineFormatting',
+  'dailySummary',
+  'articleGeneration',
+  'expectationCheck',
+  'tomorrowOutlook',
+  'videoScript',
+  'youtubeMetadata'
+]
+const VALID_OPENAI_STATUSES = ['ok', 'error', 'retry']
 
 const WORKFLOW_LOG_ALLOWED_KEYS = [
   'workflow_name', 'execution_id', 'topic_slug', 'date_key',
@@ -326,6 +337,118 @@ export function validateWorkflowLogPayload(body) {
     module_name: module_name ?? null,
     error_message: error_message ?? null,
     error_details: error_details ?? null,
+    metadata_json: metadata_json ?? null
+  })
+}
+
+const OPENAI_USAGE_ALLOWED_KEYS = [
+  'task', 'model', 'workflow_name', 'execution_id', 'topic_slug', 'date_key',
+  'prompt_tokens', 'completion_tokens', 'total_tokens',
+  'status', 'retry_count', 'error_code', 'error_message',
+  'request_latency_ms', 'estimated_cost_usd', 'metadata_json'
+]
+
+/**
+ * Validate an openai_usage_log write payload.
+ *
+ * Required: task, model
+ * Optional: workflow_name, execution_id, topic_slug, date_key, token fields,
+ *   status, retry_count, error_code, error_message, request_latency_ms,
+ *   estimated_cost_usd, metadata_json
+ */
+export function validateOpenAiUsagePayload(body) {
+  if (!body || typeof body !== 'object') return fail('Request body must be a JSON object')
+
+  const unknownError = checkUnknownKeys(body, OPENAI_USAGE_ALLOWED_KEYS)
+  if (unknownError) return fail(unknownError)
+
+  const {
+    task, model, workflow_name, execution_id, topic_slug, date_key,
+    prompt_tokens, completion_tokens, total_tokens,
+    status, retry_count, error_code, error_message,
+    request_latency_ms, estimated_cost_usd, metadata_json
+  } = body
+
+  if (!VALID_OPENAI_TASKS.includes(task)) {
+    return fail(`Invalid task: must be one of ${VALID_OPENAI_TASKS.join(', ')}`)
+  }
+  if (!isNonEmptyString(model, 100)) {
+    return fail('model is required and must be a non-empty string (max 100 chars)')
+  }
+  if (!isOptionalString(workflow_name, 200)) {
+    return fail('workflow_name must be a string (max 200 chars) or null')
+  }
+  if (execution_id !== undefined && execution_id !== null) {
+    if (typeof execution_id !== 'string' && typeof execution_id !== 'number') {
+      return fail('execution_id must be a string, number, or null')
+    }
+  }
+  if (topic_slug !== undefined && topic_slug !== null) {
+    if (!isValidTopicSlug(topic_slug) || !VALID_TOPICS.includes(topic_slug)) {
+      return fail(`Invalid topic_slug: must be one of ${VALID_TOPICS.join(', ')}`)
+    }
+  }
+  if (date_key !== undefined && date_key !== null) {
+    if (!isValidDateKey(date_key)) {
+      return fail('Invalid date_key: expected YYYY-MM-DD format')
+    }
+  }
+
+  for (const [field, value] of [
+    ['prompt_tokens', prompt_tokens],
+    ['completion_tokens', completion_tokens],
+    ['total_tokens', total_tokens],
+    ['retry_count', retry_count],
+    ['request_latency_ms', request_latency_ms]
+  ]) {
+    if (value !== undefined && (!Number.isInteger(value) || value < 0)) {
+      return fail(`${field} must be a non-negative integer`)
+    }
+  }
+
+  if (status !== undefined && !VALID_OPENAI_STATUSES.includes(status)) {
+    return fail(`Invalid status: must be one of ${VALID_OPENAI_STATUSES.join(', ')}`)
+  }
+  if (!isOptionalString(error_code, 100)) {
+    return fail('error_code must be a string (max 100 chars) or null')
+  }
+  if (!isOptionalString(error_message)) {
+    return fail('error_message must be a string or null')
+  }
+  if (estimated_cost_usd !== undefined && estimated_cost_usd !== null) {
+    if (typeof estimated_cost_usd !== 'number' || Number.isNaN(estimated_cost_usd) || estimated_cost_usd < 0) {
+      return fail('estimated_cost_usd must be a non-negative number')
+    }
+  }
+  if (!isOptionalString(metadata_json)) {
+    return fail('metadata_json must be a string or null')
+  }
+
+  const resolvedStatus = status ?? 'ok'
+  if ((resolvedStatus === 'error' || resolvedStatus === 'retry') && !isNonEmptyString(error_message)) {
+    return fail('error_message is required and must be a non-empty string for error and retry status')
+  }
+
+  const resolvedPromptTokens = prompt_tokens ?? 0
+  const resolvedCompletionTokens = completion_tokens ?? 0
+  const resolvedTotalTokens = total_tokens ?? (resolvedPromptTokens + resolvedCompletionTokens)
+
+  return ok({
+    task,
+    model,
+    workflow_name: workflow_name ?? null,
+    execution_id: execution_id != null ? String(execution_id) : null,
+    topic_slug: topic_slug ?? null,
+    date_key: date_key ?? null,
+    prompt_tokens: resolvedPromptTokens,
+    completion_tokens: resolvedCompletionTokens,
+    total_tokens: resolvedTotalTokens,
+    status: resolvedStatus,
+    retry_count: retry_count ?? 0,
+    error_code: error_code ?? null,
+    error_message: error_message ?? null,
+    request_latency_ms: request_latency_ms ?? null,
+    estimated_cost_usd: estimated_cost_usd ?? null,
     metadata_json: metadata_json ?? null
   })
 }

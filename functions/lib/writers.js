@@ -267,6 +267,59 @@ export async function createWorkflowLog(db, {
 }
 
 /**
+ * Insert a new openai_usage_log row.
+ *
+ * Records one OpenAI task execution for observability, retry visibility, and
+ * approximate cost analysis.
+ *
+ * @param {D1Database} db
+ * @param {{ task: string, model: string, workflow_name?: string|null, execution_id?: string|null, topic_slug?: string|null, date_key?: string|null, prompt_tokens?: number, completion_tokens?: number, total_tokens?: number, status?: string, retry_count?: number, error_code?: string|null, error_message?: string|null, request_latency_ms?: number|null, estimated_cost_usd?: number|null, metadata_json?: string|null }} params
+ * @returns {Promise<{ id: number }>}
+ */
+export async function createOpenAiUsageLog(db, {
+  task,
+  model,
+  workflow_name = null,
+  execution_id = null,
+  topic_slug = null,
+  date_key = null,
+  prompt_tokens = 0,
+  completion_tokens = 0,
+  total_tokens = 0,
+  status = 'ok',
+  retry_count = 0,
+  error_code = null,
+  error_message = null,
+  request_latency_ms = null,
+  estimated_cost_usd = null,
+  metadata_json = null
+}) {
+  const sql = `
+    INSERT INTO openai_usage_log
+      (task, model, workflow_name, execution_id, topic_slug, date_key,
+       prompt_tokens, completion_tokens, total_tokens,
+       status, retry_count, error_code, error_message,
+       request_latency_ms, estimated_cost_usd, metadata_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    RETURNING id`
+
+  const row = await db.prepare(sql)
+    .bind(
+      task, model, workflow_name, execution_id, topic_slug, date_key,
+      prompt_tokens, completion_tokens, total_tokens,
+      status, retry_count, error_code, error_message,
+      request_latency_ms, estimated_cost_usd, metadata_json
+    )
+    .first()
+
+  if (!row || row.id == null) {
+    throw new Error('Failed to create OpenAI usage log: no id returned from D1')
+  }
+
+  return { id: row.id }
+}
+
+/**
  * Insert a new source into the source registry.
  *
  * @param {D1Database} db
