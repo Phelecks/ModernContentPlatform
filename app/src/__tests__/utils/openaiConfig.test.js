@@ -13,7 +13,7 @@
  *   - parseOpenAIConfig — default AI_PROVIDER resolves to 'openai'
  *   - parseOpenAIConfig — whitespace-only model override falls back to default
  *   - parseOpenAIConfig — empty env object throws on missing API key
- *   - OPENAI_MODEL_DEFAULTS — correct default values exported for all 8 tasks
+ *   - OPENAI_MODEL_DEFAULTS — correct default values exported for all 10 tasks
  */
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
@@ -67,7 +67,7 @@ describe('constants', () => {
     expect(VALID_PROVIDERS).toEqual(['openai', 'google'])
   })
 
-  it('OPENAI_MODEL_DEFAULTS has correct default models for all 8 tasks', () => {
+  it('OPENAI_MODEL_DEFAULTS has correct default models for all 10 tasks', () => {
     expect(OPENAI_MODEL_DEFAULTS.alertClassification).toBe('gpt-4o-mini')
     expect(OPENAI_MODEL_DEFAULTS.timelineFormatting).toBe('gpt-4o-mini')
     expect(OPENAI_MODEL_DEFAULTS.dailySummary).toBe('gpt-4o')
@@ -76,6 +76,8 @@ describe('constants', () => {
     expect(OPENAI_MODEL_DEFAULTS.tomorrowOutlook).toBe('gpt-4o')
     expect(OPENAI_MODEL_DEFAULTS.videoScript).toBe('gpt-4o')
     expect(OPENAI_MODEL_DEFAULTS.youtubeMetadata).toBe('gpt-4o-mini')
+    expect(OPENAI_MODEL_DEFAULTS.imageGeneration).toBe('gpt-image-1')
+    expect(OPENAI_MODEL_DEFAULTS.tts).toBe('gpt-4o-mini-tts')
   })
 })
 
@@ -286,7 +288,7 @@ describe('parseOpenAIConfig — valid configurations', () => {
     expect(config.provider).toBe('openai')
   })
 
-  it('resolves all eight model keys', () => {
+  it('resolves all ten model keys', () => {
     const config = parseOpenAIConfig(VALID_ENV)
     expect(config.models).toHaveProperty('alertClassification')
     expect(config.models).toHaveProperty('timelineFormatting')
@@ -296,6 +298,8 @@ describe('parseOpenAIConfig — valid configurations', () => {
     expect(config.models).toHaveProperty('tomorrowOutlook')
     expect(config.models).toHaveProperty('videoScript')
     expect(config.models).toHaveProperty('youtubeMetadata')
+    expect(config.models).toHaveProperty('imageGeneration')
+    expect(config.models).toHaveProperty('tts')
   })
 
   it('falls back to default models when overrides are absent', () => {
@@ -308,6 +312,8 @@ describe('parseOpenAIConfig — valid configurations', () => {
     expect(config.models.tomorrowOutlook).toBe(OPENAI_MODEL_DEFAULTS.tomorrowOutlook)
     expect(config.models.videoScript).toBe(OPENAI_MODEL_DEFAULTS.videoScript)
     expect(config.models.youtubeMetadata).toBe(OPENAI_MODEL_DEFAULTS.youtubeMetadata)
+    expect(config.models.imageGeneration).toBe(OPENAI_MODEL_DEFAULTS.imageGeneration)
+    expect(config.models.tts).toBe(OPENAI_MODEL_DEFAULTS.tts)
   })
 
   it('applies per-task model overrides when provided', () => {
@@ -321,6 +327,8 @@ describe('parseOpenAIConfig — valid configurations', () => {
       OPENAI_MODEL_TOMORROW_OUTLOOK: 'gpt-4o-mini',
       OPENAI_MODEL_VIDEO_SCRIPT: 'gpt-4-turbo',
       OPENAI_MODEL_YOUTUBE_METADATA: 'gpt-4o',
+      OPENAI_MODEL_IMAGE_GENERATION: 'gpt-image-1',
+      OPENAI_MODEL_TTS: 'gpt-4o-mini-tts',
     })
     expect(config.models.alertClassification).toBe('gpt-4o')
     expect(config.models.timelineFormatting).toBe('gpt-4o')
@@ -330,6 +338,8 @@ describe('parseOpenAIConfig — valid configurations', () => {
     expect(config.models.tomorrowOutlook).toBe('gpt-4o-mini')
     expect(config.models.videoScript).toBe('gpt-4-turbo')
     expect(config.models.youtubeMetadata).toBe('gpt-4o')
+    expect(config.models.imageGeneration).toBe('gpt-image-1')
+    expect(config.models.tts).toBe('gpt-4o-mini-tts')
   })
 
   it('applies only the overrides that are explicitly set, leaving others at default', () => {
@@ -345,6 +355,8 @@ describe('parseOpenAIConfig — valid configurations', () => {
     expect(config.models.tomorrowOutlook).toBe(OPENAI_MODEL_DEFAULTS.tomorrowOutlook)
     expect(config.models.videoScript).toBe(OPENAI_MODEL_DEFAULTS.videoScript)
     expect(config.models.youtubeMetadata).toBe(OPENAI_MODEL_DEFAULTS.youtubeMetadata)
+    expect(config.models.imageGeneration).toBe(OPENAI_MODEL_DEFAULTS.imageGeneration)
+    expect(config.models.tts).toBe(OPENAI_MODEL_DEFAULTS.tts)
   })
 
   it('trims whitespace from the API key', () => {
@@ -383,6 +395,21 @@ describe('parseOpenAIConfig — valid configurations', () => {
       GOOGLE_MODEL_VIDEO_SCRIPT: 'gemini-2.5-flash',
     })
     expect(config.models.videoScript).toBe('gemini-2.5-flash')
+  })
+
+  it('allows OpenAI and Google credentials to coexist and uses selected provider credentials', () => {
+    const openaiConfig = parseAIProviderConfig({
+      AI_PROVIDER: 'openai',
+      OPENAI_API_KEY: 'openai-key',
+      GOOGLE_API_KEY: 'google-key',
+    })
+    const googleConfig = parseAIProviderConfig({
+      AI_PROVIDER: 'google',
+      OPENAI_API_KEY: 'openai-key',
+      GOOGLE_API_KEY: 'google-key',
+    })
+    expect(openaiConfig.apiKey).toBe('openai-key')
+    expect(googleConfig.apiKey).toBe('google-key')
   })
 })
 

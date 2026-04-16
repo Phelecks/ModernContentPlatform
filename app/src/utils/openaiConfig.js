@@ -68,6 +68,10 @@ export const OPENAI_MODEL_DEFAULTS = {
   videoScript: 'gpt-4o',
   /** Short structured YouTube metadata generation. Cost-sensitive. */
   youtubeMetadata: 'gpt-4o-mini',
+  /** Image generation task (not yet wired in workflows). */
+  imageGeneration: 'gpt-image-1',
+  /** Text-to-speech task (not yet wired in workflows). */
+  tts: 'gpt-4o-mini-tts',
 }
 
 /**
@@ -84,6 +88,10 @@ export const GOOGLE_MODEL_DEFAULTS = {
   tomorrowOutlook: 'gemini-2.5-pro',
   videoScript: 'gemini-2.5-pro',
   youtubeMetadata: 'gemini-2.5-flash',
+  /** Reserved for future Google image generation wiring. */
+  imageGeneration: 'gemini-2.5-flash',
+  /** Reserved for future Google TTS wiring. */
+  tts: 'gemini-2.5-flash',
 }
 
 /** Provider capability flags used for explicit task fallback behavior. */
@@ -492,6 +500,8 @@ function resolveModel(envValue, defaultValue) {
  * @param {string}  [env.OPENAI_MODEL_TOMORROW_OUTLOOK]        - Per-task model override
  * @param {string}  [env.OPENAI_MODEL_VIDEO_SCRIPT]            - Per-task model override
  * @param {string}  [env.OPENAI_MODEL_YOUTUBE_METADATA]        - Per-task model override
+ * @param {string}  [env.OPENAI_MODEL_IMAGE_GENERATION]        - Per-task model override
+ * @param {string}  [env.OPENAI_MODEL_TTS]                     - Per-task model override
  *
  * @returns {{
  *   apiKey: string,
@@ -504,7 +514,9 @@ function resolveModel(envValue, defaultValue) {
  *     expectationCheck: string,
  *     tomorrowOutlook: string,
  *     videoScript: string,
- *     youtubeMetadata: string
+ *     youtubeMetadata: string,
+ *     imageGeneration: string,
+ *     tts: string
  *   }
  * }}
  *
@@ -546,6 +558,14 @@ function buildModels(env, provider) {
     youtubeMetadata: resolveModel(
       env[`${prefix}YOUTUBE_METADATA`],
       defaults.youtubeMetadata
+    ),
+    imageGeneration: resolveModel(
+      env[`${prefix}IMAGE_GENERATION`],
+      defaults.imageGeneration
+    ),
+    tts: resolveModel(
+      env[`${prefix}TTS`],
+      defaults.tts
     ),
   }
 }
