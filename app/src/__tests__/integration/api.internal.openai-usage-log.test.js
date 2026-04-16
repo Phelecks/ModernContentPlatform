@@ -77,6 +77,14 @@ describe('POST /api/internal/openai-usage-log', () => {
     expect(body.error).toMatch(/error_message/i)
   })
 
+  it('returns 400 when status is retry and error_message is null', async () => {
+    const ctx = makeCtx(db, validPayload({ status: 'retry', error_message: null }), { 'X-Write-Key': WRITE_KEY })
+    const res = await onRequestPost(ctx)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/error_message/i)
+  })
+
   it('returns 201 for successful usage log write', async () => {
     const ctx = makeCtx(db, validPayload(), { 'X-Write-Key': WRITE_KEY })
     const res = await onRequestPost(ctx)
@@ -94,6 +102,8 @@ describe('POST /api/internal/openai-usage-log', () => {
       model: 'gpt-4o-mini',
       status: 'retry',
       retry_count: 1,
+      completion_tokens: 300,
+      total_tokens: 1500,
       error_code: 'rate_limit_exceeded',
       error_message: '429 rate limit, retry scheduled',
       topic_slug: null,
@@ -103,6 +113,20 @@ describe('POST /api/internal/openai-usage-log', () => {
     expect(res.status).toBe(201)
     const body = await res.json()
     expect(body.status).toBe('retry')
+  })
+
+  it('returns 201 when request_latency_ms is null', async () => {
+    const ctx = makeCtx(db, validPayload({ request_latency_ms: null }), { 'X-Write-Key': WRITE_KEY })
+    const res = await onRequestPost(ctx)
+    expect(res.status).toBe(201)
+  })
+
+  it('returns 400 when request_latency_ms exceeds maximum', async () => {
+    const ctx = makeCtx(db, validPayload({ request_latency_ms: 300001 }), { 'X-Write-Key': WRITE_KEY })
+    const res = await onRequestPost(ctx)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/request_latency_ms/i)
   })
 
   it('defaults status and token fields when omitted', async () => {

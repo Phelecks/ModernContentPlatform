@@ -841,4 +841,34 @@ describe('validateOpenAiUsagePayload', () => {
     expect(result.valid).toBe(false)
     expect(result.error).toMatch(/estimated_cost_usd/i)
   })
+
+  it('accepts null request_latency_ms', () => {
+    const result = validateOpenAiUsagePayload(validOpenAiUsage({ request_latency_ms: null }))
+    expect(result.valid).toBe(true)
+    expect(result.data.request_latency_ms).toBeNull()
+  })
+
+  it('returns valid=false when prompt_tokens exceeds maximum', () => {
+    const result = validateOpenAiUsagePayload(validOpenAiUsage({ prompt_tokens: 12001 }))
+    expect(result.valid).toBe(false)
+    expect(result.error).toMatch(/prompt_tokens/i)
+  })
+
+  it('returns valid=false when completion_tokens exceeds task maximum', () => {
+    const result = validateOpenAiUsagePayload(validOpenAiUsage({ completion_tokens: 1001 }))
+    expect(result.valid).toBe(false)
+    expect(result.error).toMatch(/completion_tokens/i)
+  })
+
+  it('returns valid=false when retry_count exceeds maximum', () => {
+    const result = validateOpenAiUsagePayload(validOpenAiUsage({ retry_count: 3 }))
+    expect(result.valid).toBe(false)
+    expect(result.error).toMatch(/retry_count/i)
+  })
+
+  it('returns valid=false when request_latency_ms exceeds maximum', () => {
+    const result = validateOpenAiUsagePayload(validOpenAiUsage({ request_latency_ms: 300001 }))
+    expect(result.valid).toBe(false)
+    expect(result.error).toMatch(/request_latency_ms/i)
+  })
 })
