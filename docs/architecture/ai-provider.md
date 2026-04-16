@@ -2,12 +2,13 @@
 
 ## Overview
 
-OpenAI is the default AI provider for Modern Content Platform v1.
+Modern Content Platform v1 now supports two first-class AI providers:
+**OpenAI** and **Google**.
 
-All AI-powered steps — alert classification, timeline summarisation, daily
-summary generation, article generation, expectation checks, tomorrow outlooks,
-video script generation, and YouTube metadata generation — run through the
-OpenAI Chat Completions API via the `OpenAiApi` n8n credential.
+All internal AI tasks run through a provider-agnostic contract layer
+(`app/src/utils/openaiConfig.js` exports `AI_TASK_CONTRACTS`,
+`TASK_SUPPORT_MATRIX`, and `resolveTaskProvider()`), so workflow logic can
+request a task and provider without embedding provider-specific rules.
 
 The integration is modular:
 
@@ -20,6 +21,33 @@ The integration is modular:
 - model selection is **environment-controlled** via n8n variables
   (`AI_MODEL_STANDARD` and `AI_MODEL_FAST`) so no workflow JSON needs to be
   edited when switching models
+
+---
+
+## Provider/task support matrix (v1)
+
+| Internal task | OpenAI | Google | Fallback behavior |
+|---|---|---|---|
+| alertClassification | ✅ | ✅ | none |
+| timelineFormatting | ✅ | ✅ | none |
+| dailySummary | ✅ | ✅ | none |
+| articleGeneration | ✅ | ✅ | none |
+| expectationCheck | ✅ | ✅ | none |
+| tomorrowOutlook | ✅ | ✅ | none |
+| videoScript | ✅ | ✅ | none |
+| youtubeMetadata | ✅ | ✅ | none |
+| imageGeneration | ✅ | ⚠️ not wired | fallback to OpenAI |
+| tts | ✅ | ⚠️ not wired | fallback to OpenAI |
+
+### Structured-output capability handling
+
+- OpenAI JSON-output tasks use `responseFormat: "json_object"`.
+- Google JSON-output tasks use `responseFormat: "prompt_and_validate"` in v1,
+  then pass through the same deterministic validators.
+- This difference is explicit in:
+  - `OPENAI_STRUCTURED_OUTPUT_TASKS`
+  - `GOOGLE_STRUCTURED_OUTPUT_TASKS`
+  - `resolveTaskProvider()` fallback metadata
 
 ---
 
@@ -79,7 +107,9 @@ The following variables are also passed to the n8n container:
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `AI_PROVIDER` | No | `openai` | AI provider slug — only `openai` is supported in v1 |
+| `AI_PROVIDER` | No | `openai` | AI provider slug (`openai` or `google`) |
+| `OPENAI_API_KEY` | Yes when `AI_PROVIDER=openai` | n/a | OpenAI API key |
+| `GOOGLE_API_KEY` | Yes when `AI_PROVIDER=google` | n/a | Google API key |
 | `OPENAI_MODEL_ALERT_CLASSIFICATION` | No | `gpt-4o-mini` | Alert classification (intraday fast tier) |
 | `OPENAI_MODEL_TIMELINE_FORMATTING` | No | `gpt-4o-mini` | Timeline entry formatting (intraday fast tier) |
 | `OPENAI_MODEL_DAILY_SUMMARY` | No | `gpt-4o` | Daily summary generation (daily standard tier) |
@@ -88,6 +118,14 @@ The following variables are also passed to the n8n container:
 | `OPENAI_MODEL_TOMORROW_OUTLOOK` | No | `gpt-4o` | Tomorrow outlook generation (daily standard tier) |
 | `OPENAI_MODEL_VIDEO_SCRIPT` | No | `gpt-4o` | Video script generation (daily standard tier) |
 | `OPENAI_MODEL_YOUTUBE_METADATA` | No | `gpt-4o-mini` | YouTube metadata generation (daily fast tier) |
+| `GOOGLE_MODEL_ALERT_CLASSIFICATION` | No | `gemini-2.5-flash` | Alert classification model override |
+| `GOOGLE_MODEL_TIMELINE_FORMATTING` | No | `gemini-2.5-flash` | Timeline formatting model override |
+| `GOOGLE_MODEL_DAILY_SUMMARY` | No | `gemini-2.5-pro` | Daily summary model override |
+| `GOOGLE_MODEL_ARTICLE_GENERATION` | No | `gemini-2.5-pro` | Article generation model override |
+| `GOOGLE_MODEL_EXPECTATION_CHECK` | No | `gemini-2.5-pro` | Expectation check model override |
+| `GOOGLE_MODEL_TOMORROW_OUTLOOK` | No | `gemini-2.5-pro` | Tomorrow outlook model override |
+| `GOOGLE_MODEL_VIDEO_SCRIPT` | No | `gemini-2.5-pro` | Video script model override |
+| `GOOGLE_MODEL_YOUTUBE_METADATA` | No | `gemini-2.5-flash` | YouTube metadata model override |
 
 > **Important:** current n8n workflows select models via the n8n variables
 > `$vars.AI_MODEL_STANDARD` and `$vars.AI_MODEL_FAST` (with hard-coded
@@ -107,8 +145,9 @@ split and are consumed by `app/src/utils/openaiConfig.js` for local config
 validation. They serve as the source of truth for future per-task workflow wiring.
 
 Config parsing and validation are handled by `app/src/utils/openaiConfig.js`,
-which exports `parseOpenAIConfig(env)`. It throws an `OPENAI_CONFIG_ERROR` when:
-- `OPENAI_API_KEY` is missing or empty
+which exports `parseAIProviderConfig(env)` (with `parseOpenAIConfig(env)` kept
+as a backward-compatible alias). It throws an `AI_PROVIDER_CONFIG_ERROR` when:
+- provider-specific API key is missing (`OPENAI_API_KEY` or `GOOGLE_API_KEY`)
 - `AI_PROVIDER` is set to an unsupported value
 
 Per-task model overrides fall back to their defaults when absent or empty, so

@@ -20,11 +20,18 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   PROVIDER_OPENAI,
+  PROVIDER_GOOGLE,
   VALID_PROVIDERS,
   OPENAI_MODEL_DEFAULTS,
+  GOOGLE_MODEL_DEFAULTS,
   OPENAI_STRUCTURED_OUTPUT_TASKS,
+  GOOGLE_STRUCTURED_OUTPUT_TASKS,
   OPENAI_COST_CONTROLS,
+  AI_TASK_CONTRACTS,
+  TASK_SUPPORT_MATRIX,
+  parseAIProviderConfig,
   parseOpenAIConfig,
+  resolveTaskProvider,
 } from '@/utils/openaiConfig.js'
 
 // ---------------------------------------------------------------------------
@@ -54,8 +61,10 @@ describe('constants', () => {
     expect(PROVIDER_OPENAI).toBe('openai')
   })
 
-  it('VALID_PROVIDERS contains only "openai"', () => {
-    expect(VALID_PROVIDERS).toEqual(['openai'])
+  it('provider constants include openai and google', () => {
+    expect(PROVIDER_OPENAI).toBe('openai')
+    expect(PROVIDER_GOOGLE).toBe('google')
+    expect(VALID_PROVIDERS).toEqual(['openai', 'google'])
   })
 
   it('OPENAI_MODEL_DEFAULTS has correct default models for all 8 tasks', () => {
@@ -105,6 +114,40 @@ describe('OPENAI_STRUCTURED_OUTPUT_TASKS', () => {
   })
 })
 
+describe('GOOGLE_STRUCTURED_OUTPUT_TASKS', () => {
+  it('covers the same JSON-output tasks as OpenAI', () => {
+    expect(Object.keys(GOOGLE_STRUCTURED_OUTPUT_TASKS).sort())
+      .toEqual(Object.keys(OPENAI_STRUCTURED_OUTPUT_TASKS).sort())
+  })
+
+  it('uses prompt_and_validate for every JSON-output task', () => {
+    Object.values(GOOGLE_STRUCTURED_OUTPUT_TASKS).forEach(cfg => {
+      expect(cfg.responseFormat).toBe('prompt_and_validate')
+    })
+  })
+})
+
+describe('AI task contracts and support matrix', () => {
+  it('exposes internal contracts for core and extended tasks', () => {
+    expect(AI_TASK_CONTRACTS).toHaveProperty('alertClassification')
+    expect(AI_TASK_CONTRACTS).toHaveProperty('articleGeneration')
+    expect(AI_TASK_CONTRACTS).toHaveProperty('imageGeneration')
+    expect(AI_TASK_CONTRACTS).toHaveProperty('tts')
+  })
+
+  it('exposes per-provider matrix entries for each task', () => {
+    expect(TASK_SUPPORT_MATRIX.alertClassification.openai.supported).toBe(true)
+    expect(TASK_SUPPORT_MATRIX.alertClassification.google.supported).toBe(true)
+  })
+
+  it('falls back from google to openai when task support differs (imageGeneration)', () => {
+    const resolved = resolveTaskProvider('imageGeneration', 'google')
+    expect(resolved.requestedProvider).toBe('google')
+    expect(resolved.provider).toBe('openai')
+    expect(resolved.usedFallback).toBe(true)
+  })
+})
+
 // ---------------------------------------------------------------------------
 // Cost controls
 // ---------------------------------------------------------------------------
@@ -127,7 +170,7 @@ describe('OPENAI_COST_CONTROLS', () => {
   })
 
   it('all maxTokens values are positive integers', () => {
-    Object.entries(OPENAI_COST_CONTROLS.maxTokens).forEach(([task, limit]) => {
+    Object.entries(OPENAI_COST_CONTROLS.maxTokens).forEach(([, limit]) => {
       expect(typeof limit).toBe('number')
       expect(Number.isInteger(limit)).toBe(true)
       expect(limit).toBeGreaterThan(0)
@@ -172,7 +215,7 @@ describe('OPENAI_COST_CONTROLS', () => {
   })
 
   it('all outputLimits values are positive integers', () => {
-    Object.entries(OPENAI_COST_CONTROLS.outputLimits).forEach(([key, limit]) => {
+    Object.entries(OPENAI_COST_CONTROLS.outputLimits).forEach(([, limit]) => {
       expect(typeof limit).toBe('number')
       expect(Number.isInteger(limit)).toBe(true)
       expect(limit).toBeGreaterThan(0)
@@ -321,6 +364,26 @@ describe('parseOpenAIConfig — valid configurations', () => {
     expect(config.provider).toBe('openai')
     expect(config.models.alertClassification).toBe(OPENAI_MODEL_DEFAULTS.alertClassification)
   })
+
+  it('supports google provider through the provider-agnostic parser', () => {
+    const config = parseAIProviderConfig({
+      AI_PROVIDER: 'google',
+      GOOGLE_API_KEY: 'google-key',
+    })
+    expect(config.provider).toBe('google')
+    expect(config.apiKey).toBe('google-key')
+    expect(config.models.alertClassification).toBe(GOOGLE_MODEL_DEFAULTS.alertClassification)
+    expect(config.models.dailySummary).toBe(GOOGLE_MODEL_DEFAULTS.dailySummary)
+  })
+
+  it('applies google per-task model overrides when provided', () => {
+    const config = parseAIProviderConfig({
+      AI_PROVIDER: 'google',
+      GOOGLE_API_KEY: 'google-key',
+      GOOGLE_MODEL_VIDEO_SCRIPT: 'gemini-2.5-flash',
+    })
+    expect(config.models.videoScript).toBe('gemini-2.5-flash')
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -390,21 +453,21 @@ describe('parseOpenAIConfig — model override edge cases', () => {
 // ---------------------------------------------------------------------------
 
 describe('parseOpenAIConfig — validation errors', () => {
-  it('throws OPENAI_CONFIG_ERROR when OPENAI_API_KEY is absent', () => {
-    expect(() => parseOpenAIConfig({})).toThrow('OPENAI_CONFIG_ERROR')
+  it('throws AI_PROVIDER_CONFIG_ERROR when OPENAI_API_KEY is absent', () => {
+    expect(() => parseOpenAIConfig({})).toThrow('AI_PROVIDER_CONFIG_ERROR')
   })
 
-  it('throws OPENAI_CONFIG_ERROR when OPENAI_API_KEY is an empty string', () => {
-    expect(() => parseOpenAIConfig({ OPENAI_API_KEY: '' })).toThrow('OPENAI_CONFIG_ERROR')
+  it('throws AI_PROVIDER_CONFIG_ERROR when OPENAI_API_KEY is an empty string', () => {
+    expect(() => parseOpenAIConfig({ OPENAI_API_KEY: '' })).toThrow('AI_PROVIDER_CONFIG_ERROR')
   })
 
-  it('throws OPENAI_CONFIG_ERROR when OPENAI_API_KEY is whitespace-only', () => {
-    expect(() => parseOpenAIConfig({ OPENAI_API_KEY: '   ' })).toThrow('OPENAI_CONFIG_ERROR')
+  it('throws AI_PROVIDER_CONFIG_ERROR when OPENAI_API_KEY is whitespace-only', () => {
+    expect(() => parseOpenAIConfig({ OPENAI_API_KEY: '   ' })).toThrow('AI_PROVIDER_CONFIG_ERROR')
   })
 
-  it('throws OPENAI_CONFIG_ERROR when AI_PROVIDER is unsupported', () => {
+  it('throws AI_PROVIDER_CONFIG_ERROR when AI_PROVIDER is unsupported', () => {
     expect(() => parseOpenAIConfig({ OPENAI_API_KEY: 'sk-key', AI_PROVIDER: 'anthropic' }))
-      .toThrow('OPENAI_CONFIG_ERROR')
+      .toThrow('AI_PROVIDER_CONFIG_ERROR')
   })
 
   it('error message mentions the unsupported provider name', () => {
@@ -418,6 +481,10 @@ describe('parseOpenAIConfig — validation errors', () => {
 
   it('throws on both missing API key and invalid provider in the same call', () => {
     expect(() => parseOpenAIConfig({ AI_PROVIDER: 'bad-provider' }))
-      .toThrow('OPENAI_CONFIG_ERROR')
+      .toThrow('AI_PROVIDER_CONFIG_ERROR')
+  })
+
+  it('requires GOOGLE_API_KEY when AI_PROVIDER=google', () => {
+    expect(() => parseAIProviderConfig({ AI_PROVIDER: 'google' })).toThrow('GOOGLE_API_KEY')
   })
 })
