@@ -45,6 +45,9 @@ export const VALID_SOURCE_ROLES_SUMMARY = ['primary', 'confirmation', 'data', 'c
 export const VALID_SOURCE_ROLES_VIDEO = ['primary', 'data', 'commentary']
 export const VALID_LABEL_COLORS = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'gray']
 export const VALID_VISIBILITIES = ['public', 'unlisted', 'private']
+export const VALID_IMAGE_FORMATS = ['url', 'b64_json']
+export const VALID_IMAGE_PROVIDERS = ['openai', 'google']
+export const VALID_IMAGE_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp']
 
 // ---------------------------------------------------------------------------
 // Core parse helper
@@ -649,6 +652,131 @@ export function parseAndValidateYoutubeMetadata(rawContent) {
   if (!ok) {
     throw new Error(
       `AI_VALIDATION_ERROR: YouTube metadata output is invalid.\n${errors.join('\n')}`
+    )
+  }
+  return obj
+}
+
+// ---------------------------------------------------------------------------
+// Image generation asset
+// ---------------------------------------------------------------------------
+
+/**
+ * Validates a normalized image generation asset object.
+ *
+ * This is not a direct AI JSON output — it is the normalized asset record
+ * produced by the 06b_generate_images workflow Code node after consuming
+ * the provider-specific API response (OpenAI images/generations or Google
+ * Imagen).  Validation here confirms the normalization step is correct and
+ * the downstream media pipeline receives a consistent contract.
+ *
+ * Required top-level fields: images (array, min 1), image_count, provider,
+ * model, generated_at.
+ *
+ * Each images[] entry must have: index, prompt, provider, model, format,
+ * generated_at.  The url/b64_json field must be non-null according to
+ * format.
+ *
+ * @param {unknown} obj - Parsed image generation asset object.
+ * @returns {{ ok: boolean, errors: string[] }}
+ */
+export function validateImageGenerationAsset(obj) {
+  const errors = []
+
+  if (!obj || typeof obj !== 'object') {
+    return { ok: false, errors: ['Output is not an object.'] }
+  }
+
+  if (!Array.isArray(obj.images) || obj.images.length < 1) {
+    errors.push('images must be a non-empty array.')
+  } else if (obj.images.length > 4) {
+    errors.push('images must have at most 4 entries.')
+  } else {
+    obj.images.forEach((img, i) => {
+      const prefix = `images[${i}]`
+
+      if (!img || typeof img !== 'object') {
+        errors.push(`${prefix} must be an object.`)
+        return
+      }
+
+      if (!Number.isInteger(img.index) || img.index < 0) {
+        errors.push(`${prefix}.index must be a non-negative integer.`)
+      }
+
+      if (!isString(img.prompt, 10, 2000)) {
+        errors.push(`${prefix}.prompt must be a string of 10–2000 characters.`)
+      }
+
+      if (!VALID_IMAGE_PROVIDERS.includes(img.provider)) {
+        errors.push(`${prefix}.provider "${img.provider}" is invalid. Expected: ${VALID_IMAGE_PROVIDERS.join(', ')}.`)
+      }
+
+      if (!isString(img.model, 1, 100)) {
+        errors.push(`${prefix}.model must be a non-empty string up to 100 characters.`)
+      }
+
+      if (!VALID_IMAGE_FORMATS.includes(img.format)) {
+        errors.push(`${prefix}.format "${img.format}" is invalid. Expected: ${VALID_IMAGE_FORMATS.join(', ')}.`)
+      } else if (img.format === 'url') {
+        if (!isString(img.url, 1)) {
+          errors.push(`${prefix}.url must be a non-empty string when format is 'url'.`)
+        }
+      } else if (img.format === 'b64_json') {
+        if (!isString(img.b64_json, 1)) {
+          errors.push(`${prefix}.b64_json must be a non-empty string when format is 'b64_json'.`)
+        }
+        if (img.mime_type !== null && img.mime_type !== undefined && !VALID_IMAGE_MIME_TYPES.includes(img.mime_type)) {
+          errors.push(`${prefix}.mime_type "${img.mime_type}" is invalid. Expected one of: ${VALID_IMAGE_MIME_TYPES.join(', ')}.`)
+        }
+      }
+
+      if (!isString(img.generated_at, 10)) {
+        errors.push(`${prefix}.generated_at must be a non-empty ISO 8601 timestamp string.`)
+      }
+    })
+  }
+
+  if (!Number.isInteger(obj.image_count) || obj.image_count < 1 || obj.image_count > 4) {
+    errors.push('image_count must be an integer between 1 and 4.')
+  } else if (Array.isArray(obj.images) && obj.image_count !== obj.images.length) {
+    errors.push(`image_count (${obj.image_count}) must equal images.length (${obj.images.length}).`)
+  }
+
+  if (!VALID_IMAGE_PROVIDERS.includes(obj.provider)) {
+    errors.push(`provider "${obj.provider}" is invalid. Expected: ${VALID_IMAGE_PROVIDERS.join(', ')}.`)
+  }
+
+  if (!isString(obj.model, 1, 100)) {
+    errors.push('model must be a non-empty string up to 100 characters.')
+  }
+
+  if (!isString(obj.generated_at, 10)) {
+    errors.push('generated_at must be a non-empty ISO 8601 timestamp string.')
+  }
+
+  return { ok: errors.length === 0, errors }
+}
+
+/**
+ * Validates an image generation asset object.
+ *
+ * Unlike most other parseAndValidate* functions this does not call
+ * parseJsonOutput() because the image asset is produced by the workflow
+ * Code node rather than returned as raw JSON text by an AI model.
+ * Callers pass a pre-parsed object directly.
+ *
+ * Throws AI_VALIDATION_ERROR when required fields are absent or invalid.
+ *
+ * @param {object} obj - Pre-parsed image generation asset object.
+ * @returns {object} The validated object (unmodified).
+ * @throws {Error} AI_VALIDATION_ERROR.
+ */
+export function parseAndValidateImageGenerationAsset(obj) {
+  const { ok, errors } = validateImageGenerationAsset(obj)
+  if (!ok) {
+    throw new Error(
+      `AI_VALIDATION_ERROR: Image generation asset is invalid.\n${errors.join('\n')}`
     )
   }
   return obj

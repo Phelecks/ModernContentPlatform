@@ -1,0 +1,325 @@
+{
+  "name": "Daily — 06b Generate Images",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "d1e2f3a4-006b-006b-006b-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Build an image generation prompt from the daily summary context.\n// Returns the topic context extended with image_prompt and image_count.\n\nconst ctx = $input.first().json;\nconst summary = ctx.summary || {};\nconst topic_slug = ctx.topic_slug;\nconst date_key = ctx.date_key;\n\n// Topic-specific visual style hints for stronger photorealistic thumbnails\nconst TOPIC_STYLE_HINTS = {\n  finance:    'stock market floor, traders, financial charts on screens, Wall Street aesthetic, blue and gold palette',\n  crypto:     'Bitcoin and Ethereum symbols, blockchain network visualization, neon blue on dark background, digital assets',\n  economy:    'global economic map, GDP charts, world trade routes, clean data visualization, professional tone',\n  health:     'modern medical research lab, DNA helix, clinical clean aesthetic, blue and white palette',\n  ai:         'neural network nodes, glowing data streams, futuristic technology, electric blue and purple palette',\n  energy:     'renewable energy landscape, solar panels and wind turbines, green technology, sunrise backdrop',\n  technology: 'abstract circuit board, glowing tech interfaces, dark sleek aesthetic, neon accents',\n};\n\nconst styleHint = TOPIC_STYLE_HINTS[topic_slug] || 'abstract data visualization, professional news aesthetic, clean modern design';\nconst headline = String(summary.headline || '').slice(0, 150);\nconst topicLabel = topic_slug.charAt(0).toUpperCase() + topic_slug.slice(1);\n\n// Build a rich, specific prompt that avoids policy-violating content\nconst image_prompt = [\n  `Professional ${topicLabel} news thumbnail.`,\n  styleHint + '.',\n  headline ? `Theme: ${headline}.` : '',\n  'Cinematic lighting, photorealistic, high quality, no text overlays, no logos, no watermarks, no people.',\n].filter(Boolean).join(' ');\n\n// Request 1 image per daily run (cost-conscious default).\n// Increase via AI_IMAGE_COUNT n8n variable if more images are needed.\nconst image_count = parseInt($vars.AI_IMAGE_COUNT || '1', 10) || 1;\nconst clamped_count = Math.min(4, Math.max(1, image_count));\n\n// Provider and model selection.\n// Falls back to openai for any unrecognised provider value.\nconst provider = ($vars.AI_PROVIDER || 'openai').toLowerCase();\nconst effective_provider = ['openai', 'google'].includes(provider) ? provider : 'openai';\n\n// Model defaults mirror OPENAI_MODEL_DEFAULTS / GOOGLE_MODEL_DEFAULTS in openaiConfig.js.\nconst IMAGE_MODEL_DEFAULTS = {\n  openai: $vars.OPENAI_MODEL_IMAGE_GENERATION || 'gpt-image-1',\n  google: $vars.GOOGLE_MODEL_IMAGE_GENERATION || 'imagen-3.0-generate-001',\n};\nconst image_model = IMAGE_MODEL_DEFAULTS[effective_provider];\n\nreturn [{\n  json: {\n    ...ctx,\n    _image_prompt: image_prompt,\n    _image_count: clamped_count,\n    _image_provider: effective_provider,\n    _image_model: image_model,\n  }\n}];"
+      },
+      "id": "d1e2f3a4-006b-006b-006b-000000000002",
+      "name": "Build Image Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json._image_provider }}",
+                    "rightValue": "google",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "google"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json._image_provider }}",
+                    "rightValue": "openai",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "openai"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "d1e2f3a4-006b-006b-006b-000000000003",
+      "name": "Route by Provider",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/={{ $json._image_model }}:predict",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  instances: [{ prompt: $json._image_prompt }],\n  parameters: {\n    sampleCount: $json._image_count,\n    aspectRatio: '1:1',\n    safetyFilterLevel: 'block_some',\n    personGeneration: 'dont_allow'\n  }\n} }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "d1e2f3a4-006b-006b-006b-000000000004",
+      "name": "Generate Image — Google Imagen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        900,
+        200
+      ],
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "google-api-key-credentials",
+          "name": "GoogleApiKey"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/images/generations",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  model: $json._image_model,\n  prompt: $json._image_prompt,\n  n: $json._image_count,\n  size: '1024x1024',\n  response_format: 'url'\n} }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "d1e2f3a4-006b-006b-006b-000000000005",
+      "name": "Generate Image — OpenAI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        900,
+        400
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "openai-api-credentials",
+          "name": "OpenAiApi"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Normalize Google Imagen API response to the shared image generation asset contract.\n// Non-blocking: if the API returned an error or no predictions, return ctx with image_asset_warnings.\n// Google returns: { predictions: [{ bytesBase64Encoded: '...', mimeType: 'image/png' }] }\n\nconst raw = $input.first().json;\nconst ctx = $('Build Image Prompt').first().json;\nconst ts = new Date().toISOString();\n\n// Strip internal underscore-prefixed keys from ctx before merging\nconst { _image_prompt, _image_count, _image_provider, _image_model, ...cleanCtx } = ctx;\n\n// Check for HTTP/API errors from the upstream node (continueOnFail passes errors as json)\nconst apiError = raw?.error || raw?.message || null;\nconst predictions = raw?.predictions || [];\n\nif (apiError || predictions.length === 0) {\n  const reason = apiError\n    ? `Google Imagen API error: ${JSON.stringify(apiError).slice(0, 200)}`\n    : `Google Imagen returned no predictions for ${ctx.topic_slug}/${ctx.date_key}`;\n  return [{ json: { ...cleanCtx, image_assets: null, image_asset_warnings: [reason] } }];\n}\n\nconst images = predictions.map((pred, i) => ({\n  index: i,\n  prompt: ctx._image_prompt,\n  revised_prompt: null,\n  provider: 'google',\n  model: ctx._image_model,\n  size: '1024x1024',\n  format: 'b64_json',\n  url: null,\n  b64_json: pred.bytesBase64Encoded || null,\n  mime_type: pred.mimeType || 'image/png',\n  generated_at: ts,\n}));\n\nconst image_assets = {\n  images,\n  image_count: images.length,\n  provider: 'google',\n  model: ctx._image_model,\n  generated_at: ts,\n};\n\nreturn [{ json: { ...cleanCtx, image_assets } }];"
+      },
+      "id": "d1e2f3a4-006b-006b-006b-000000000006",
+      "name": "Normalize Google Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Normalize OpenAI images/generations response to the shared image generation asset contract.\n// Non-blocking: if the API returned an error or no data, return ctx with image_asset_warnings.\n// OpenAI returns: { created: ..., data: [{ url: '...', revised_prompt: '...' }] }\n\nconst raw = $input.first().json;\nconst ctx = $('Build Image Prompt').first().json;\nconst ts = new Date().toISOString();\n\n// Strip internal underscore-prefixed keys from ctx before merging\nconst { _image_prompt, _image_count, _image_provider, _image_model, ...cleanCtx } = ctx;\n\n// Check for HTTP/API errors from the upstream node (continueOnFail passes errors as json)\nconst apiError = raw?.error || null;\nconst data = raw?.data || [];\n\nif (apiError || data.length === 0) {\n  const reason = apiError\n    ? `OpenAI images/generations API error: ${JSON.stringify(apiError).slice(0, 200)}`\n    : `OpenAI images/generations returned no data for ${ctx.topic_slug}/${ctx.date_key}`;\n  return [{ json: { ...cleanCtx, image_assets: null, image_asset_warnings: [reason] } }];\n}\n\nconst images = data.map((item, i) => ({\n  index: i,\n  prompt: ctx._image_prompt,\n  revised_prompt: item.revised_prompt || null,\n  provider: 'openai',\n  model: ctx._image_model,\n  size: '1024x1024',\n  format: 'url',\n  url: item.url || null,\n  b64_json: null,\n  mime_type: null,\n  generated_at: ts,\n}));\n\nconst image_assets = {\n  images,\n  image_count: images.length,\n  provider: 'openai',\n  model: ctx._image_model,\n  generated_at: ts,\n};\n\nreturn [{ json: { ...cleanCtx, image_assets } }];"
+      },
+      "id": "d1e2f3a4-006b-006b-006b-000000000007",
+      "name": "Normalize OpenAI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Validate the normalized image generation asset against the shared contract.\n// Non-blocking: logs a warning but does not throw, so a failed image step\n// never blocks the rest of the daily editorial pipeline.\n\nconst VALID_PROVIDERS = ['openai', 'google'];\nconst VALID_FORMATS = ['url', 'b64_json'];\n\nconst ctx = $input.first().json;\nconst asset = ctx.image_assets;\n\nconst errors = [];\n\nif (!asset || typeof asset !== 'object') {\n  errors.push('image_assets is missing or not an object');\n} else {\n  if (!Array.isArray(asset.images) || asset.images.length === 0) {\n    errors.push('image_assets.images must be a non-empty array');\n  } else {\n    asset.images.forEach((img, i) => {\n      if (!img || typeof img !== 'object') { errors.push(`images[${i}] not an object`); return; }\n      if (typeof img.index !== 'number') errors.push(`images[${i}].index missing`);\n      if (!img.prompt || img.prompt.length < 10) errors.push(`images[${i}].prompt missing or too short`);\n      if (!VALID_PROVIDERS.includes(img.provider)) errors.push(`images[${i}].provider invalid`);\n      if (!img.model) errors.push(`images[${i}].model missing`);\n      if (!VALID_FORMATS.includes(img.format)) errors.push(`images[${i}].format invalid`);\n      if (img.format === 'url' && !img.url) errors.push(`images[${i}].url missing for url format`);\n      if (img.format === 'b64_json' && !img.b64_json) errors.push(`images[${i}].b64_json missing for b64_json format`);\n      if (!img.generated_at) errors.push(`images[${i}].generated_at missing`);\n    });\n  }\n  if (typeof asset.image_count !== 'number') errors.push('image_assets.image_count missing');\n  if (!VALID_PROVIDERS.includes(asset.provider)) errors.push('image_assets.provider invalid');\n  if (!asset.model) errors.push('image_assets.model missing');\n  if (!asset.generated_at) errors.push('image_assets.generated_at missing');\n}\n\nif (errors.length > 0) {\n  // Non-blocking: attach errors as a warning field rather than throwing\n  console.warn(\n    `Image asset validation warnings for ${ctx.topic_slug}/${ctx.date_key} (${errors.length}):`,\n    errors.join(', ')\n  );\n  return [{ json: { ...ctx, image_asset_warnings: errors } }];\n}\n\nreturn [{ json: { ...ctx, image_asset_warnings: null } }];"
+      },
+      "id": "d1e2f3a4-006b-006b-006b-000000000008",
+      "name": "Validate Image Asset",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build Image Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Image Prompt": {
+      "main": [
+        [
+          {
+            "node": "Route by Provider",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Provider": {
+      "google": [
+        [
+          {
+            "node": "Generate Image — Google Imagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "openai": [
+        [
+          {
+            "node": "Generate Image — OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "extra": [
+        [
+          {
+            "node": "Generate Image — OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Image — Google Imagen": {
+      "main": [
+        [
+          {
+            "node": "Normalize Google Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Image — OpenAI": {
+      "main": [
+        [
+          {
+            "node": "Normalize OpenAI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Google Response": {
+      "main": [
+        [
+          {
+            "node": "Validate Image Asset",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize OpenAI Response": {
+      "main": [
+        [
+          {
+            "node": "Validate Image Asset",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": true,
+    "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
+  },
+  "id": "daily-06b-generate-images-v1",
+  "tags": [
+    "daily",
+    "editorial",
+    "ai",
+    "images",
+    "media",
+    "v1"
+  ]
+}

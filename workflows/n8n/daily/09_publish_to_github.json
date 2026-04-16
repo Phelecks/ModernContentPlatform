@@ -7,18 +7,24 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Build the four content file payloads to write to GitHub.\n// Files:\n//   content/topics/{topic_slug}/{date_key}/summary.json\n//   content/topics/{topic_slug}/{date_key}/article.md\n//   content/topics/{topic_slug}/{date_key}/metadata.json\n//   content/topics/{topic_slug}/{date_key}/video.json\n\nconst ctx = $input.first().json;\n\nif (!ctx.validated) {\n  throw new Error(`Attempted GitHub publish for unvalidated content: ${ctx.topic_slug}/${ctx.date_key}`);\n}\n\nconst base = `content/topics/${ctx.topic_slug}/${ctx.date_key}`;\nconst ts = new Date().toISOString();\nconst youtubeMetadata = ctx.youtube_metadata || {};\nconst youtubeVideoId = ctx.youtube_video_id ?? null;\n\nconst summaryJson = JSON.stringify({\n  topic_slug: ctx.topic_slug,\n  date_key: ctx.date_key,\n  generated_at: ts,\n  ...ctx.summary,\n  expectation_check: ctx.expectation_check,\n  tomorrow_outlook: ctx.tomorrow_outlook\n}, null, 2);\n\nconst metadataJson = JSON.stringify({\n  topic_slug: ctx.topic_slug,\n  date_key: ctx.date_key,\n  alert_count: ctx.alert_count,\n  cluster_count: ctx.cluster_count,\n  sentiment: ctx.summary.sentiment,\n  topic_score: ctx.summary.topic_score,\n  generated_at: ts,\n  publish_job_id: ctx.publish_job_id\n}, null, 2);\n\n// video.json exposes top-level title and video_id for the frontend VideoEmbed\n// component, plus the full script and metadata for future video pipeline use.\nconst videoJson = JSON.stringify({\n  topic_slug: ctx.topic_slug,\n  date_key: ctx.date_key,\n  title: youtubeMetadata.title ?? null,\n  video_id: youtubeVideoId,\n  script: ctx.video_script,\n  youtube_metadata: youtubeMetadata,\n  youtube_video_id: youtubeVideoId,\n  generated_at: ts\n}, null, 2);\n\nconst files = [\n  {\n    path: `${base}/summary.json`,\n    content: summaryJson,\n    message: `daily(${ctx.topic_slug}): summary for ${ctx.date_key}`\n  },\n  {\n    path: `${base}/article.md`,\n    content: ctx.article_md,\n    message: `daily(${ctx.topic_slug}): article for ${ctx.date_key}`\n  },\n  {\n    path: `${base}/metadata.json`,\n    content: metadataJson,\n    message: `daily(${ctx.topic_slug}): metadata for ${ctx.date_key}`\n  },\n  {\n    path: `${base}/video.json`,\n    content: videoJson,\n    message: `daily(${ctx.topic_slug}): video script for ${ctx.date_key}`\n  }\n];\n\n// Pass context along with the files list\nreturn [{ json: { ...ctx, _github_files: files } }];"
+        "jsCode": "// Build the content file payloads to write to GitHub (plus images.json when image_assets are present).\n// Files:\n//   content/topics/{topic_slug}/{date_key}/summary.json\n//   content/topics/{topic_slug}/{date_key}/article.md\n//   content/topics/{topic_slug}/{date_key}/metadata.json\n//   content/topics/{topic_slug}/{date_key}/video.json\n//   content/topics/{topic_slug}/{date_key}/images.json  (when image_assets present)\n\nconst ctx = $input.first().json;\n\nif (!ctx.validated) {\n  throw new Error(`Attempted GitHub publish for unvalidated content: ${ctx.topic_slug}/${ctx.date_key}`);\n}\n\nconst base = `content/topics/${ctx.topic_slug}/${ctx.date_key}`;\nconst ts = new Date().toISOString();\nconst youtubeMetadata = ctx.youtube_metadata || {};\nconst youtubeVideoId = ctx.youtube_video_id ?? null;\n\nconst summaryJson = JSON.stringify({\n  topic_slug: ctx.topic_slug,\n  date_key: ctx.date_key,\n  generated_at: ts,\n  ...ctx.summary,\n  expectation_check: ctx.expectation_check,\n  tomorrow_outlook: ctx.tomorrow_outlook\n}, null, 2);\n\nconst metadataJson = JSON.stringify({\n  topic_slug: ctx.topic_slug,\n  date_key: ctx.date_key,\n  alert_count: ctx.alert_count,\n  cluster_count: ctx.cluster_count,\n  sentiment: ctx.summary.sentiment,\n  topic_score: ctx.summary.topic_score,\n  generated_at: ts,\n  publish_job_id: ctx.publish_job_id\n}, null, 2);\n\n// video.json exposes top-level title and video_id for the frontend VideoEmbed\n// component, plus the full script and metadata for future video pipeline use.\nconst videoJson = JSON.stringify({\n  topic_slug: ctx.topic_slug,\n  date_key: ctx.date_key,\n  title: youtubeMetadata.title ?? null,\n  video_id: youtubeVideoId,\n  script: ctx.video_script,\n  youtube_metadata: youtubeMetadata,\n  youtube_video_id: youtubeVideoId,\n  generated_at: ts\n}, null, 2);\n\nconst files = [\n  {\n    path: `${base}/summary.json`,\n    content: summaryJson,\n    message: `daily(${ctx.topic_slug}): summary for ${ctx.date_key}`\n  },\n  {\n    path: `${base}/article.md`,\n    content: ctx.article_md,\n    message: `daily(${ctx.topic_slug}): article for ${ctx.date_key}`\n  },\n  {\n    path: `${base}/metadata.json`,\n    content: metadataJson,\n    message: `daily(${ctx.topic_slug}): metadata for ${ctx.date_key}`\n  },\n  {\n    path: `${base}/video.json`,\n    content: videoJson,\n    message: `daily(${ctx.topic_slug}): video script for ${ctx.date_key}`\n  }\n];\n\n// images.json — published when image_assets are present.\n// Stores the asset manifest (prompt, provider, model, count) without raw\n// binary data (b64_json) or temporary URLs to keep GitHub payload small.\nif (ctx.image_assets && typeof ctx.image_assets === 'object') {\n  const imagesManifest = {\n    topic_slug: ctx.topic_slug,\n    date_key: ctx.date_key,\n    image_count: ctx.image_assets.image_count,\n    provider: ctx.image_assets.provider,\n    model: ctx.image_assets.model,\n    generated_at: ctx.image_assets.generated_at,\n    images: (ctx.image_assets.images || []).map(img => ({\n      index: img.index,\n      prompt: img.prompt,\n      revised_prompt: img.revised_prompt || null,\n      provider: img.provider,\n      model: img.model,\n      size: img.size || null,\n      format: img.format,\n      // Omit url (temporary) and b64_json (too large) from GitHub storage.\n      // These are available in the workflow context for the video pipeline.\n      mime_type: img.mime_type || null,\n      generated_at: img.generated_at\n    }))\n  };\n  files.push({\n    path: `${base}/images.json`,\n    content: JSON.stringify(imagesManifest, null, 2),\n    message: `daily(${ctx.topic_slug}): image assets for ${ctx.date_key}`\n  });\n}\n\n// Pass context along with the files list\nreturn [{ json: { ...ctx, _github_files: files } }];"
       },
       "id": "d1e2f3a4-0009-0009-0009-000000000002",
       "name": "Build Content Files",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
@@ -29,7 +35,10 @@
       "name": "Expand Files",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [680, 300]
+      "position": [
+        680,
+        300
+      ]
     },
     {
       "parameters": {
@@ -40,7 +49,10 @@
       "name": "Write Files One by One",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [900, 300]
+      "position": [
+        900,
+        300
+      ]
     },
     {
       "parameters": {
@@ -50,17 +62,29 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Accept", "value": "application/vnd.github+json" },
-            { "name": "X-GitHub-Api-Version", "value": "2022-11-28" }
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
           ]
         },
-        "options": { "timeout": 10000, "ignoreResponseCode": true }
+        "options": {
+          "timeout": 10000,
+          "ignoreResponseCode": true
+        }
       },
       "id": "d1e2f3a4-0009-0009-0009-000000000005",
       "name": "Get Existing File SHA",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1120, 300],
+      "position": [
+        1120,
+        300
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "github-api-credentials",
@@ -77,7 +101,10 @@
       "name": "Extract Existing SHA",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1340, 300]
+      "position": [
+        1340,
+        300
+      ]
     },
     {
       "parameters": {
@@ -88,21 +115,35 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Accept", "value": "application/vnd.github+json" },
-            { "name": "X-GitHub-Api-Version", "value": "2022-11-28" },
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ (() => {\n  const body = {\n    message: $json.message,\n    content: Buffer.from($json.content, 'utf8').toString('base64'),\n    branch: $vars.GITHUB_CONTENT_BRANCH || 'main'\n  };\n  if ($json.existing_sha) body.sha = $json.existing_sha;\n  return body;\n})() }}",
-        "options": { "timeout": 15000 }
+        "options": {
+          "timeout": 15000
+        }
       },
       "id": "d1e2f3a4-0009-0009-0009-000000000007",
       "name": "Write File to GitHub",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1560, 300],
+      "position": [
+        1560,
+        300
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "github-api-credentials",
@@ -122,7 +163,10 @@
       "name": "Extract Commit SHA",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1780, 300]
+      "position": [
+        1780,
+        300
+      ]
     },
     {
       "parameters": {
@@ -133,49 +177,106 @@
       "name": "Collect Write Results",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1780, 500]
+      "position": [
+        1780,
+        500
+      ]
     }
   ],
   "connections": {
     "Execute Workflow Trigger": {
       "main": [
-        [{ "node": "Build Content Files", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Build Content Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Build Content Files": {
       "main": [
-        [{ "node": "Expand Files", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Expand Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Expand Files": {
       "main": [
-        [{ "node": "Write Files One by One", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Write Files One by One",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Write Files One by One": {
       "main": [
-        [{ "node": "Get Existing File SHA", "type": "main", "index": 0 }],
-        [{ "node": "Collect Write Results", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Get Existing File SHA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Collect Write Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Get Existing File SHA": {
       "main": [
-        [{ "node": "Extract Existing SHA", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Extract Existing SHA",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Extract Existing SHA": {
       "main": [
-        [{ "node": "Write File to GitHub", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Write File to GitHub",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Write File to GitHub": {
       "main": [
-        [{ "node": "Extract Commit SHA", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Extract Commit SHA",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Extract Commit SHA": {
       "main": [
-        [{ "node": "Write Files One by One", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Write Files One by One",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -188,5 +289,11 @@
     "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
   },
   "id": "daily-09-publish-to-github-v1",
-  "tags": ["daily", "editorial", "github", "publishing", "v1"]
+  "tags": [
+    "daily",
+    "editorial",
+    "github",
+    "publishing",
+    "v1"
+  ]
 }
