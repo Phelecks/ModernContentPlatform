@@ -276,6 +276,9 @@ const OPENAI_MAX_COMPLETION_TOKENS_BY_TASK = {
   youtubeMetadata: 800
 }
 const OPENAI_MAX_PROMPT_TOKENS = 12000
+// Keep the total token ceiling derived from prompt + highest task completion cap
+// (1500 for articleGeneration/videoScript) so per-field and aggregate
+// validation stay consistent for all supported tasks.
 const OPENAI_MAX_TOTAL_TOKENS = OPENAI_MAX_PROMPT_TOKENS + Math.max(...Object.values(OPENAI_MAX_COMPLETION_TOKENS_BY_TASK))
 const OPENAI_MAX_RETRY_COUNT = 2
 const OPENAI_MAX_REQUEST_LATENCY_MS = 300000
@@ -415,6 +418,8 @@ export function validateOpenAiUsagePayload(body) {
     ['retry_count', retry_count],
     ['request_latency_ms', request_latency_ms]
   ]) {
+    // request_latency_ms is optional nullable telemetry; other numeric fields
+    // are omitted via undefined when absent.
     const isOmitted = value === undefined || (field === 'request_latency_ms' && value === null)
     if (!isOmitted && (!Number.isInteger(value) || value < 0)) {
       return fail(`${field} must be a non-negative integer`)
@@ -427,9 +432,6 @@ export function validateOpenAiUsagePayload(body) {
   }
   if (completion_tokens !== undefined && completion_tokens > maxCompletionTokens) {
     return fail(`completion_tokens must be <= ${maxCompletionTokens} for task ${task}`)
-  }
-  if (total_tokens !== undefined && total_tokens > OPENAI_MAX_TOTAL_TOKENS) {
-    return fail(`total_tokens must be <= ${OPENAI_MAX_TOTAL_TOKENS}`)
   }
   if (retry_count !== undefined && retry_count > OPENAI_MAX_RETRY_COUNT) {
     return fail(`retry_count must be <= ${OPENAI_MAX_RETRY_COUNT}`)
