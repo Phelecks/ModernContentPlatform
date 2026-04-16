@@ -148,6 +148,13 @@ export const GOOGLE_STRUCTURED_OUTPUT_TASKS = {
   youtubeMetadata: { responseFormat: 'prompt_and_validate' },
 }
 
+function getStructuredTaskResponseFormat(provider, task) {
+  const source = provider === PROVIDER_GOOGLE
+    ? GOOGLE_STRUCTURED_OUTPUT_TASKS
+    : OPENAI_STRUCTURED_OUTPUT_TASKS
+  return source[task]?.responseFormat
+}
+
 /**
  * Internal task contracts and per-provider support/fallback handling.
  */
@@ -155,22 +162,40 @@ export const AI_TASK_CONTRACTS = {
   alertClassification: {
     output: 'json',
     providers: {
-      [PROVIDER_OPENAI]: { supported: true, responseFormat: 'json_object' },
-      [PROVIDER_GOOGLE]: { supported: true, responseFormat: 'prompt_and_validate' },
+      [PROVIDER_OPENAI]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_OPENAI, 'alertClassification'),
+      },
+      [PROVIDER_GOOGLE]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_GOOGLE, 'alertClassification'),
+      },
     },
   },
   timelineFormatting: {
     output: 'json',
     providers: {
-      [PROVIDER_OPENAI]: { supported: true, responseFormat: 'json_object' },
-      [PROVIDER_GOOGLE]: { supported: true, responseFormat: 'prompt_and_validate' },
+      [PROVIDER_OPENAI]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_OPENAI, 'timelineFormatting'),
+      },
+      [PROVIDER_GOOGLE]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_GOOGLE, 'timelineFormatting'),
+      },
     },
   },
   dailySummary: {
     output: 'json',
     providers: {
-      [PROVIDER_OPENAI]: { supported: true, responseFormat: 'json_object' },
-      [PROVIDER_GOOGLE]: { supported: true, responseFormat: 'prompt_and_validate' },
+      [PROVIDER_OPENAI]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_OPENAI, 'dailySummary'),
+      },
+      [PROVIDER_GOOGLE]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_GOOGLE, 'dailySummary'),
+      },
     },
   },
   articleGeneration: {
@@ -183,29 +208,53 @@ export const AI_TASK_CONTRACTS = {
   expectationCheck: {
     output: 'json',
     providers: {
-      [PROVIDER_OPENAI]: { supported: true, responseFormat: 'json_object' },
-      [PROVIDER_GOOGLE]: { supported: true, responseFormat: 'prompt_and_validate' },
+      [PROVIDER_OPENAI]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_OPENAI, 'expectationCheck'),
+      },
+      [PROVIDER_GOOGLE]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_GOOGLE, 'expectationCheck'),
+      },
     },
   },
   tomorrowOutlook: {
     output: 'json',
     providers: {
-      [PROVIDER_OPENAI]: { supported: true, responseFormat: 'json_object' },
-      [PROVIDER_GOOGLE]: { supported: true, responseFormat: 'prompt_and_validate' },
+      [PROVIDER_OPENAI]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_OPENAI, 'tomorrowOutlook'),
+      },
+      [PROVIDER_GOOGLE]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_GOOGLE, 'tomorrowOutlook'),
+      },
     },
   },
   videoScript: {
     output: 'json',
     providers: {
-      [PROVIDER_OPENAI]: { supported: true, responseFormat: 'json_object' },
-      [PROVIDER_GOOGLE]: { supported: true, responseFormat: 'prompt_and_validate' },
+      [PROVIDER_OPENAI]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_OPENAI, 'videoScript'),
+      },
+      [PROVIDER_GOOGLE]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_GOOGLE, 'videoScript'),
+      },
     },
   },
   youtubeMetadata: {
     output: 'json',
     providers: {
-      [PROVIDER_OPENAI]: { supported: true, responseFormat: 'json_object' },
-      [PROVIDER_GOOGLE]: { supported: true, responseFormat: 'prompt_and_validate' },
+      [PROVIDER_OPENAI]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_OPENAI, 'youtubeMetadata'),
+      },
+      [PROVIDER_GOOGLE]: {
+        supported: true,
+        responseFormat: getStructuredTaskResponseFormat(PROVIDER_GOOGLE, 'youtubeMetadata'),
+      },
     },
   },
   imageGeneration: {
@@ -454,8 +503,8 @@ function resolveModel(envValue, defaultValue) {
  *   }
  * }}
  *
- * @throws {Error} OPENAI_CONFIG_ERROR  when OPENAI_API_KEY is missing or empty
- * @throws {Error} OPENAI_CONFIG_ERROR  when AI_PROVIDER is set to an unsupported value
+ * @throws {Error} AI_PROVIDER_CONFIG_ERROR  when provider-specific API key is missing
+ * @throws {Error} AI_PROVIDER_CONFIG_ERROR  when AI_PROVIDER is set to an unsupported value
  */
 function buildModels(env, provider) {
   const defaults = provider === PROVIDER_GOOGLE ? GOOGLE_MODEL_DEFAULTS : OPENAI_MODEL_DEFAULTS
@@ -506,17 +555,19 @@ export function parseAIProviderConfig(env = {}) {
   const provider = (typeof env.AI_PROVIDER === 'string' && env.AI_PROVIDER.trim() !== '')
     ? env.AI_PROVIDER.trim()
     : PROVIDER_OPENAI
-  const apiKeyVarName = provider === PROVIDER_GOOGLE ? 'GOOGLE_API_KEY' : 'OPENAI_API_KEY'
-  const apiKey = typeof env[apiKeyVarName] === 'string' ? env[apiKeyVarName].trim() : ''
 
   const errors = []
 
   if (!VALID_PROVIDERS.includes(provider)) {
-    errors.push(
+    throw new Error(
+      'AI_PROVIDER_CONFIG_ERROR: Invalid AI provider configuration.\n' +
       `AI_PROVIDER "${provider}" is not supported. ` +
       `Supported values: ${VALID_PROVIDERS.join(', ')}.`
     )
   }
+
+  const apiKeyVarName = provider === PROVIDER_GOOGLE ? 'GOOGLE_API_KEY' : 'OPENAI_API_KEY'
+  const apiKey = typeof env[apiKeyVarName] === 'string' ? env[apiKeyVarName].trim() : ''
 
   if (!apiKey) {
     errors.push(`${apiKeyVarName} is required but is missing or empty.`)

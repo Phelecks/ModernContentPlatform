@@ -484,6 +484,15 @@ describe('parseOpenAIConfig — validation errors', () => {
       .toThrow('AI_PROVIDER_CONFIG_ERROR')
   })
 
+  it('invalid provider error does not include provider key-missing errors', () => {
+    try {
+      parseOpenAIConfig({ AI_PROVIDER: 'bad-provider' })
+    } catch (error) {
+      expect(error.message).not.toContain('OPENAI_API_KEY')
+      expect(error.message).not.toContain('GOOGLE_API_KEY')
+    }
+  })
+
   it('requires GOOGLE_API_KEY when AI_PROVIDER=google', () => {
     expect(() => parseAIProviderConfig({ AI_PROVIDER: 'google' })).toThrow('GOOGLE_API_KEY')
   })

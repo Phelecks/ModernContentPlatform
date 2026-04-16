@@ -10,6 +10,11 @@ All internal AI tasks run through a provider-agnostic contract layer
 `TASK_SUPPORT_MATRIX`, and `resolveTaskProvider()`), so workflow logic can
 request a task and provider without embedding provider-specific rules.
 
+> Current state note: the provider-agnostic contract/config layer is
+> implemented in app code, but the committed n8n workflow JSON is still wired
+> to OpenAI nodes and `AI_MODEL_STANDARD` / `AI_MODEL_FAST`. Provider routing
+> inside n8n (OpenAI vs Google node selection) is a follow-up wiring step.
+
 The integration is modular:
 
 - every AI step lives in a dedicated n8n sub-workflow
