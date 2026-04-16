@@ -16,7 +16,7 @@
     "test:integration": "vitest run src/__tests__/integration"
   },
   "dependencies": {
-    "dompurify": "^3.3.3",
+    "dompurify": "^3.4.0",
     "vue": "^3.4.0",
     "vue-router": "^4.3.0"
   },
