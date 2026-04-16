@@ -123,6 +123,8 @@ The following variables are also passed to the n8n container:
 | `OPENAI_MODEL_TOMORROW_OUTLOOK` | No | `gpt-4o` | Tomorrow outlook generation (daily standard tier) |
 | `OPENAI_MODEL_VIDEO_SCRIPT` | No | `gpt-4o` | Video script generation (daily standard tier) |
 | `OPENAI_MODEL_YOUTUBE_METADATA` | No | `gpt-4o-mini` | YouTube metadata generation (daily fast tier) |
+| `OPENAI_MODEL_IMAGE_GENERATION` | No | `gpt-image-1` | Future image generation task model override |
+| `OPENAI_MODEL_TTS` | No | `gpt-4o-mini-tts` | Future text-to-speech task model override |
 | `GOOGLE_MODEL_ALERT_CLASSIFICATION` | No | `gemini-2.5-flash` | Alert classification model override |
 | `GOOGLE_MODEL_TIMELINE_FORMATTING` | No | `gemini-2.5-flash` | Timeline formatting model override |
 | `GOOGLE_MODEL_DAILY_SUMMARY` | No | `gemini-2.5-pro` | Daily summary model override |
@@ -131,6 +133,8 @@ The following variables are also passed to the n8n container:
 | `GOOGLE_MODEL_TOMORROW_OUTLOOK` | No | `gemini-2.5-pro` | Tomorrow outlook model override |
 | `GOOGLE_MODEL_VIDEO_SCRIPT` | No | `gemini-2.5-pro` | Video script model override |
 | `GOOGLE_MODEL_YOUTUBE_METADATA` | No | `gemini-2.5-flash` | YouTube metadata model override |
+| `GOOGLE_MODEL_IMAGE_GENERATION` | No | `gemini-2.5-flash` | Reserved for future Google image generation wiring |
+| `GOOGLE_MODEL_TTS` | No | `gemini-2.5-flash` | Reserved for future Google TTS wiring |
 
 > **Important:** current n8n workflows select models via the n8n variables
 > `$vars.AI_MODEL_STANDARD` and `$vars.AI_MODEL_FAST` (with hard-coded
