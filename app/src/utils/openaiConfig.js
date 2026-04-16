@@ -314,6 +314,11 @@ export function resolveTaskProvider(task, requestedProvider = PROVIDER_OPENAI) {
 
   const support = taskConfig.providers?.[requestedProvider]
   if (support?.supported) {
+    if (taskConfig.output === 'json' && !support.responseFormat) {
+      throw new Error(
+        `AI_PROVIDER_CONFIG_ERROR: Missing structured output mapping for task "${task}" on provider "${requestedProvider}".`
+      )
+    }
     return {
       task,
       requestedProvider,
@@ -560,9 +565,7 @@ export function parseAIProviderConfig(env = {}) {
 
   if (!VALID_PROVIDERS.includes(provider)) {
     throw new Error(
-      'AI_PROVIDER_CONFIG_ERROR: Invalid AI provider configuration.\n' +
-      `AI_PROVIDER "${provider}" is not supported. ` +
-      `Supported values: ${VALID_PROVIDERS.join(', ')}.`
+      `AI_PROVIDER_CONFIG_ERROR: Invalid AI provider configuration. AI_PROVIDER "${provider}" is not supported. Supported values: ${VALID_PROVIDERS.join(', ')}.`
     )
   }
 
