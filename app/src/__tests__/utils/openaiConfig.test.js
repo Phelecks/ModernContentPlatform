@@ -7,9 +7,9 @@
  *   - parseOpenAIConfig — valid config with all env vars set
  *   - parseOpenAIConfig — default model fallback when overrides are absent
  *   - parseOpenAIConfig — per-task model overrides are applied
- *   - parseOpenAIConfig — missing OPENAI_API_KEY throws OPENAI_CONFIG_ERROR
- *   - parseOpenAIConfig — empty OPENAI_API_KEY throws OPENAI_CONFIG_ERROR
- *   - parseOpenAIConfig — unsupported AI_PROVIDER throws OPENAI_CONFIG_ERROR
+ *   - parseOpenAIConfig — missing OPENAI_API_KEY throws AI_PROVIDER_CONFIG_ERROR
+ *   - parseOpenAIConfig — empty OPENAI_API_KEY throws AI_PROVIDER_CONFIG_ERROR
+ *   - parseOpenAIConfig — unsupported AI_PROVIDER throws AI_PROVIDER_CONFIG_ERROR
  *   - parseOpenAIConfig — default AI_PROVIDER resolves to 'openai'
  *   - parseOpenAIConfig — whitespace-only model override falls back to default
  *   - parseOpenAIConfig — empty env object throws on missing API key
@@ -32,6 +32,7 @@ import {
   parseAIProviderConfig,
   parseOpenAIConfig,
   resolveTaskProvider,
+  resolveTaskAIConfig,
 } from '@/utils/openaiConfig.js'
 
 // ---------------------------------------------------------------------------
@@ -147,6 +148,32 @@ describe('AI task contracts and support matrix', () => {
     expect(resolved.requestedProvider).toBe('google')
     expect(resolved.provider).toBe('openai')
     expect(resolved.usedFallback).toBe(true)
+  })
+
+  it('resolves task AI config with fallback-aware provider/key/model for imageGeneration', () => {
+    const resolved = resolveTaskAIConfig({
+      AI_PROVIDER: 'google',
+      GOOGLE_API_KEY: 'google-key',
+      OPENAI_API_KEY: 'openai-key',
+      OPENAI_MODEL_IMAGE_GENERATION: 'gpt-image-custom',
+    }, 'imageGeneration')
+
+    expect(resolved.requestedProvider).toBe('google')
+    expect(resolved.provider).toBe('openai')
+    expect(resolved.usedFallback).toBe(true)
+    expect(resolved.apiKey).toBe('openai-key')
+    expect(resolved.model).toBe('gpt-image-custom')
+  })
+
+  it('throws when fallback provider credentials are missing for a fallback-only task', () => {
+    expect(() => resolveTaskAIConfig({
+      AI_PROVIDER: 'google',
+      GOOGLE_API_KEY: 'google-key',
+    }, 'tts')).toThrow('AI_PROVIDER_CONFIG_ERROR')
+    expect(() => resolveTaskAIConfig({
+      AI_PROVIDER: 'google',
+      GOOGLE_API_KEY: 'google-key',
+    }, 'tts')).toThrow('OPENAI_API_KEY')
   })
 })
 

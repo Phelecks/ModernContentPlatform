@@ -483,46 +483,6 @@ function resolveModel(envValue, defaultValue) {
     : defaultValue
 }
 
-/**
- * Parses and validates the OpenAI configuration from an env-vars-like object.
- *
- * Resolves each per-task model override, falling back to the default for that
- * task tier when the override is absent or empty.
- *
- * @param {Object} env
- * @param {string}  [env.OPENAI_API_KEY]                       - Required OpenAI API key
- * @param {string}  [env.AI_PROVIDER]                          - AI provider slug (default: 'openai')
- * @param {string}  [env.OPENAI_MODEL_ALERT_CLASSIFICATION]    - Per-task model override
- * @param {string}  [env.OPENAI_MODEL_TIMELINE_FORMATTING]     - Per-task model override
- * @param {string}  [env.OPENAI_MODEL_DAILY_SUMMARY]           - Per-task model override
- * @param {string}  [env.OPENAI_MODEL_ARTICLE_GENERATION]      - Per-task model override
- * @param {string}  [env.OPENAI_MODEL_EXPECTATION_CHECK]       - Per-task model override
- * @param {string}  [env.OPENAI_MODEL_TOMORROW_OUTLOOK]        - Per-task model override
- * @param {string}  [env.OPENAI_MODEL_VIDEO_SCRIPT]            - Per-task model override
- * @param {string}  [env.OPENAI_MODEL_YOUTUBE_METADATA]        - Per-task model override
- * @param {string}  [env.OPENAI_MODEL_IMAGE_GENERATION]        - Per-task model override
- * @param {string}  [env.OPENAI_MODEL_TTS]                     - Per-task model override
- *
- * @returns {{
- *   apiKey: string,
- *   provider: string,
- *   models: {
- *     alertClassification: string,
- *     timelineFormatting: string,
- *     dailySummary: string,
- *     articleGeneration: string,
- *     expectationCheck: string,
- *     tomorrowOutlook: string,
- *     videoScript: string,
- *     youtubeMetadata: string,
- *     imageGeneration: string,
- *     tts: string
- *   }
- * }}
- *
- * @throws {Error} AI_PROVIDER_CONFIG_ERROR  when provider-specific API key is missing
- * @throws {Error} AI_PROVIDER_CONFIG_ERROR  when AI_PROVIDER is set to an unsupported value
- */
 function buildModels(env, provider) {
   const defaults = provider === PROVIDER_GOOGLE ? GOOGLE_MODEL_DEFAULTS : OPENAI_MODEL_DEFAULTS
   const prefix = provider === PROVIDER_GOOGLE ? 'GOOGLE_MODEL_' : 'OPENAI_MODEL_'
@@ -607,6 +567,50 @@ export function parseAIProviderConfig(env = {}) {
     apiKey,
     provider,
     models: buildModels(env, provider),
+  }
+}
+
+/**
+ * Resolves effective provider credentials and model for a specific AI task.
+ *
+ * This helper combines:
+ * 1) provider + API key config parsing (`parseAIProviderConfig`)
+ * 2) task support/fallback resolution (`resolveTaskProvider`)
+ *
+ * It prevents callers from accidentally using models from the originally
+ * requested provider when the task contract falls back to another provider.
+ *
+ * @param {Object} env
+ * @param {string} task
+ * @returns {{
+ *   task: string,
+ *   requestedProvider: string,
+ *   provider: string,
+ *   usedFallback: boolean,
+ *   apiKey: string,
+ *   model: string,
+ *   support: Object
+ * }}
+ */
+export function resolveTaskAIConfig(env = {}, task) {
+  const requestedConfig = parseAIProviderConfig(env)
+  const resolved = resolveTaskProvider(task, requestedConfig.provider)
+
+  const effectiveConfig = resolved.usedFallback
+    ? parseAIProviderConfig({ ...env, AI_PROVIDER: resolved.provider })
+    : requestedConfig
+
+  const model = effectiveConfig.models?.[task]
+  if (!model) {
+    throw new Error(
+      `AI_PROVIDER_CONFIG_ERROR: Missing model mapping for task "${task}" on provider "${resolved.provider}".`
+    )
+  }
+
+  return {
+    ...resolved,
+    apiKey: effectiveConfig.apiKey,
+    model,
   }
 }
 
