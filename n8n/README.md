@@ -87,7 +87,13 @@ Variables passed to n8n at runtime (via `docker-compose.yml`):
 | Variable | Scope | Purpose |
 |---|---|---|
 | `GENERIC_TIMEZONE` | n8n | Timezone for cron schedules (default: `UTC`) |
-| `OPENAI_API_KEY` | AI | OpenAI API key for AI workflow steps |
+| `AI_PROVIDER` | AI | Active AI provider: `openai` (default) or `google` |
+| `OPENAI_API_KEY` | AI | OpenAI API key — required when `AI_PROVIDER=openai` |
+| `GOOGLE_API_KEY` | AI | Google API key — required when `AI_PROVIDER=google` |
+| `MEDIA_MODE` | Media | Media pipeline strategy: `image_video` (default) or `full_video` (not available in v1) |
+| `RENDER_PROVIDER` | Media | Video render service: `shotstack`, `creatomate`, or leave unset to skip rendering |
+| `SHOTSTACK_API_KEY` | Media | Shotstack API key — required when `RENDER_PROVIDER=shotstack` |
+| `CREATOMATE_API_KEY` | Media | Creatomate API key — required when `RENDER_PROVIDER=creatomate` |
 | `TELEGRAM_BOT_TOKEN` | Delivery | Telegram bot token for alert delivery |
 | `TELEGRAM_CHAT_ID` | Delivery | Telegram chat/channel ID |
 | `DISCORD_WEBHOOK_URL` | Delivery | Discord webhook URL for alert delivery |

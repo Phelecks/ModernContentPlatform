@@ -38,6 +38,7 @@ services:
 
       # -- AI ------------------------------------------------------------------
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
       AI_PROVIDER: ${AI_PROVIDER:-openai}
       # The OPENAI_MODEL_* vars below document the intended per-task model split.
       # Current workflows read $vars.AI_MODEL_STANDARD / $vars.AI_MODEL_FAST
@@ -47,6 +48,24 @@ services:
       OPENAI_MODEL_DAILY_SUMMARY: ${OPENAI_MODEL_DAILY_SUMMARY:-}
       OPENAI_MODEL_VIDEO_SCRIPT: ${OPENAI_MODEL_VIDEO_SCRIPT:-}
       OPENAI_MODEL_YOUTUBE_METADATA: ${OPENAI_MODEL_YOUTUBE_METADATA:-}
+
+      # -- Media mode ----------------------------------------------------------
+      # MEDIA_MODE selects the daily video pipeline strategy.
+      # Defaults to image_video (the only available v1 strategy).
+      MEDIA_MODE: ${MEDIA_MODE:-image_video}
+      AI_IMAGE_COUNT: ${AI_IMAGE_COUNT:-1}
+      OPENAI_TTS_VOICE: ${OPENAI_TTS_VOICE:-}
+      GOOGLE_TTS_VOICE: ${GOOGLE_TTS_VOICE:-}
+      AI_TTS_VOICE: ${AI_TTS_VOICE:-}
+      GOOGLE_TTS_LANGUAGE_CODE: ${GOOGLE_TTS_LANGUAGE_CODE:-}
+
+      # -- Render provider -----------------------------------------------------
+      # RENDER_PROVIDER selects the video assembly service (step 06d).
+      # Leave unset to skip rendering (safe default for local development).
+      RENDER_PROVIDER: ${RENDER_PROVIDER:-}
+      SHOTSTACK_API_KEY: ${SHOTSTACK_API_KEY:-}
+      CREATOMATE_API_KEY: ${CREATOMATE_API_KEY:-}
+      CREATOMATE_TEMPLATE_ID: ${CREATOMATE_TEMPLATE_ID:-}
 
       # -- Telegram ------------------------------------------------------------
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
