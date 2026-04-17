@@ -31,6 +31,7 @@ The reusable validation logic for all AI output schemas is implemented in `app/s
 | `tomorrow_outlook.json` | Tomorrow outlook | n8n module 05 → module 08 → GitHub | Daily editorial |
 | `video_script.json` | Video script generation | n8n module 06 → module 08 → GitHub | Daily editorial |
 | `youtube_metadata.json` | YouTube metadata generation | n8n module 07 → module 08 → YouTube | Daily editorial |
+| `full_video_generation_asset.json` | Full-video generation output *(reserved — not available in v1)* | n8n module `06_full_video_generation` → module 08 → GitHub | Daily editorial (future) |
 
 ---
 
@@ -74,7 +75,23 @@ The reusable validation logic for all AI output schemas is implemented in `app/s
 
 ---
 
-### `daily_summary.json`
+### `full_video_generation_asset.json`
+
+**AI step / workflow module:** Full-video generation (`06_full_video_generation.json`). **Not available in v1.**
+
+**Purpose:** Defines the output contract for the `full_video` media mode. This mode produces a fully AI-generated video directly from the video script without separate image generation, TTS narration, or an external render service. The asset records the video URL, generation job ID (for async polling), captions, and cost metadata.
+
+**Required fields:** `topic_slug`, `date_key`, `status`, `provider`, `model`, `video_url`, `duration_seconds`, `captions_srt`, `captions_format`, `generated_at`, `warning`
+
+**Optional fields:** `generation_job_id`, `resolution`, `scene_count`, `prompt_tokens`
+
+**Usage notes:**
+- `MEDIA_MODE=full_video` is blocked at orchestrator startup by a `MEDIA_MODE_CONFIG_ERROR` until a provider with `fullVideoGeneration: true` is added to `MEDIA_PROVIDER_CAPABILITIES` in `mediaMode.js`.
+- No current v1 provider (openai, google) supports this capability.
+- The workflow stub `06_full_video_generation.json` exists as a placeholder. It produces a graceful `status: "failed"` asset with a descriptive warning if reached without a capable provider.
+- Captions are always generated from the video script regardless of video generation status, ensuring SRT content is available for YouTube upload and accessibility.
+- `full_video_generation_asset` replaces the combined `image_generation_asset` + `narration_asset` + `render_video_asset` output of the `image_video` pipeline. It is committed to GitHub as `full_video.json`.
+- See `docs/architecture/full-video-mode.md` for the full design, provider requirements, and step-by-step implementation plan.
 
 **AI step:** Daily summary generation (daily module 02).
 

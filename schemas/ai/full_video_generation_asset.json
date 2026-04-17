@@ -1,0 +1,138 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "full_video_generation_asset",
+  "title": "Full Video Generation Asset",
+  "description": "Output contract for the full AI-generated video mode (MEDIA_MODE=full_video). This mode is not supported by any v1 provider and is reserved for future use. This schema defines the expected asset shape once a compatible provider becomes available. The workflow module 06_full_video_generation will produce this asset when the mode is enabled.",
+  "type": "object",
+  "required": [
+    "topic_slug",
+    "date_key",
+    "status",
+    "provider",
+    "model",
+    "video_url",
+    "duration_seconds",
+    "captions_srt",
+    "captions_format",
+    "generated_at",
+    "warning"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "topic_slug": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "Topic slug this video belongs to."
+    },
+    "date_key": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "Date key (YYYY-MM-DD) this video belongs to."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["completed", "pending", "failed"],
+      "description": "Video generation status. 'completed' means video_url is available. 'pending' means the provider accepted the job but the video is not yet ready (async generation). 'failed' means the provider returned an error or the capability is unavailable."
+    },
+    "provider": {
+      "type": "string",
+      "description": "The AI provider that generated the video. In v1 no provider supports fullVideoGeneration. Future candidates include dedicated video AI providers.",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "model": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "maxLength": 100,
+      "description": "The model identifier used to generate the video. Null when status is 'failed' and no generation was attempted."
+    },
+    "generation_job_id": {
+      "type": ["string", "null"],
+      "maxLength": 255,
+      "description": "Job ID returned by the provider for async generation. Used to poll for completion or retrieve the video. Null when generation failed before submission or when the provider returns the video synchronously."
+    },
+    "video_url": {
+      "type": ["string", "null"],
+      "description": "URL of the generated MP4 video. Available when status is 'completed'. Null when status is 'pending' or 'failed'.",
+      "pattern": "^https?://"
+    },
+    "duration_seconds": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "description": "Total duration of the generated video in seconds. Derived from the video script's total_duration_seconds. Null when unavailable."
+    },
+    "resolution": {
+      "type": ["string", "null"],
+      "description": "Video resolution (e.g. '1280x720', '1920x1080'). Null when not reported by the provider.",
+      "pattern": "^[0-9]+x[0-9]+$"
+    },
+    "captions_srt": {
+      "type": ["string", "null"],
+      "description": "SRT subtitle file content derived from the video script. Generated locally from the script regardless of whether video generation succeeds, so captions are always available for accessibility and YouTube upload.",
+      "minLength": 10
+    },
+    "captions_format": {
+      "type": "string",
+      "enum": ["srt", "none"],
+      "description": "Format of the generated captions. 'srt' for standard SubRip format. 'none' when caption generation was skipped."
+    },
+    "scene_count": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "description": "Number of scenes the video was generated from. Maps to the number of segments in the video script. Null when not reported by the provider."
+    },
+    "prompt_tokens": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Token count for the generation prompt submitted to the provider. Used for cost tracking. Null when not reported."
+    },
+    "generated_at": {
+      "type": "string",
+      "description": "ISO 8601 timestamp when this asset record was created.",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}"
+    },
+    "warning": {
+      "type": ["string", "null"],
+      "maxLength": 1000,
+      "description": "Warning message when generation was skipped, failed, or produced output with caveats. Null on clean success."
+    }
+  },
+  "examples": [
+    {
+      "_label": "completed full-video generation (future provider)",
+      "topic_slug": "crypto",
+      "date_key": "2025-06-15",
+      "status": "completed",
+      "provider": "future_video_provider",
+      "model": "video-gen-v1",
+      "generation_job_id": "job-abc123",
+      "video_url": "https://cdn.future-provider.example/renders/crypto-2025-06-15.mp4",
+      "duration_seconds": 185,
+      "resolution": "1280x720",
+      "captions_srt": "1\n00:00:00,000 --> 00:00:05,000\nBitcoin just hit a new all-time high.\n\n2\n00:00:05,000 --> 00:00:10,000\nBreaking above 120,000 dollars for the first time.\n",
+      "captions_format": "srt",
+      "scene_count": 3,
+      "prompt_tokens": 820,
+      "generated_at": "2025-06-15T23:30:00.000Z",
+      "warning": null
+    },
+    {
+      "_label": "failed — fullVideoGeneration capability not available in v1",
+      "topic_slug": "finance",
+      "date_key": "2025-01-15",
+      "status": "failed",
+      "provider": "none",
+      "model": null,
+      "generation_job_id": null,
+      "video_url": null,
+      "duration_seconds": null,
+      "resolution": null,
+      "captions_srt": "1\n00:00:00,000 --> 00:00:06,000\nThe Fed held rates steady today.\n",
+      "captions_format": "srt",
+      "scene_count": null,
+      "prompt_tokens": null,
+      "generated_at": "2025-01-15T23:30:00.000Z",
+      "warning": "MEDIA_MODE_CONFIG_ERROR: full_video mode requires a provider with fullVideoGeneration capability. No supported provider is available in v1. Set MEDIA_MODE=image_video to use the default pipeline."
+    }
+  ]
+}
