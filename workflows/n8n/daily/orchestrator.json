@@ -1,5 +1,5 @@
 {
-  "name": "Daily — Orchestrator",
+  "name": "Daily \u2014 Orchestrator",
   "nodes": [
     {
       "parameters": {
@@ -375,6 +375,25 @@
         "workflowId": {
           "__rl": true,
           "mode": "id",
+          "value": "={{ $vars.DAILY_GENERATE_NARRATION_WORKFLOW_ID }}"
+        },
+        "options": {}
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000024",
+      "name": "06c Generate Narration",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        3980,
+        400
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
           "value": "={{ $vars.DAILY_YOUTUBE_METADATA_WORKFLOW_ID }}"
         },
         "options": {}
@@ -384,7 +403,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
       "position": [
-        3980,
+        4200,
         400
       ]
     },
@@ -402,7 +421,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
       "position": [
-        3980,
+        4420,
         400
       ]
     },
@@ -420,7 +439,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
       "position": [
-        4200,
+        4640,
         400
       ]
     },
@@ -438,7 +457,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
       "position": [
-        4420,
+        4860,
         400
       ]
     },
@@ -657,6 +676,17 @@
       ]
     },
     "06b Generate Images": {
+      "main": [
+        [
+          {
+            "node": "06c Generate Narration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06c Generate Narration": {
       "main": [
         [
           {

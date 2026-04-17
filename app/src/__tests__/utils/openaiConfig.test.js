@@ -33,6 +33,7 @@ import {
   parseOpenAIConfig,
   resolveTaskProvider,
   resolveTaskAIConfig,
+  TTS_VOICE_DEFAULTS,
 } from '@/utils/openaiConfig.js'
 
 // ---------------------------------------------------------------------------
@@ -79,6 +80,24 @@ describe('constants', () => {
     expect(OPENAI_MODEL_DEFAULTS.youtubeMetadata).toBe('gpt-4o-mini')
     expect(OPENAI_MODEL_DEFAULTS.imageGeneration).toBe('gpt-image-1')
     expect(OPENAI_MODEL_DEFAULTS.tts).toBe('gpt-4o-mini-tts')
+  })
+
+  it('GOOGLE_MODEL_DEFAULTS.tts is the Google Cloud TTS voice identifier', () => {
+    expect(GOOGLE_MODEL_DEFAULTS.tts).toBe('en-US-Chirp3-HD-Aoede')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// TTS voice defaults
+// ---------------------------------------------------------------------------
+
+describe('TTS_VOICE_DEFAULTS', () => {
+  it('provides a default voice for openai', () => {
+    expect(TTS_VOICE_DEFAULTS.openai).toBe('alloy')
+  })
+
+  it('provides a default voice for google', () => {
+    expect(TTS_VOICE_DEFAULTS.google).toBe('en-US-Chirp3-HD-Aoede')
   })
 })
 
@@ -143,6 +162,11 @@ describe('AI task contracts and support matrix', () => {
     expect(TASK_SUPPORT_MATRIX.alertClassification.google.supported).toBe(true)
   })
 
+  it('marks tts as supported for both openai and google', () => {
+    expect(TASK_SUPPORT_MATRIX.tts.openai.supported).toBe(true)
+    expect(TASK_SUPPORT_MATRIX.tts.google.supported).toBe(true)
+  })
+
   it('falls back from google to openai when task support differs (imageGeneration)', () => {
     const resolved = resolveTaskProvider('imageGeneration', 'google')
     expect(resolved.requestedProvider).toBe('google')
@@ -165,15 +189,16 @@ describe('AI task contracts and support matrix', () => {
     expect(resolved.model).toBe('imagen-custom')
   })
 
-  it('throws when fallback provider credentials are missing for a fallback-only task', () => {
-    expect(() => resolveTaskAIConfig({
+  it('resolves google tts without fallback now that google tts is supported', () => {
+    const resolved = resolveTaskAIConfig({
       AI_PROVIDER: 'google',
       GOOGLE_API_KEY: 'google-key',
-    }, 'tts')).toThrow('AI_PROVIDER_CONFIG_ERROR')
-    expect(() => resolveTaskAIConfig({
-      AI_PROVIDER: 'google',
-      GOOGLE_API_KEY: 'google-key',
-    }, 'tts')).toThrow('OPENAI_API_KEY')
+    }, 'tts')
+    expect(resolved.requestedProvider).toBe('google')
+    expect(resolved.provider).toBe('google')
+    expect(resolved.usedFallback).toBe(false)
+    expect(resolved.apiKey).toBe('google-key')
+    expect(resolved.model).toBeTruthy()
   })
 })
 

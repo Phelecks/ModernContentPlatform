@@ -70,7 +70,7 @@ export const OPENAI_MODEL_DEFAULTS = {
   youtubeMetadata: 'gpt-4o-mini',
   /** Image generation task (not yet wired in workflows). */
   imageGeneration: 'gpt-image-1',
-  /** Text-to-speech task (not yet wired in workflows). */
+  /** Text-to-speech narration for daily video and audio pipeline. */
   tts: 'gpt-4o-mini-tts',
 }
 
@@ -91,8 +91,8 @@ export const GOOGLE_MODEL_DEFAULTS = {
   youtubeMetadata: 'gemini-2.5-flash',
   /** Imagen 3 via the Gemini REST API for daily media asset generation. */
   imageGeneration: 'imagen-3.0-generate-001',
-  /** Reserved for future Google TTS wiring. */
-  tts: 'gemini-2.5-flash',
+  /** Google Cloud Text-to-Speech API — HD Chirp3 voice for high-quality narration. */
+  tts: 'en-US-Chirp3-HD-Aoede',
 }
 
 /** Provider capability flags used for explicit task fallback behavior. */
@@ -105,8 +105,21 @@ export const PROVIDER_CAPABILITIES = {
   [PROVIDER_GOOGLE]: {
     nativeJsonObjectMode: false,
     imageGeneration: true,
-    tts: false,
+    tts: true,
   },
+}
+
+/**
+ * Default TTS voice names per provider.
+ *
+ * These are the voice identifiers passed to each provider's TTS API.
+ * Override at runtime via the AI_TTS_VOICE n8n variable (applied to both
+ * providers) or the provider-specific OPENAI_TTS_VOICE / GOOGLE_TTS_VOICE
+ * variables.
+ */
+export const TTS_VOICE_DEFAULTS = {
+  [PROVIDER_OPENAI]: 'alloy',
+  [PROVIDER_GOOGLE]: 'en-US-Chirp3-HD-Aoede',
 }
 
 // ---------------------------------------------------------------------------
@@ -279,11 +292,13 @@ export const AI_TASK_CONTRACTS = {
   tts: {
     output: 'binary',
     providers: {
-      [PROVIDER_OPENAI]: { supported: true },
+      [PROVIDER_OPENAI]: {
+        supported: true,
+        note: 'uses POST /v1/audio/speech; returns binary MP3 converted to base64 in the normalization node',
+      },
       [PROVIDER_GOOGLE]: {
-        supported: false,
-        fallbackProvider: PROVIDER_OPENAI,
-        reason: 'google tts is not wired in v1',
+        supported: true,
+        note: 'uses Google Cloud Text-to-Speech POST /v1/text:synthesize; returns audioContent as base64',
       },
     },
   },
