@@ -1,0 +1,11 @@
+{
+  "description": "Unknown MEDIA_MODE value. Should throw MEDIA_MODE_CONFIG_ERROR with the list of supported modes.",
+  "env": {
+    "MEDIA_MODE": "gif_only",
+    "AI_PROVIDER": "openai"
+  },
+  "expected": {
+    "valid": false,
+    "errorPrefix": "MEDIA_MODE_CONFIG_ERROR"
+  }
+}

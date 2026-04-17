@@ -1,0 +1,12 @@
+{
+  "description": "full_video mode with OpenAI provider. fullVideoGeneration capability is missing — this configuration is invalid and should throw MEDIA_MODE_CONFIG_ERROR.",
+  "env": {
+    "MEDIA_MODE": "full_video",
+    "AI_PROVIDER": "openai"
+  },
+  "expected": {
+    "valid": false,
+    "errorPrefix": "MEDIA_MODE_CONFIG_ERROR",
+    "missingCapabilities": ["fullVideoGeneration"]
+  }
+}

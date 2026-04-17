@@ -1,0 +1,13 @@
+{
+  "description": "MEDIA_MODE not set. Should default to image_video with the given AI_PROVIDER.",
+  "env": {
+    "AI_PROVIDER": "openai"
+  },
+  "expected": {
+    "mode": "image_video",
+    "provider": "openai",
+    "workflowSteps": ["06_video_script", "06b_generate_images", "06c_generate_narration"],
+    "requiredCapabilities": ["imageGeneration", "tts"],
+    "available": true
+  }
+}
