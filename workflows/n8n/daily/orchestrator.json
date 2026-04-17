@@ -365,7 +365,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
       "position": [
-        3760,
+        3980,
         400
       ],
       "continueOnFail": true
@@ -384,7 +384,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
       "position": [
-        3980,
+        4200,
         400
       ],
       "continueOnFail": true
@@ -403,7 +403,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
       "position": [
-        4200,
+        4420,
         400
       ]
     },
@@ -421,7 +421,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
       "position": [
-        4420,
+        4640,
         400
       ]
     },
@@ -439,7 +439,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
       "position": [
-        4640,
+        4860,
         400
       ]
     },
@@ -457,7 +457,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
       "position": [
-        4860,
+        5080,
         400
       ]
     },
@@ -471,6 +471,63 @@
         900,
         500
       ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Resolve the active media mode from n8n variables.\n// Defaults to 'image_video' when MEDIA_MODE is not set.\n// Throws if the mode is unknown so the pipeline fails clearly\n// rather than silently proceeding with bad config.\nconst ctx = $input.first().json;\nconst VALID_MODES = ['image_video', 'full_video'];\nconst rawMode = $vars.MEDIA_MODE ?? '';\nconst media_mode = (typeof rawMode === 'string' && rawMode.trim() !== '')\n  ? rawMode.trim()\n  : 'image_video';\n\nif (!VALID_MODES.includes(media_mode)) {\n  throw new Error(\n    `MEDIA_MODE_CONFIG_ERROR: Invalid MEDIA_MODE \"${media_mode}\". ` +\n    `Supported values: ${VALID_MODES.join(', ')}.`\n  );\n}\n\nreturn [{ json: { ...ctx, media_mode } }];"
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000025",
+      "name": "Check Media Mode",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3650,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "media-mode-check",
+              "leftValue": "={{ $json.media_mode }}",
+              "rightValue": "image_video",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000026",
+      "name": "Image Video Mode?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        3760,
+        400
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "d0e0f1a2-0000-0000-0000-000000000027",
+      "name": "Skip Media Assets",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        3980,
+        520
+      ],
+      "notes": "full_video mode: no image or narration assets are generated in v1. The video script is passed directly to YouTube Metadata."
     }
   ],
   "connections": {
@@ -668,7 +725,7 @@
       "main": [
         [
           {
-            "node": "06b Generate Images",
+            "node": "Check Media Mode",
             "type": "main",
             "index": 0
           }
@@ -735,6 +792,46 @@
         [
           {
             "node": "Process Topics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Media Mode": {
+      "main": [
+        [
+          {
+            "node": "Image Video Mode?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Image Video Mode?": {
+      "main": [
+        [
+          {
+            "node": "06b Generate Images",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip Media Assets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip Media Assets": {
+      "main": [
+        [
+          {
+            "node": "07 YouTube Metadata",
             "type": "main",
             "index": 0
           }

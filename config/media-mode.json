@@ -1,0 +1,41 @@
+{
+  "_comment": "Media mode configuration for Modern Content Platform. Canonical reference: app/src/utils/mediaMode.js. Set MEDIA_MODE in n8n variables to switch modes at runtime.",
+
+  "defaultMode": "image_video",
+
+  "modes": {
+    "image_video": {
+      "description": "Image-based video. Generates still images via an image provider and TTS narration, then assembles them into a video. Default v1 strategy — cheaper and more reliable.",
+      "workflowSteps": [
+        "06_video_script",
+        "06b_generate_images",
+        "06c_generate_narration"
+      ],
+      "requiredCapabilities": ["imageGeneration", "tts"],
+      "available": true
+    },
+    "full_video": {
+      "description": "Full AI-generated video. Requires a provider with native video generation capability. Not yet supported by any v1 provider. Reserved for future use.",
+      "workflowSteps": [
+        "06_video_script",
+        "06_full_video_generation"
+      ],
+      "requiredCapabilities": ["fullVideoGeneration"],
+      "available": false
+    }
+  },
+
+  "providerCapabilities": {
+    "_comment": "Which media capabilities each AI provider supports. Used to validate MEDIA_MODE against AI_PROVIDER at startup.",
+    "openai": {
+      "imageGeneration": true,
+      "tts": true,
+      "fullVideoGeneration": false
+    },
+    "google": {
+      "imageGeneration": true,
+      "tts": true,
+      "fullVideoGeneration": false
+    }
+  }
+}
