@@ -1,0 +1,399 @@
+{
+  "name": "Daily — 06d Render Video",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "d3e4f5a6-006d-006d-006d-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Generate SRT captions from the daily video script.\n// Uses the per-segment duration_seconds from the script to produce accurate\n// time codes for each spoken block.\n//\n// SRT format:\n//   <sequence>\n//   <start> --> <end>\n//   <text>\n//   <blank line>\n//\n// Strategy:\n//   1. Split each script segment's spoken text into ~4-second caption lines.\n//   2. Assign cumulative timecodes based on declared segment durations.\n//   3. Emit intro, all segments, and outro as separate caption groups.\n\nconst ctx = $input.first().json;\nconst script = ctx.video_script || ctx.script || {};\n\nfunction secondsToSRT(totalSeconds) {\n  const h = Math.floor(totalSeconds / 3600);\n  const m = Math.floor((totalSeconds % 3600) / 60);\n  const s = Math.floor(totalSeconds % 60);\n  const ms = Math.round((totalSeconds - Math.floor(totalSeconds)) * 1000);\n  return [\n    String(h).padStart(2, '0'),\n    String(m).padStart(2, '0'),\n    String(s).padStart(2, '0'),\n  ].join(':') + ',' + String(ms).padStart(3, '0');\n}\n\n// Split a block of text into caption lines of approximately targetWords words.\nfunction splitIntoLines(text, wordsPerLine = 8) {\n  const words = String(text || '').trim().split(/\\s+/).filter(Boolean);\n  const lines = [];\n  for (let i = 0; i < words.length; i += wordsPerLine) {\n    lines.push(words.slice(i, i + wordsPerLine).join(' '));\n  }\n  return lines.length > 0 ? lines : [String(text || '').trim()];\n}\n\n// Average spoken words per second (comfortable narration pace).\nconst WORDS_PER_SECOND = 2.5;\n\n// Collect all spoken blocks: intro, segments, outro.\nconst blocks = [];\n\nif (script.intro) {\n  const duration = Math.max(\n    String(script.intro).trim().split(/\\s+/).length / WORDS_PER_SECOND,\n    2\n  );\n  blocks.push({ text: String(script.intro).trim(), duration });\n}\n\nif (Array.isArray(script.segments)) {\n  for (const seg of script.segments) {\n    if (seg && seg.script) {\n      const declaredDuration = typeof seg.duration_seconds === 'number' ? seg.duration_seconds : null;\n      const estimatedDuration = String(seg.script).trim().split(/\\s+/).length / WORDS_PER_SECOND;\n      blocks.push({\n        text: String(seg.script).trim(),\n        duration: declaredDuration ?? estimatedDuration,\n      });\n    }\n  }\n}\n\nif (script.outro) {\n  const duration = Math.max(\n    String(script.outro).trim().split(/\\s+/).length / WORDS_PER_SECOND,\n    2\n  );\n  blocks.push({ text: String(script.outro).trim(), duration });\n}\n\n// Build SRT entries.\nconst entries = [];\nlet sequence = 1;\nlet cursor = 0; // running time in seconds\n\nfor (const block of blocks) {\n  const lines = splitIntoLines(block.text, 8);\n  const lineDuration = block.duration / lines.length;\n\n  for (const line of lines) {\n    const start = cursor;\n    const end = cursor + lineDuration;\n    entries.push(\n      `${sequence}\\n${secondsToSRT(start)} --> ${secondsToSRT(end)}\\n${line}`\n    );\n    sequence++;\n    cursor = end;\n  }\n}\n\nconst totalDuration = cursor;\nconst captions_srt = entries.length > 0 ? entries.join('\\n\\n') + '\\n' : null;\nconst captions_format = captions_srt ? 'srt' : 'none';\n\nreturn [{\n  json: {\n    ...ctx,\n    _captions_srt: captions_srt,\n    _captions_format: captions_format,\n    _render_total_duration: Math.round(totalDuration),\n  }\n}];"
+      },
+      "id": "d3e4f5a6-006d-006d-006d-000000000002",
+      "name": "Generate Captions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Assemble the render job specification.\n// Resolves the active render provider from n8n variables and builds\n// the payload for the video render service.\n//\n// Supported providers (v1):\n//   shotstack   — REST API, image slideshow + audio + SRT captions → MP4\n//   creatomate  — REST API, template-based image+audio render → MP4\n//   none        — no render credentials configured; assets are packaged\n//                 but no external render call is made (fallback mode)\n//\n// Image assets: ctx.image_assets (from 06b)\n// Narration:    ctx.narration_asset (from 06c)\n// Captions:     ctx._captions_srt (from Generate Captions node)\n// Script meta:  ctx.video_script.total_duration_seconds\n\nconst ctx = $input.first().json;\nconst imageAssets  = ctx.image_assets  || null;\nconst narration    = ctx.narration_asset || null;\nconst captionsSrt  = ctx._captions_srt  || null;\nconst script       = ctx.video_script   || ctx.script || {};\n\n// Resolve provider.\nconst rawProvider = ($vars.RENDER_PROVIDER || '').trim().toLowerCase();\nconst SUPPORTED_PROVIDERS = ['shotstack', 'creatomate'];\nconst render_provider = SUPPORTED_PROVIDERS.includes(rawProvider) ? rawProvider : 'none';\n\n// Duration: prefer declared script duration, else from captions generation.\nconst duration_seconds =\n  (typeof script.total_duration_seconds === 'number' ? script.total_duration_seconds : null)\n  ?? ctx._render_total_duration\n  ?? null;\n\n// --- Build Shotstack timeline ---\nfunction buildShotstackPayload(ctx, imageAssets, narration, captionsSrt, duration_seconds) {\n  const timeline = { tracks: [] };\n\n  // Image track — one clip per image, evenly distributed across the duration.\n  const images = (imageAssets && Array.isArray(imageAssets.images)) ? imageAssets.images : [];\n  if (images.length > 0) {\n    const clipDuration = duration_seconds\n      ? Math.max(1, duration_seconds / images.length)\n      : 10;\n    const imageClips = images.map((img, i) => ({\n      asset: {\n        type: img.format === 'b64_json' ? 'image' : 'image',\n        src: img.url || `data:${img.mime_type || 'image/png'};base64,${img.b64_json}`,\n      },\n      start: i * clipDuration,\n      length: clipDuration,\n      effect: 'zoomIn',\n    }));\n    timeline.tracks.push({ clips: imageClips });\n  }\n\n  // Audio track — narration audio.\n  if (narration && narration.audio_b64) {\n    timeline.tracks.push({\n      clips: [{\n        asset: {\n          type: 'audio',\n          src: `data:audio/${narration.audio_encoding || 'mp3'};base64,${narration.audio_b64}`,\n          volume: 1,\n        },\n        start: 0,\n        length: duration_seconds || 180,\n      }]\n    });\n  }\n\n  // Caption track — SRT subtitles.\n  if (captionsSrt) {\n    timeline.tracks.push({\n      clips: [{\n        asset: {\n          type: 'html',\n          html: '<p>{{caption}}</p>',\n          css: 'p { font-family: Arial; font-size: 20px; color: #ffffff; text-shadow: 1px 1px 2px #000; text-align: center; }',\n          width: 560,\n          height: 80,\n          position: 'bottom',\n        },\n        start: 0,\n        length: duration_seconds || 180,\n      }]\n    });\n  }\n\n  const output = {\n    format: 'mp4',\n    resolution: 'hd',\n    fps: 25,\n    quality: 'mediocre',\n    size: { width: 1280, height: 720 },\n  };\n\n  return { timeline, output };\n}\n\n// --- Build Creatomate payload ---\nfunction buildCreatomatePayload(ctx, imageAssets, narration, captionsSrt, duration_seconds) {\n  const images = (imageAssets && Array.isArray(imageAssets.images)) ? imageAssets.images : [];\n  const modifications = {};\n\n  if (images.length > 0) {\n    modifications['Background Image'] = images[0].url\n      || `data:${images[0].mime_type || 'image/png'};base64,${images[0].b64_json}`;\n  }\n\n  if (narration && narration.audio_b64) {\n    modifications['Narration Audio'] =\n      `data:audio/${narration.audio_encoding || 'mp3'};base64,${narration.audio_b64}`;\n  }\n\n  if (captionsSrt) {\n    modifications['Captions'] = captionsSrt;\n  }\n\n  return {\n    template_id: $vars.CREATOMATE_TEMPLATE_ID || '',\n    modifications,\n  };\n}\n\nlet render_payload = null;\nconst warnings = [];\n\nif (!imageAssets || !Array.isArray(imageAssets.images) || imageAssets.images.length === 0) {\n  warnings.push('No image_assets available. Render will use placeholder images if the provider supports it.');\n}\nif (!narration || !narration.audio_b64) {\n  warnings.push('No narration audio available. Render will be silent.');\n}\nif (!captionsSrt) {\n  warnings.push('No captions generated. Video will not have subtitles.');\n}\n\nif (render_provider === 'shotstack') {\n  render_payload = buildShotstackPayload(ctx, imageAssets, narration, captionsSrt, duration_seconds);\n} else if (render_provider === 'creatomate') {\n  render_payload = buildCreatomatePayload(ctx, imageAssets, narration, captionsSrt, duration_seconds);\n} else {\n  warnings.push(\n    'No render provider configured (RENDER_PROVIDER not set or unsupported). ' +\n    'Assets are ready but video was not rendered. ' +\n    'Set RENDER_PROVIDER=shotstack and SHOTSTACK_API_KEY to enable rendering.'\n  );\n}\n\nreturn [{\n  json: {\n    ...ctx,\n    _render_provider: render_provider,\n    _render_payload: render_payload,\n    _render_duration_seconds: duration_seconds,\n    _render_warnings: warnings,\n  }\n}];"
+      },
+      "id": "d3e4f5a6-006d-006d-006d-000000000003",
+      "name": "Build Render Job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json._render_provider }}",
+                    "rightValue": "shotstack",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "shotstack"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json._render_provider }}",
+                    "rightValue": "creatomate",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "creatomate"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "d3e4f5a6-006d-006d-006d-000000000004",
+      "name": "Route by Provider",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.shotstack.io/stage/render",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json._render_payload) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "d3e4f5a6-006d-006d-006d-000000000005",
+      "name": "Submit Shotstack Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1120,
+        220
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "shotstack-api-credentials",
+          "name": "ShotstackApi"
+        }
+      },
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "url": "https://api.creatomate.com/v1/renders",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json._render_payload) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "d3e4f5a6-006d-006d-006d-000000000006",
+      "name": "Submit Creatomate Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1120,
+        380
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "creatomate-api-credentials",
+          "name": "CreatomateApi"
+        }
+      },
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Fallback path: no render provider configured or provider is 'none'.\n// Pass the context through with a failed render asset (assets packaged,\n// no external render call made).\nconst ctx = $input.first().json;\nreturn [{ json: { ...ctx, _render_response: null, _render_provider_used: 'none' } }];"
+      },
+      "id": "d3e4f5a6-006d-006d-006d-000000000007",
+      "name": "Skip Render",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        520
+      ],
+      "notes": "Fallback when RENDER_PROVIDER is not set or is unsupported. Captions are still generated; the render_video_asset carries status=failed with a descriptive warning."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Normalize the Shotstack API response into the render_video_asset contract.\n// Shotstack POST /render returns:\n//   { success: true, message: '...', response: { id: 'ss-xxx', status: 'queued', ... } }\n//   or an error object on failure.\n//\n// A queued job maps to status='pending' — the video_url becomes available\n// after the webhook fires or when the job is polled.\n\nconst ctx = $input.first().json;\nconst raw = ctx._render_response || {};\nconst resp = raw.response || {};\nconst captionsSrt = ctx._captions_srt || null;\nconst warnings = Array.isArray(ctx._render_warnings) ? [...ctx._render_warnings] : [];\n\nconst render_job_id = resp.id || null;\nconst ss_status = (resp.status || '').toLowerCase();\n\n// Map Shotstack status to our status enum.\nconst STATUS_MAP = { queued: 'pending', fetching: 'pending', rendering: 'pending', saving: 'pending', done: 'completed', failed: 'failed' };\nconst status = STATUS_MAP[ss_status] || (raw.success === false ? 'failed' : 'pending');\n\nif (status === 'failed' || raw.success === false) {\n  warnings.push(`Shotstack render failed: ${raw.message || resp.message || 'Unknown error'}`);\n}\n\nconst render_video_asset = {\n  topic_slug: ctx.topic_slug,\n  date_key: ctx.date_key,\n  status,\n  render_provider: 'shotstack',\n  render_job_id,\n  video_url: resp.url || null,\n  duration_seconds: ctx._render_duration_seconds ?? null,\n  captions_srt: captionsSrt,\n  captions_format: captionsSrt ? 'srt' : 'none',\n  image_count: ctx.image_assets?.image_count ?? null,\n  has_narration: !!(ctx.narration_asset?.audio_b64),\n  generated_at: new Date().toISOString(),\n  warning: warnings.length > 0 ? warnings.join(' | ') : null,\n};\n\nconst { _render_payload, _render_response, _render_provider, _render_warnings, ...cleanCtx } = ctx;\nreturn [{ json: { ...cleanCtx, render_video_asset } }];"
+      },
+      "id": "d3e4f5a6-006d-006d-006d-000000000008",
+      "name": "Normalize Shotstack Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Normalize the Creatomate API response into the render_video_asset contract.\n// Creatomate POST /renders returns an array of render objects:\n//   [{ id: 'cre-xxx', status: 'planned'|'rendering'|'succeeded'|'failed', url: '...', ... }]\n//   or an error object on failure.\n\nconst ctx = $input.first().json;\nconst raw = ctx._render_response;\nconst captionsSrt = ctx._captions_srt || null;\nconst warnings = Array.isArray(ctx._render_warnings) ? [...ctx._render_warnings] : [];\n\n// Creatomate returns an array; we take the first render result.\nconst renders = Array.isArray(raw) ? raw : (raw ? [raw] : []);\nconst result = renders[0] || {};\n\nconst render_job_id = result.id || null;\nconst cre_status = (result.status || '').toLowerCase();\n\nconst STATUS_MAP = { planned: 'pending', rendering: 'pending', succeeded: 'completed', failed: 'failed' };\nconst status = STATUS_MAP[cre_status] || (renders.length === 0 ? 'failed' : 'pending');\n\nif (status === 'failed') {\n  warnings.push(`Creatomate render failed: ${result.error_message || result.message || 'Unknown error'}`);\n}\n\nconst render_video_asset = {\n  topic_slug: ctx.topic_slug,\n  date_key: ctx.date_key,\n  status,\n  render_provider: 'creatomate',\n  render_job_id,\n  video_url: result.url || null,\n  duration_seconds: ctx._render_duration_seconds ?? null,\n  captions_srt: captionsSrt,\n  captions_format: captionsSrt ? 'srt' : 'none',\n  image_count: ctx.image_assets?.image_count ?? null,\n  has_narration: !!(ctx.narration_asset?.audio_b64),\n  generated_at: new Date().toISOString(),\n  warning: warnings.length > 0 ? warnings.join(' | ') : null,\n};\n\nconst { _render_payload, _render_response, _render_provider, _render_warnings, ...cleanCtx } = ctx;\nreturn [{ json: { ...cleanCtx, render_video_asset } }];"
+      },
+      "id": "d3e4f5a6-006d-006d-006d-000000000009",
+      "name": "Normalize Creatomate Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Fallback normalizer: no render provider was used.\n// Emit a render_video_asset with status='failed' and a descriptive warning,\n// but still include the generated captions so they are not lost.\n\nconst ctx = $input.first().json;\nconst captionsSrt = ctx._captions_srt || null;\nconst warnings = Array.isArray(ctx._render_warnings) ? [...ctx._render_warnings] : [];\n\nif (warnings.length === 0) {\n  warnings.push(\n    'No render provider configured (RENDER_PROVIDER not set). ' +\n    'Assets are ready but video was not rendered. ' +\n    'Set RENDER_PROVIDER=shotstack and SHOTSTACK_API_KEY to enable rendering.'\n  );\n}\n\nconst render_video_asset = {\n  topic_slug: ctx.topic_slug,\n  date_key: ctx.date_key,\n  status: 'failed',\n  render_provider: 'none',\n  render_job_id: null,\n  video_url: null,\n  duration_seconds: ctx._render_duration_seconds ?? null,\n  captions_srt: captionsSrt,\n  captions_format: captionsSrt ? 'srt' : 'none',\n  image_count: ctx.image_assets?.image_count ?? null,\n  has_narration: !!(ctx.narration_asset?.audio_b64),\n  generated_at: new Date().toISOString(),\n  warning: warnings.join(' | '),\n};\n\nconst { _render_payload, _render_response, _render_provider, _render_warnings,\n        _captions_srt, _captions_format, _render_total_duration, _render_duration_seconds,\n        ...cleanCtx } = ctx;\nreturn [{ json: { ...cleanCtx, render_video_asset } }];"
+      },
+      "id": "d3e4f5a6-006d-006d-006d-000000000010",
+      "name": "Normalize Fallback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Merge render responses from Shotstack, Creatomate, or fallback path\n// into a single downstream item.\n// Exactly one path executes per run; pass it through unchanged.\nconst item = $input.first();\nreturn [{ json: item.json }];"
+      },
+      "id": "d3e4f5a6-006d-006d-006d-000000000011",
+      "name": "Merge Render Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        380
+      ]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Generate Captions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Captions": {
+      "main": [
+        [
+          {
+            "node": "Build Render Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Render Job": {
+      "main": [
+        [
+          {
+            "node": "Route by Provider",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Provider": {
+      "main": [
+        [
+          {
+            "node": "Submit Shotstack Job",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Submit Creatomate Job",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip Render",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Submit Shotstack Job": {
+      "main": [
+        [
+          {
+            "node": "Normalize Shotstack Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Submit Creatomate Job": {
+      "main": [
+        [
+          {
+            "node": "Normalize Creatomate Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip Render": {
+      "main": [
+        [
+          {
+            "node": "Normalize Fallback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Shotstack Response": {
+      "main": [
+        [
+          {
+            "node": "Merge Render Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Creatomate Response": {
+      "main": [
+        [
+          {
+            "node": "Merge Render Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Fallback": {
+      "main": [
+        [
+          {
+            "node": "Merge Render Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": true,
+    "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
+  },
+  "versionId": "d3e4f5a6-006d-006d-006d-000000000000",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "daily-06d-render-video",
+  "tags": [
+    {
+      "createdAt": "2025-01-15T00:00:00.000Z",
+      "updatedAt": "2025-01-15T00:00:00.000Z",
+      "id": "daily",
+      "name": "daily"
+    }
+  ]
+}

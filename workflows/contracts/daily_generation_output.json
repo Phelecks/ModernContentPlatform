@@ -74,6 +74,36 @@
       "type": "boolean",
       "description": "Set to true by module 08 after all outputs pass validation. Must be true before module 09 runs."
     },
+    "image_assets": {
+      "type": ["object", "null"],
+      "description": "Image generation output from module 06b. Present when media_mode is image_video and image generation succeeded. Null or absent when images were skipped or failed. Non-blocking — pipeline continues without it.",
+      "$ref": "../../../schemas/ai/image_generation_asset.json"
+    },
+    "image_asset_warnings": {
+      "type": ["array", "null"],
+      "items": { "type": "string" },
+      "description": "Non-fatal warnings recorded during image asset validation in module 08. Null when no warnings were raised."
+    },
+    "narration_asset": {
+      "type": ["object", "null"],
+      "description": "TTS narration output from module 06c. Present when media_mode is image_video and narration generation succeeded. Null or absent when narration was skipped or failed. Non-blocking — pipeline continues without it.",
+      "$ref": "../../../schemas/ai/narration_asset.json"
+    },
+    "narration_asset_warnings": {
+      "type": ["array", "null"],
+      "items": { "type": "string" },
+      "description": "Non-fatal warnings recorded during narration asset validation in module 08. Null when no warnings were raised."
+    },
+    "render_video_asset": {
+      "type": ["object", "null"],
+      "description": "Render output from module 06d. Present when media_mode is image_video and the render step ran. Null when the render step was skipped (non-image_video mode). status may be 'pending', 'completed', or 'failed'. Non-blocking — pipeline continues regardless of render outcome.",
+      "$ref": "../../../schemas/ai/render_video_asset.json"
+    },
+    "render_video_asset_warnings": {
+      "type": ["array", "null"],
+      "items": { "type": "string" },
+      "description": "Non-fatal warnings recorded during render asset validation in module 08. Null when no warnings were raised."
+    },
     "github_commit_sha": {
       "type": ["string", "null"],
       "description": "SHA of the GitHub commit written by module 09. Populated after successful GitHub publish. Null before publishing."
