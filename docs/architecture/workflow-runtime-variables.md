@@ -25,10 +25,10 @@ governs the entire run.
 
 ### Supported values
 
-| Value | Description | API key required |
-|-------|-------------|-----------------|
-| `openai` | OpenAI API (default) | `OPENAI_API_KEY` credential |
-| `google` | Google Gemini / Imagen / Cloud TTS APIs | `GOOGLE_API_KEY` credential |
+| Value | Description | n8n credential required |
+|-------|-------------|------------------------|
+| `openai` | OpenAI API (default) | `OpenAiApi` credential in n8n (configured with your `OPENAI_API_KEY`) |
+| `google` | Google Gemini / Imagen / Cloud TTS APIs | `GoogleApiKey` credential in n8n (configured with your `GOOGLE_API_KEY`) |
 
 ### Default
 
@@ -36,9 +36,9 @@ governs the entire run.
 
 ### What it affects
 
-All AI generation steps read `ai_provider` from the run context:
+`ai_provider` is currently used by the **media generation branch** (06b–06d), which routes to the appropriate provider API for image generation, TTS narration, and render. AI sub-workflows 02–07 currently use the OpenAI node (`n8n-nodes-base.openAi`) with the `OpenAiApi` credential only and do not yet branch on `ai_provider`. The table below shows the intended target-state model mapping when those modules are updated.
 
-| Step | Node | OpenAI | Google |
+| Step | Node | OpenAI | Google (future) |
 |------|------|--------|--------|
 | 02 Daily Summary | `02_generate_summary.json` | `gpt-4o` | `gemini-2.5-pro` |
 | 03 Article | `03_generate_article.json` | `gpt-4o` | `gemini-2.5-pro` |
@@ -46,8 +46,8 @@ All AI generation steps read `ai_provider` from the run context:
 | 05 Tomorrow Outlook | `05_generate_tomorrow_outlook.json` | `gpt-4o` | `gemini-2.5-pro` |
 | 06 Video Script | `06_generate_video_script.json` | `gpt-4o` | `gemini-2.5-pro` |
 | 07 YouTube Metadata | `07_generate_youtube_metadata.json` | `gpt-4o-mini` | `gemini-2.5-flash` |
-| 06b Image Generation | `06b_generate_images.json` | `gpt-image-1` (DALL-E) | `imagen-3.0-generate-001` |
-| 06c Narration (TTS) | `06c_generate_narration.json` | `gpt-4o-mini-tts` / `alloy` voice | `en-US-Chirp3-HD-Aoede` |
+| 06b Image Generation | `06b_generate_images.json` | `gpt-image-1` (DALL-E) — **active** | `imagen-3.0-generate-001` — **active** |
+| 06c Narration (TTS) | `06c_generate_narration.json` | `gpt-4o-mini-tts` / `alloy` voice — **active** | `en-US-Chirp3-HD-Aoede` — **active** |
 
 Model names can be overridden per-task via the `OPENAI_MODEL_*` and
 `GOOGLE_MODEL_*` n8n variables. See `docs/architecture/ai-provider.md` for
@@ -87,21 +87,29 @@ This is the safe, cost-effective default for all v1 deployments.
 ### Pipeline branch by mode
 
 ```
-06 Video Script
- │
- └─ Build Topic Context validates media_mode + ai_provider
-     │
-     ▼
- Check Media Mode ──[image_video]──► 06b Generate Images
-                                           │
-                                     06c Generate Narration (TTS)
-                                           │
-                                     06d Render Video
-                                           │
-                   [full_video] ──► (fails validation — not available in v1)
-                                           │
-                                     ─────┴───────────────────────────────►
-                                                                    07 YouTube Metadata
+[Build Topic Context — start of per-topic run]
+  Resolves ai_provider + media_mode from $vars (with safe defaults).
+  Throws MEDIA_MODE_CONFIG_ERROR on unrecognised or incompatible values.
+  Injects both fields into run context for all downstream steps.
+      │
+      ▼
+  01 → 02 → 03 → 04 → 05 → 06 Video Script
+                                    │
+                             Check Media Mode
+                             (reads from context)
+                                    │
+              ┌─────────────────────┴────────────────────────┐
+              │ media_mode = image_video                     │ media_mode = full_video
+              │ (default)                                    │ (fails at Build Topic Context —
+              ▼                                              │  not available in v1)
+       06b Generate Images
+              │
+       06c Generate Narration (TTS)
+              │
+       06d Render Video
+              │
+              └──────────────────────────────────────────────►
+                                                      07 YouTube Metadata
 ```
 
 ### `image_video` mode — workflow steps

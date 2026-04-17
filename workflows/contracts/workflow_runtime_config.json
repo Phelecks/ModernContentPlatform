@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "workflow_runtime_config",
   "title": "Workflow Runtime Config",
-  "description": "Runtime configuration fields injected by the orchestrator's Build Topic Context node at the start of every per-topic daily run. All downstream sub-workflows receive these fields as part of the run context. Sub-workflows must not re-read $vars.AI_PROVIDER or $vars.MEDIA_MODE directly — they must use the values in the context so that a single, validated config governs the entire run.",
+  "description": "Runtime configuration fields injected by the orchestrator's Build Topic Context node at the start of every per-topic daily run. All downstream sub-workflows receive these fields as part of the run context. Downstream modules are expected to prefer ctx.ai_provider and ctx.media_mode as the validated run-level configuration so that a single, validated config governs the entire run, even though some existing workflows may still re-read $vars.AI_PROVIDER or $vars.MEDIA_MODE directly.",
   "type": "object",
   "required": [
     "ai_provider",
@@ -13,7 +13,7 @@
       "type": "string",
       "enum": ["openai", "google"],
       "default": "openai",
-      "description": "Active AI provider for the run. Resolved from the AI_PROVIDER n8n variable. Defaults to 'openai' when AI_PROVIDER is not set or is empty. Controls which API endpoints and credentials are used by all AI sub-workflows (02–07) and by the media generation branch (06b–06d)."
+      "description": "Active AI provider for the run. Resolved from the AI_PROVIDER n8n variable. Defaults to 'openai' when AI_PROVIDER is not set or is empty. Reserved as the run-level provider selector for workflow branching. Currently used by the media generation branch (06b–06d); AI sub-workflows 02–07 continue to use the OpenAI path unless they are explicitly updated to branch on ai_provider."
     },
     "media_mode": {
       "type": "string",

@@ -368,7 +368,7 @@ workflows/n8n/daily/
 |----------------|--------|
 | `CloudflareD1Api` | Orchestrator, modules 01, 10 |
 | `OpenAiApi` | Modules 02, 03, 04, 05, 06, 07 (when `AI_PROVIDER=openai`) |
-| `GoogleApi` | Modules 02–07, 06b, 06c (when `AI_PROVIDER=google`) |
+| `GoogleApiKey` | Modules 06b, 06c (when `AI_PROVIDER=google`; future: modules 02–07) |
 | `GitHubApi` | Module 09 |
 | `TelegramBotApi` | Shared failure notifier |
 
