@@ -1,0 +1,135 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "render_video_asset",
+  "title": "Render Video Asset",
+  "description": "Upload-ready render output contract for the image-based daily video pipeline. Produced by the 06d_render_video workflow after assembling images, narration audio, and captions into a rendered video. Used by the YouTube upload step and committed to GitHub as render.json (manifest only — no binary data).",
+  "type": "object",
+  "required": [
+    "topic_slug",
+    "date_key",
+    "status",
+    "render_provider",
+    "captions_srt",
+    "captions_format",
+    "duration_seconds",
+    "generated_at",
+    "warning"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "topic_slug": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "Topic slug this render belongs to."
+    },
+    "date_key": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "Date key (YYYY-MM-DD) this render belongs to."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["completed", "pending", "failed"],
+      "description": "Render job status. 'completed' means the video_url is available. 'pending' means the render service accepted the job but the video is not yet ready. 'failed' means the render could not be submitted or the provider returned an error."
+    },
+    "render_provider": {
+      "type": "string",
+      "enum": ["shotstack", "creatomate", "none"],
+      "description": "The render service provider. 'none' is used when the render step is skipped (e.g. no render credentials configured) and the pipeline falls back to asset-only mode."
+    },
+    "render_job_id": {
+      "type": ["string", "null"],
+      "maxLength": 255,
+      "description": "Job ID returned by the render provider. Used to poll for completion or retrieve the video. Null when render_provider is 'none' or submission failed."
+    },
+    "video_url": {
+      "type": ["string", "null"],
+      "description": "URL of the rendered MP4 video. Available when status is 'completed'. Null when status is 'pending' or 'failed'.",
+      "pattern": "^https?://"
+    },
+    "duration_seconds": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "description": "Total duration of the rendered video in seconds. Derived from the video script's total_duration_seconds. Null when the script duration is unavailable."
+    },
+    "captions_srt": {
+      "type": ["string", "null"],
+      "description": "SRT subtitle file content generated from the video script. Null when caption generation was skipped or failed.",
+      "minLength": 10
+    },
+    "captions_format": {
+      "type": "string",
+      "enum": ["srt", "none"],
+      "description": "Format of the generated captions. 'srt' for standard SubRip format. 'none' when captions were not generated."
+    },
+    "image_count": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Number of images included in the render job. Null when no image assets were available."
+    },
+    "has_narration": {
+      "type": "boolean",
+      "description": "Whether the render job includes narration audio. False when no narration asset was available."
+    },
+    "generated_at": {
+      "type": "string",
+      "description": "ISO 8601 timestamp when this render asset was created.",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}"
+    },
+    "warning": {
+      "type": ["string", "null"],
+      "maxLength": 1000,
+      "description": "Warning message when the render was submitted with caveats (e.g. missing narration, missing images, render provider unavailable). Null on clean success."
+    }
+  },
+  "examples": [
+    {
+      "_label": "completed render with Shotstack",
+      "topic_slug": "crypto",
+      "date_key": "2025-01-15",
+      "status": "completed",
+      "render_provider": "shotstack",
+      "render_job_id": "ss-abc123def456",
+      "video_url": "https://cdn.shotstack.io/au/stage/a1b2c3/output/crypto-2025-01-15.mp4",
+      "duration_seconds": 180,
+      "captions_srt": "1\n00:00:00,000 --> 00:00:05,000\nBitcoin just hit a new all-time high.\n\n2\n00:00:05,000 --> 00:00:10,000\nBreaking above 120,000 dollars for the first time.\n",
+      "captions_format": "srt",
+      "image_count": 1,
+      "has_narration": true,
+      "generated_at": "2025-01-15T23:30:00.000Z",
+      "warning": null
+    },
+    {
+      "_label": "pending render — job submitted but not yet complete",
+      "topic_slug": "finance",
+      "date_key": "2025-01-15",
+      "status": "pending",
+      "render_provider": "shotstack",
+      "render_job_id": "ss-xyz789",
+      "video_url": null,
+      "duration_seconds": 210,
+      "captions_srt": "1\n00:00:00,000 --> 00:00:06,000\nThe Fed held rates steady today.\n",
+      "captions_format": "srt",
+      "image_count": 1,
+      "has_narration": true,
+      "generated_at": "2025-01-15T23:30:00.000Z",
+      "warning": "Render job submitted. video_url will be available once the render completes."
+    },
+    {
+      "_label": "fallback — no render credentials configured",
+      "topic_slug": "crypto",
+      "date_key": "2025-01-15",
+      "status": "failed",
+      "render_provider": "none",
+      "render_job_id": null,
+      "video_url": null,
+      "duration_seconds": 180,
+      "captions_srt": "1\n00:00:00,000 --> 00:00:05,000\nBitcoin just hit a new all-time high.\n",
+      "captions_format": "srt",
+      "image_count": 1,
+      "has_narration": true,
+      "generated_at": "2025-01-15T23:30:00.000Z",
+      "warning": "No render provider configured (RENDER_PROVIDER not set). Assets are ready but video was not rendered. Set RENDER_PROVIDER=shotstack and SHOTSTACK_API_KEY to enable rendering."
+    }
+  ]
+}
