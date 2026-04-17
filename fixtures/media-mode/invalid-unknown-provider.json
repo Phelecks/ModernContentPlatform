@@ -1,0 +1,11 @@
+{
+  "description": "Unknown AI_PROVIDER value. Should throw MEDIA_MODE_CONFIG_ERROR with the list of supported providers.",
+  "env": {
+    "MEDIA_MODE": "image_video",
+    "AI_PROVIDER": "anthropic"
+  },
+  "expected": {
+    "valid": false,
+    "errorPrefix": "MEDIA_MODE_CONFIG_ERROR"
+  }
+}

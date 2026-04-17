@@ -26,10 +26,15 @@
  *     - defaults to openai when AI_PROVIDER is empty string
  *     - defaults to image_video when MEDIA_MODE is whitespace-only
  *     - throws MEDIA_MODE_CONFIG_ERROR for unknown mode
+ *     - error message for unknown mode lists valid modes
+ *     - error message for unknown mode includes the invalid value
+ *     - throws MEDIA_MODE_CONFIG_ERROR for unknown AI_PROVIDER
+ *     - error message for unknown AI_PROVIDER lists supported providers
+ *     - error message for unknown AI_PROVIDER includes the invalid value
  *     - throws MEDIA_MODE_CONFIG_ERROR for full_video with openai (missing capability)
  *     - throws MEDIA_MODE_CONFIG_ERROR for full_video with google (missing capability)
- *     - error message for unknown mode lists valid modes
  *     - error message for incompatible mode names required and missing capabilities
+ *     - error message for incompatible mode names the provider
  *
  *   fixture files
  *     - image-video-openai fixture matches parseMediaModeConfig output
@@ -37,6 +42,7 @@
  *     - default-no-mode-set fixture matches parseMediaModeConfig output
  *     - invalid-full-video-openai fixture causes parseMediaModeConfig to throw
  *     - invalid-unknown-mode fixture causes parseMediaModeConfig to throw
+ *     - invalid-unknown-provider fixture causes parseMediaModeConfig to throw
  */
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
@@ -266,6 +272,21 @@ describe('parseMediaModeConfig — invalid configurations', () => {
       .toThrow('gif_only')
   })
 
+  it('throws MEDIA_MODE_CONFIG_ERROR for an unknown AI_PROVIDER', () => {
+    expect(() => parseMediaModeConfig({ MEDIA_MODE: 'image_video', AI_PROVIDER: 'anthropic' }))
+      .toThrow('MEDIA_MODE_CONFIG_ERROR')
+  })
+
+  it('error message for unknown AI_PROVIDER lists supported providers', () => {
+    expect(() => parseMediaModeConfig({ MEDIA_MODE: 'image_video', AI_PROVIDER: 'anthropic' }))
+      .toThrow('openai')
+  })
+
+  it('error message for unknown AI_PROVIDER includes the invalid value', () => {
+    expect(() => parseMediaModeConfig({ MEDIA_MODE: 'image_video', AI_PROVIDER: 'anthropic' }))
+      .toThrow('anthropic')
+  })
+
   it('throws MEDIA_MODE_CONFIG_ERROR for full_video with openai — no fullVideoGeneration', () => {
     expect(() => parseMediaModeConfig({ MEDIA_MODE: 'full_video', AI_PROVIDER: 'openai' }))
       .toThrow('MEDIA_MODE_CONFIG_ERROR')
@@ -322,6 +343,11 @@ describe('fixture files', () => {
 
   it('invalid-unknown-mode fixture causes parseMediaModeConfig to throw', () => {
     const fixture = loadFixture('invalid-unknown-mode.json')
+    expect(() => parseMediaModeConfig(fixture.env)).toThrow(fixture.expected.errorPrefix)
+  })
+
+  it('invalid-unknown-provider fixture causes parseMediaModeConfig to throw', () => {
+    const fixture = loadFixture('invalid-unknown-provider.json')
     expect(() => parseMediaModeConfig(fixture.env)).toThrow(fixture.expected.errorPrefix)
   })
 })

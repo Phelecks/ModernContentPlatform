@@ -29,7 +29,8 @@
  *
  * All functions are side-effect-free and do not depend on any runtime globals.
  *
- * See config/media-mode.json for the n8n-readable canonical config mirror.
+ * config/media-mode.json is a read-only n8n-readable reference mirror derived from this file.
+ * This JS module is the canonical source of truth for media mode definitions and validation.
  */
 
 // ---------------------------------------------------------------------------
@@ -54,9 +55,12 @@ export const VALID_MEDIA_MODES = [MODE_IMAGE_VIDEO, MODE_FULL_VIDEO]
  * are required, and whether the mode is available in v1.
  *
  * workflowSteps
- *   Ordered list of workflow module identifiers that must run for this mode.
- *   Used by the orchestrator's media mode branch to decide which sub-workflows
- *   to execute and which to skip.
+ *   Ordered list of workflow module identifiers for this mode.
+ *   For available modes these are the steps the orchestrator executes.
+ *   For unavailable modes (available: false) these are the planned steps
+ *   that will run once a compatible provider is available; they are not
+ *   yet implemented in the orchestrator and the mode fails validation at
+ *   startup before any steps can run.
  *
  * requiredCapabilities
  *   Provider capability flags that must be true for the active AI provider.
@@ -145,7 +149,10 @@ export function validateMediaModeForProvider(mode, provider) {
  *
  * Reads MEDIA_MODE from env (defaults to 'image_video').
  * Reads AI_PROVIDER from env (defaults to 'openai').
- * Validates the mode is a known value and compatible with the AI provider.
+ * Validates, in order:
+ *   1. mode is a known VALID_MEDIA_MODES value
+ *   2. provider is a recognised key in MEDIA_PROVIDER_CAPABILITIES
+ *   3. the mode's required capabilities are all present for that provider
  *
  * @param {Object} env  Any plain object with the relevant keys.
  *   MEDIA_MODE  — media output mode (default: 'image_video')
@@ -157,7 +164,8 @@ export function validateMediaModeForProvider(mode, provider) {
  *   requiredCapabilities: string[],
  *   available: boolean
  * }}
- * @throws {Error} MEDIA_MODE_CONFIG_ERROR on invalid or incompatible config.
+ * @throws {Error} MEDIA_MODE_CONFIG_ERROR on invalid mode, unknown provider,
+ *   or incompatible mode/provider combination.
  */
 export function parseMediaModeConfig(env = {}) {
   const mode = (typeof env.MEDIA_MODE === 'string' && env.MEDIA_MODE.trim() !== '')
@@ -172,6 +180,14 @@ export function parseMediaModeConfig(env = {}) {
     throw new Error(
       `MEDIA_MODE_CONFIG_ERROR: Invalid MEDIA_MODE "${mode}". ` +
       `Supported values: ${VALID_MEDIA_MODES.join(', ')}.`
+    )
+  }
+
+  const supportedProviders = Object.keys(MEDIA_PROVIDER_CAPABILITIES)
+  if (!supportedProviders.includes(provider)) {
+    throw new Error(
+      `MEDIA_MODE_CONFIG_ERROR: Unknown AI_PROVIDER "${provider}". ` +
+      `Supported values: ${supportedProviders.join(', ')}.`
     )
   }
 

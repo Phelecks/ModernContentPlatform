@@ -1,5 +1,5 @@
 {
-  "_comment": "Media mode configuration for Modern Content Platform. Canonical reference: app/src/utils/mediaMode.js. Set MEDIA_MODE in n8n variables to switch modes at runtime.",
+  "_comment": "n8n-readable reference mirror of app/src/utils/mediaMode.js. The JS utility is the canonical source of truth for media mode definitions, validation logic, and provider capabilities. Set MEDIA_MODE in n8n variables to switch modes at runtime.",
 
   "defaultMode": "image_video",
 
