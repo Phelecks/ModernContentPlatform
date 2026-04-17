@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "workflow_runtime_config",
+  "title": "Workflow Runtime Config",
+  "description": "Runtime configuration fields injected by the orchestrator's Build Topic Context node at the start of every per-topic daily run. All downstream sub-workflows receive these fields as part of the run context. Downstream modules are expected to prefer ctx.ai_provider and ctx.media_mode as the validated run-level configuration so that a single, validated config governs the entire run, even though some existing workflows may still re-read $vars.AI_PROVIDER or $vars.MEDIA_MODE directly.",
+  "type": "object",
+  "required": [
+    "ai_provider",
+    "media_mode"
+  ],
+  "properties": {
+    "ai_provider": {
+      "type": "string",
+      "enum": ["openai", "google"],
+      "default": "openai",
+      "description": "Active AI provider for the run. Resolved from the AI_PROVIDER n8n variable. Defaults to 'openai' when AI_PROVIDER is not set or is empty. Reserved as the run-level provider selector for workflow branching. Currently used by the media generation branch (06b–06d); AI sub-workflows 02–07 continue to use the OpenAI path unless they are explicitly updated to branch on ai_provider."
+    },
+    "media_mode": {
+      "type": "string",
+      "enum": ["image_video", "full_video"],
+      "default": "image_video",
+      "description": "Active media output mode for the run. Resolved from the MEDIA_MODE n8n variable. Defaults to 'image_video' when MEDIA_MODE is not set or is empty. Determines which branch of the media pipeline runs after step 06 (Video Script). See config/media-mode.json for the full mode definitions and provider capability matrix."
+    }
+  },
+  "additionalProperties": false,
+
+  "_notes": {
+    "defaults": {
+      "ai_provider": "openai — safe default; no AI_PROVIDER variable required for standard operation",
+      "media_mode": "image_video — safe default; the only fully available media strategy in v1"
+    },
+    "branching": {
+      "image_video": "Runs 06b Generate Images → 06c Generate Narration → 06d Render Video. Both openai and google are compatible.",
+      "full_video": "Not available in v1. Requires a provider with fullVideoGeneration capability. Fails validation until a compatible provider is configured."
+    },
+    "validation": {
+      "description": "Both ai_provider and media_mode are validated by the Build Topic Context node before any sub-workflow runs. An incompatible combination (e.g. full_video with openai) throws MEDIA_MODE_CONFIG_ERROR and aborts the run immediately — no partial output is produced.",
+      "error_prefix": "MEDIA_MODE_CONFIG_ERROR"
+    },
+    "environment_notes": {
+      "local": "Set AI_PROVIDER and MEDIA_MODE in n8n Settings → Variables. For local development both can be left unset — defaults (openai / image_video) are used automatically.",
+      "staging": "Set AI_PROVIDER=openai and MEDIA_MODE=image_video unless you are specifically testing the Google provider path. Set RENDER_PROVIDER=none if you do not have render credentials.",
+      "production": "Set AI_PROVIDER and MEDIA_MODE explicitly. Do not rely on defaults in production. Set RENDER_PROVIDER=shotstack or RENDER_PROVIDER=creatomate with the corresponding API key."
+    }
+  }
+}

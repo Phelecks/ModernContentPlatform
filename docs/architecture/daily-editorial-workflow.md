@@ -32,7 +32,8 @@ through the validation gate.
            │  topic_slug
            ▼
 ┌──────────────────────┐
-│  Build Topic Context │  Add date_key = today (UTC, YYYY-MM-DD)
+│  Build Topic Context │  Resolve date_key, ai_provider, media_mode from vars/trigger;
+│                      │  validate mode+provider compatibility; inject into run context
 └──────────┬───────────┘
            │
            ▼
@@ -79,6 +80,32 @@ through the validation gate.
 │  06 Video Script     │  AI → spoken-word video script
 └──────────┬───────────┘
            │  + video_script{}
+           ▼
+┌──────────────────────┐
+│  Check Media Mode    │  Confirm media_mode + ai_provider from run context;
+│                      │  throws MEDIA_MODE_CONFIG_ERROR on invalid combination
+└──────────┬───────────┘
+           │
+      ┌────┴─────────────────────────────┐
+      │ media_mode = image_video         │ media_mode = full_video
+      │ (default)                        │ (not available in v1 — fails above)
+      ▼                                  ▼
+┌──────────────────────┐
+│  06b Generate Images │  AI image generation (OpenAI DALL-E / Google Imagen)
+└──────────┬───────────┘  Non-blocking — warnings recorded if skipped
+           │  + image_assets{}
+           ▼
+┌──────────────────────┐
+│  06c Generate        │  TTS narration (OpenAI TTS / Google Cloud TTS)
+│  Narration           │  Non-blocking — warnings recorded if skipped
+└──────────┬───────────┘
+           │  + narration_asset{}
+           ▼
+┌──────────────────────┐
+│  06d Render Video    │  Assemble images + audio + captions (Shotstack /
+│                      │  Creatomate / none). Non-blocking.
+└──────────┬───────────┘
+           │  + render_video_asset{}
            ▼
 ┌──────────────────────┐
 │  07 YouTube Metadata │  AI → YouTube title, description, tags
@@ -292,6 +319,7 @@ All AI modules:
 
 | File | Purpose |
 |------|---------|
+| `workflows/contracts/workflow_runtime_config.json` | Runtime config fields (`ai_provider`, `media_mode`) injected by Build Topic Context |
 | `workflows/contracts/daily_aggregate_context.json` | Output of module 01; base input for all generation modules |
 | `workflows/contracts/daily_generation_output.json` | Full validated package output by module 08; input to modules 09–10 |
 | `schemas/ai/daily_summary.json` | Validated AI output schema for module 02 (includes `key_events[].sources`, `sources`, `source_confidence_note`) |
@@ -299,7 +327,11 @@ All AI modules:
 | `schemas/ai/tomorrow_outlook.json` | Validated AI output schema for module 05 |
 | `schemas/ai/video_script.json` | Validated AI output schema for module 06 (includes `segments[].sources`) |
 | `schemas/ai/youtube_metadata.json` | Validated AI output schema for module 07 |
+| `schemas/ai/image_generation_asset.json` | Validated asset schema for module 06b |
+| `schemas/ai/narration_asset.json` | Validated asset schema for module 06c |
+| `schemas/ai/render_video_asset.json` | Validated asset schema for module 06d |
 | `docs/video-script-source-attribution.md` | Source attribution rules for the video/script pipeline |
+| `docs/architecture/workflow-runtime-variables.md` | Full runtime variable reference — defaults, branching, environment notes |
 
 ---
 
@@ -318,6 +350,10 @@ workflows/n8n/daily/
 ├── 04_generate_expectation_check.json
 ├── 05_generate_tomorrow_outlook.json
 ├── 06_generate_video_script.json
+├── 06b_generate_images.json
+├── 06c_generate_narration.json
+├── 06d_render_video.json
+├── 06_full_video_generation.json   ← reserved (not available in v1)
 ├── 07_generate_youtube_metadata.json
 ├── 08_validate_outputs.json
 ├── 09_publish_to_github.json
@@ -331,7 +367,8 @@ workflows/n8n/daily/
 | Credential name | Used by |
 |----------------|--------|
 | `CloudflareD1Api` | Orchestrator, modules 01, 10 |
-| `OpenAiApi` | Modules 02, 03, 04, 05, 06, 07 |
+| `OpenAiApi` | Modules 02, 03, 04, 05, 06, 07 (when `AI_PROVIDER=openai`) |
+| `GoogleApiKey` | Modules 06b, 06c (when `AI_PROVIDER=google`; future: modules 02–07) |
 | `GitHubApi` | Module 09 |
 | `TelegramBotApi` | Shared failure notifier |
 
@@ -353,6 +390,39 @@ workflows/n8n/daily/
 | `GITHUB_REPO_OWNER` | GitHub repository owner (user or org) |
 | `GITHUB_REPO_NAME` | GitHub repository name |
 | `GITHUB_CONTENT_BRANCH` | Branch to publish content to (default: `main`) |
+
+### AI provider and media mode
+
+These are the core runtime-selection variables. Both have safe defaults and can
+be left unset for local development.
+
+| Variable | Default | Description |
+|---------|---------|-------------|
+| `AI_PROVIDER` | `openai` | Active AI provider: `openai` or `google`. Resolved once per run by Build Topic Context and injected into the run context. |
+| `MEDIA_MODE` | `image_video` | Media pipeline strategy: `image_video` (default) or `full_video` (not available in v1). Resolved and validated by Build Topic Context. |
+
+Invalid combinations fail immediately with `MEDIA_MODE_CONFIG_ERROR` before
+any API call is made. See `docs/architecture/workflow-runtime-variables.md`
+for the full variable reference, branching logic, and environment notes.
+
+### Media pipeline
+
+| Variable | Default | Description |
+|---------|---------|-------------|
+| `AI_IMAGE_COUNT` | `1` | Number of images to generate per run (1–4). Used by `06b_generate_images`. |
+| `OPENAI_TTS_VOICE` | `alloy` | OpenAI TTS voice. Used by `06c_generate_narration` when `AI_PROVIDER=openai`. |
+| `GOOGLE_TTS_VOICE` | `en-US-Chirp3-HD-Aoede` | Google TTS voice. Used by `06c_generate_narration` when `AI_PROVIDER=google`. |
+| `AI_TTS_VOICE` | — | Shared TTS voice override (provider-specific variable takes precedence). |
+| `GOOGLE_TTS_LANGUAGE_CODE` | _(derived from voice)_ | BCP-47 language code for Google TTS. Auto-derived from `GOOGLE_TTS_VOICE` if not set. |
+
+### Render provider
+
+| Variable | Default | Description |
+|---------|---------|-------------|
+| `RENDER_PROVIDER` | _(none — render skipped)_ | Video render service: `shotstack` or `creatomate`. Leave unset to skip rendering. |
+| `SHOTSTACK_API_KEY` | — | Required when `RENDER_PROVIDER=shotstack`. |
+| `CREATOMATE_API_KEY` | — | Required when `RENDER_PROVIDER=creatomate`. |
+| `CREATOMATE_TEMPLATE_ID` | — | Creatomate template ID for daily video. Required when `RENDER_PROVIDER=creatomate`. |
 
 ### Daily Module Workflow IDs
 
