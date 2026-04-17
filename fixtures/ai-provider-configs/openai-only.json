@@ -1,0 +1,25 @@
+{
+  "description": "OpenAI-only configuration. Uses OPENAI_API_KEY; AI_PROVIDER defaults to 'openai'.",
+  "env": {
+    "OPENAI_API_KEY": "sk-test-openai-key",
+    "AI_PROVIDER": "openai"
+  },
+  "expected": {
+    "provider": "openai",
+    "apiKeyEnvVar": "OPENAI_API_KEY",
+    "defaultModels": {
+      "alertClassification": "gpt-4o-mini",
+      "timelineFormatting": "gpt-4o-mini",
+      "dailySummary": "gpt-4o",
+      "articleGeneration": "gpt-4o",
+      "expectationCheck": "gpt-4o",
+      "tomorrowOutlook": "gpt-4o",
+      "videoScript": "gpt-4o",
+      "youtubeMetadata": "gpt-4o-mini",
+      "imageGeneration": "gpt-image-1",
+      "tts": "gpt-4o-mini-tts"
+    },
+    "ttsVoice": "alloy",
+    "imageGenerationModel": "gpt-image-1"
+  }
+}
