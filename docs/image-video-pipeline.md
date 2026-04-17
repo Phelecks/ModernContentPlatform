@@ -32,8 +32,8 @@ The media pipeline runs as part of the daily editorial flow, after the core summ
 |------|--------|-------|--------|----------|
 | Script generation | `06_generate_video_script.json` | Daily summary | `video_script` (structured JSON) | OpenAI / Google |
 | Image generation | `06b_generate_images.json` | Summary + topic style hint | `image_assets` | OpenAI DALL-E / Google Imagen |
-| Narration (TTS) | `06c_generate_narration.json` | Video script text | `narration_asset` (base64 MP3) | OpenAI TTS / Google TTS |
-| Render & captions | `06d_render_video.json` | Images + narration + script | `render_video_asset` (render manifest) | Shotstack / Creatomate |
+| Narration (TTS) | `06c_generate_narration.json` | `video_script` text (intro + segments + outro concatenated) | `narration_asset` (base64 MP3) | OpenAI TTS / Google TTS |
+| Render & captions | `06d_render_video.json` | Images + narration + `video_script` | `render_video_asset` (render manifest + SRT captions) | Shotstack / Creatomate |
 
 All media stages are **non-blocking**. If a stage fails, the daily editorial pipeline continues and publishes text content to GitHub. Failed or missing assets are recorded in the `*_warnings` fields of the generation output.
 
