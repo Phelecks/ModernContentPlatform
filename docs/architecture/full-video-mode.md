@@ -47,9 +47,12 @@ In `app/src/utils/mediaMode.js` and `config/media-mode.json`:
 }
 ```
 
-`available: false` means the mode fails provider capability validation at
-orchestrator startup before any steps run. This is intentional — the pipeline
-should fail loudly with a clear `MEDIA_MODE_CONFIG_ERROR` rather than silently
+`available: false` marks the mode as reserved for future use in v1, but it is
+not, by itself, the current startup enforcement mechanism. In the current v1
+implementation, `full_video` is rejected because it requires the
+`fullVideoGeneration` capability, and no supported provider advertises that
+capability. This still causes the pipeline to fail loudly with a clear
+`MEDIA_MODE_CONFIG_ERROR` during media-mode validation, rather than silently
 producing incomplete output.
 
 ---
@@ -228,9 +231,16 @@ enabling this mode in production.
   placeholder. It will fail gracefully with a `status: "failed"` asset and a
   warning if reached. This prevents silent data loss if the mode is accidentally
   activated before a provider is ready.
-- Adding a new capable provider requires changes to `mediaMode.js` and
-  `config/media-mode.json`. Both files must stay in sync. The JS utility is the
-  canonical source of truth.
+- Adding a new capable provider requires changes to **both** `mediaMode.js`/`config/media-mode.json`
+  **and** the `Check Media Mode` Code node inside `orchestrator.json`. The
+  orchestrator currently validates `MEDIA_MODE`/`AI_PROVIDER` with its own
+  hard-coded provider lists (separate from `mediaMode.js`). When a new provider
+  is added, update the `MEDIA_PROVIDER_CAPABILITIES` and
+  `MODE_REQUIRED_CAPABILITIES` objects in that Code node to match (or refactor
+  it to read from `config/media-mode.json` at runtime). Skipping this step
+  means the orchestrator will still reject the new provider even after
+  `mediaMode.js` is updated. The JS utility is the canonical source of truth for
+  the definitions; `orchestrator.json` is the runtime enforcement point.
 
 ---
 
@@ -243,7 +253,10 @@ Complete these steps in order when a capable provider becomes available:
 
 2. **Add provider capability** — Add the provider slug to
    `MEDIA_PROVIDER_CAPABILITIES` in `mediaMode.js` and mirror in
-   `config/media-mode.json`.
+   `config/media-mode.json`. Then update the `MEDIA_PROVIDER_CAPABILITIES` and
+   `MODE_REQUIRED_CAPABILITIES` objects in the `Check Media Mode` Code node
+   inside `orchestrator.json` to match — the orchestrator validates these at
+   runtime independently of `mediaMode.js`.
 
 3. **Implement generation call** — In `06_full_video_generation.json`, add the
    provider slug to `FULL_VIDEO_CAPABLE_PROVIDERS` and implement the API call
