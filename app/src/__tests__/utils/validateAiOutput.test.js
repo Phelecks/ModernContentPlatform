@@ -1513,6 +1513,20 @@ describe('validateNarrationAsset', () => {
     expect(ok).toBe(false)
     expect(errors.some(e => e.includes('warning'))).toBe(true)
   })
+
+  it('reports an error when audio_b64 is omitted entirely', () => {
+    const { audio_b64: _, ...noAudioB64 } = VALID_NARRATION_ASSET_OPENAI
+    const { ok, errors } = validateNarrationAsset(noAudioB64)
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('audio_b64'))).toBe(true)
+  })
+
+  it('reports an error when warning is omitted entirely', () => {
+    const { warning: _, ...noWarning } = VALID_NARRATION_ASSET_OPENAI
+    const { ok, errors } = validateNarrationAsset(noWarning)
+    expect(ok).toBe(false)
+    expect(errors.some(e => e.includes('warning'))).toBe(true)
+  })
 })
 
 // ---------------------------------------------------------------------------

@@ -837,7 +837,11 @@ export function validateNarrationAsset(obj) {
     errors.push(`audio_encoding "${obj.audio_encoding}" is invalid. Expected: ${VALID_NARRATION_AUDIO_ENCODINGS.join(', ')}.`)
   }
 
-  if (obj.audio_b64 !== null && obj.audio_b64 !== undefined && !isString(obj.audio_b64, 1)) {
+  // audio_b64 must always be present as an explicit null or a non-empty string.
+  // Downstream consumers must not have to distinguish "missing" from "null".
+  if (!('audio_b64' in obj)) {
+    errors.push('audio_b64 must be present (null or a non-empty base64 string).')
+  } else if (obj.audio_b64 !== null && !isString(obj.audio_b64, 1)) {
     errors.push('audio_b64 must be a non-empty string or null.')
   }
 
@@ -855,7 +859,10 @@ export function validateNarrationAsset(obj) {
     errors.push('generated_at must be a non-empty ISO 8601 timestamp string.')
   }
 
-  if (obj.warning !== null && obj.warning !== undefined) {
+  // warning must always be present as an explicit null or a string ≤ 500 chars.
+  if (!('warning' in obj)) {
+    errors.push('warning must be present (null or a string of up to 500 characters).')
+  } else if (obj.warning !== null) {
     if (typeof obj.warning !== 'string' || obj.warning.length > 500) {
       errors.push('warning must be a string of up to 500 characters or null.')
     }

@@ -2,9 +2,9 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "narration_asset",
   "title": "Narration Asset",
-  "description": "Shared internal asset contract for the TTS narration step. Produced by the 06c_generate_narration workflow after normalizing the provider-specific API response. Used by downstream media pipeline steps (video rendering, audio publishing) and committed to GitHub as narration.json.",
+  "description": "Shared internal asset contract for the TTS narration step. Produced by the 06c_generate_narration workflow after normalizing the provider-specific API response. Used by downstream media pipeline steps (video rendering, audio publishing).",
   "type": "object",
-  "required": ["provider", "model", "voice", "format", "audio_encoding", "char_count", "generated_at"],
+  "required": ["provider", "model", "voice", "format", "audio_encoding", "audio_b64", "char_count", "generated_at", "warning"],
   "additionalProperties": false,
   "properties": {
     "provider": {
