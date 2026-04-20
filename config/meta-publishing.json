@@ -1,0 +1,66 @@
+{
+  "_comment": "Meta publishing configuration. Controls which platforms are active and sets formatting limits. This file is a reference for platform limits, topic hashtags, and account requirements. Runtime toggles are read from individual n8n Variables (ENABLE_META_INSTAGRAM, ENABLE_META_FACEBOOK, etc.). Workflows currently hardcode formatting rules; this config is the canonical reference and can be wired into workflows via an n8n variable in a future version.",
+  "platforms": {
+    "instagram": {
+      "enabled": false,
+      "_comment_enabled": "Set ENABLE_META_INSTAGRAM=true in n8n Variables to activate Instagram publishing. Requires a Professional Account (Business or Creator) linked to a Facebook Page.",
+      "caption_max_length": 2200,
+      "hashtag_position": "end",
+      "story_enabled": false,
+      "_comment_story": "Instagram story publishing requires the Instagram Graph API Content Publishing endpoint and a valid business account. Set ENABLE_META_INSTAGRAM_STORIES=true to activate.",
+      "feed_post_enabled": true
+    },
+    "facebook": {
+      "enabled": false,
+      "_comment_enabled": "Set ENABLE_META_FACEBOOK=true in n8n Variables to activate Facebook Page publishing. Requires a Facebook Page and a Page Access Token with pages_manage_posts permission.",
+      "caption_max_length": 63206,
+      "hashtag_position": "end",
+      "story_enabled": false,
+      "_comment_story": "Facebook story publishing requires the Facebook Graph API Pages Stories endpoint. Set ENABLE_META_FACEBOOK_STORIES=true to activate.",
+      "feed_post_enabled": true
+    }
+  },
+  "alert_story_threshold": {
+    "min_importance_score": 80,
+    "_comment": "Only alerts with importance_score >= this value are eligible for Meta story generation. Keeps story volume manageable and quality high."
+  },
+  "retry": {
+    "max_attempts": 3,
+    "wait_between_ms": 5000,
+    "_comment": "Retry settings for Meta API publish calls. Meta Graph API has rate limits; use exponential backoff in practice."
+  },
+  "formatting": {
+    "add_cta": true,
+    "default_cta": "Follow for daily updates.",
+    "_comment_cta": "Default CTA appended when AI does not generate one. Can be overridden per topic in future config versions.",
+    "topic_hashtags": {
+      "crypto":     ["#crypto", "#blockchain", "#digitalassets", "#web3"],
+      "finance":    ["#finance", "#investing", "#markets", "#stocks"],
+      "economy":    ["#economy", "#macroeconomics", "#fed", "#inflation"],
+      "health":     ["#health", "#wellness", "#medicine", "#healthcare"],
+      "ai":         ["#AI", "#artificialintelligence", "#machinelearning", "#tech"],
+      "energy":     ["#energy", "#renewableenergy", "#oilandgas", "#cleanenergy"],
+      "technology": ["#technology", "#tech", "#innovation", "#software"]
+    },
+    "_comment_topic_hashtags": "Base topic hashtags always appended to AI-generated hashtags. Ensures minimum discoverability per topic."
+  },
+  "account_requirements": {
+    "instagram": {
+      "account_type": "Professional (Business or Creator)",
+      "linked_page_required": true,
+      "api": "Instagram Graph API",
+      "required_permissions": ["instagram_basic", "instagram_content_publish", "pages_read_engagement"],
+      "token_type": "User Access Token or Page-backed Instagram token",
+      "token_expiry": "Long-lived tokens expire in 60 days — use token refresh logic or a system user token",
+      "setup_docs": "https://developers.facebook.com/docs/instagram-api/getting-started"
+    },
+    "facebook": {
+      "account_type": "Facebook Page (admin access required)",
+      "api": "Facebook Graph API — Pages",
+      "required_permissions": ["pages_manage_posts", "pages_read_engagement", "publish_to_groups (if group posting)"],
+      "token_type": "Page Access Token",
+      "token_expiry": "Page Access Tokens derived from long-lived User Tokens do not expire if the Page has a valid connected app",
+      "setup_docs": "https://developers.facebook.com/docs/pages/getting-started"
+    }
+  }
+}

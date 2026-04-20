@@ -41,7 +41,9 @@ import {
   ECONOMY_NORMALIZED_ITEM_BLS_CPI,
   CRYPTO_NORMALIZED_ITEM_X_QUERY_BTC,
   CRYPTO_NORMALIZED_ITEM_SOCIAL_TELEGRAM,
-  CRYPTO_NORMALIZED_ITEM_WEBHOOK_LIQUIDATION
+  CRYPTO_NORMALIZED_ITEM_WEBHOOK_LIQUIDATION,
+  CRYPTO_META_DAILY_POST,
+  CRYPTO_META_STORY
 } from './helpers/fixtures.js'
 
 // ---- Helpers ----
@@ -593,5 +595,72 @@ describe('fixtures/normalized-items', () => {
     expect(CRYPTO_NORMALIZED_ITEM_X_QUERY_BTC.source_id).toBe(CRYPTO_SOURCE_EVENT_X_QUERY_BTC.source_id)
     expect(CRYPTO_NORMALIZED_ITEM_SOCIAL_TELEGRAM.source_id).toBe(CRYPTO_SOURCE_EVENT_SOCIAL_TELEGRAM.source_id)
     expect(CRYPTO_NORMALIZED_ITEM_WEBHOOK_LIQUIDATION.source_id).toBe(CRYPTO_SOURCE_EVENT_WEBHOOK_LIQUIDATION.source_id)
+  })
+})
+
+// ---- Meta social asset fixtures ----
+
+const META_ASSET_TYPES  = ['daily_post', 'story']
+const META_SOURCE_TYPES = ['daily_summary', 'alert']
+
+function assertMetaSocialAsset(fixture, label) {
+  expect(fixture, `${label}: must be an object`).toBeTypeOf('object')
+  expect(fixture.topic_slug,  `${label}: topic_slug`).toBeTypeOf('string')
+  expect(TOPIC_SLUGS,         `${label}: topic_slug must be a known slug`).toContain(fixture.topic_slug)
+  expect(fixture.date_key,    `${label}: date_key`).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  expect(META_ASSET_TYPES,    `${label}: asset_type`).toContain(fixture.asset_type)
+  expect(META_SOURCE_TYPES,   `${label}: source_type`).toContain(fixture.source_type)
+  expect(fixture.ai_output,   `${label}: ai_output`).toBeTypeOf('object')
+  expect(fixture.ai_output.post_caption, `${label}: ai_output.post_caption`).toBeTypeOf('string')
+  expect(fixture.ai_output.post_caption.length, `${label}: post_caption non-empty`).toBeGreaterThan(0)
+  expect(Array.isArray(fixture.ai_output.hashtags), `${label}: ai_output.hashtags`).toBe(true)
+  expect(fixture.ai_output.hashtags.length, `${label}: at least one hashtag`).toBeGreaterThan(0)
+  expect(fixture.instagram,   `${label}: instagram`).toBeTypeOf('object')
+  expect(typeof fixture.instagram.enabled, `${label}: instagram.enabled is boolean`).toBe('boolean')
+  expect(fixture.instagram.caption, `${label}: instagram.caption`).toBeTypeOf('string')
+  expect(typeof fixture.instagram.story_enabled, `${label}: instagram.story_enabled is boolean`).toBe('boolean')
+  expect(fixture.facebook,    `${label}: facebook`).toBeTypeOf('object')
+  expect(typeof fixture.facebook.enabled, `${label}: facebook.enabled is boolean`).toBe('boolean')
+  expect(fixture.facebook.caption, `${label}: facebook.caption`).toBeTypeOf('string')
+  expect(typeof fixture.facebook.story_enabled, `${label}: facebook.story_enabled is boolean`).toBe('boolean')
+  expect(fixture.generated_at, `${label}: generated_at`).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+}
+
+describe('Meta social asset fixtures', () => {
+  it('crypto-2025-01-15-daily-post has correct meta_social_asset structure', () => {
+    assertMetaSocialAsset(CRYPTO_META_DAILY_POST, 'crypto-meta-daily-post')
+  })
+
+  it('crypto-2025-01-15-daily-post has asset_type daily_post', () => {
+    expect(CRYPTO_META_DAILY_POST.asset_type).toBe('daily_post')
+  })
+
+  it('crypto-2025-01-15-daily-post has source_type daily_summary', () => {
+    expect(CRYPTO_META_DAILY_POST.source_type).toBe('daily_summary')
+  })
+
+  it('crypto-2025-01-15-daily-post instagram caption does not exceed 2200 chars', () => {
+    expect(CRYPTO_META_DAILY_POST.instagram.caption.length).toBeLessThanOrEqual(2200)
+  })
+
+  it('crypto-2025-01-15-daily-post facebook caption does not exceed 63206 chars', () => {
+    expect(CRYPTO_META_DAILY_POST.facebook.caption.length).toBeLessThanOrEqual(63206)
+  })
+
+  it('crypto-2025-01-15-story has correct meta_social_asset structure', () => {
+    assertMetaSocialAsset(CRYPTO_META_STORY, 'crypto-meta-story')
+  })
+
+  it('crypto-2025-01-15-story has asset_type story', () => {
+    expect(CRYPTO_META_STORY.asset_type).toBe('story')
+  })
+
+  it('crypto-2025-01-15-story has source_type alert', () => {
+    expect(CRYPTO_META_STORY.source_type).toBe('alert')
+  })
+
+  it('crypto-2025-01-15-story has a non-empty source_id', () => {
+    expect(CRYPTO_META_STORY.source_id).toBeTypeOf('string')
+    expect(CRYPTO_META_STORY.source_id.length).toBeGreaterThan(0)
   })
 })

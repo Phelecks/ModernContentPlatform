@@ -1,0 +1,40 @@
+{
+  "topic_slug": "crypto",
+  "date_key": "2025-01-15",
+  "asset_type": "daily_post",
+  "source_type": "daily_summary",
+  "source_id": null,
+  "publish_job_id": 42,
+  "ai_output": {
+    "post_caption": "Bitcoin ETF inflows hit a record $500M in a single session as institutional demand accelerates. BTC briefly touched the $50K level before settling at $49,400. Ethereum ETFs also recorded their second-best inflow day since approval, signalling broad institutional appetite across the crypto market.",
+    "hashtags": [
+      "#crypto",
+      "#bitcoin",
+      "#BTC",
+      "#ethereum",
+      "#ETH",
+      "#ETF",
+      "#institutionalcrypto",
+      "#cryptonews",
+      "#blockchain",
+      "#digitalassets"
+    ],
+    "image_prompt": "Professional financial chart showing Bitcoin price rally with upward trend line, dark background with orange Bitcoin symbol, clean modern style",
+    "story_caption": "BTC ETFs record $500M single-day inflows 🚀 Bitcoin touches $50K",
+    "story_background_hint": "Dark gradient with orange Bitcoin symbol and upward arrow",
+    "cta": "Full daily crypto briefing — link in bio."
+  },
+  "instagram": {
+    "enabled": true,
+    "caption": "Bitcoin ETF inflows hit a record $500M in a single session as institutional demand accelerates. BTC briefly touched the $50K level before settling at $49,400. Ethereum ETFs also recorded their second-best inflow day since approval, signalling broad institutional appetite across the crypto market.\n\nFull daily crypto briefing — link in bio.\n\n#crypto #bitcoin #BTC #ethereum #ETH #ETF #institutionalcrypto #cryptonews #blockchain #digitalassets #web3",
+    "story_caption": "BTC ETFs record $500M single-day inflows 🚀 Bitcoin touches $50K",
+    "story_enabled": false
+  },
+  "facebook": {
+    "enabled": true,
+    "caption": "Bitcoin ETF inflows hit a record $500M in a single session as institutional demand accelerates. BTC briefly touched the $50K level before settling at $49,400. Ethereum ETFs also recorded their second-best inflow day since approval, signalling broad institutional appetite across the crypto market.\n\nFull daily crypto briefing — link in bio.\n\n#crypto #bitcoin #BTC #ethereum #ETH #ETF #institutionalcrypto #cryptonews #blockchain #digitalassets #web3",
+    "story_caption": "BTC ETFs record $500M single-day inflows 🚀 Bitcoin touches $50K",
+    "story_enabled": false
+  },
+  "generated_at": "2025-01-15T23:45:00Z"
+}

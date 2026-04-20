@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "meta_social_post",
+  "title": "Meta Social Post AI Output",
+  "description": "Structured JSON output expected from the AI Meta social post generation prompt. Used by module 11 (daily) and module 10-intraday (story). Validated before platform-specific formatting is applied.",
+  "type": "object",
+  "required": [
+    "post_caption",
+    "hashtags",
+    "image_prompt"
+  ],
+  "properties": {
+    "post_caption": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 2000,
+      "description": "Base caption suitable for both Instagram and Facebook feed posts. No platform-specific truncation applied yet. Factual, engaging, third-person. HTML-free."
+    },
+    "hashtags": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 30,
+      "items": {
+        "type": "string",
+        "pattern": "^#[A-Za-z0-9_]+$",
+        "description": "A single hashtag including the # prefix."
+      },
+      "description": "Hashtags relevant to the topic and content. Include general topic tags and specific event tags."
+    },
+    "image_prompt": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 500,
+      "description": "Prompt or guidance for generating or selecting a relevant background image. Should be safe for image generation APIs. Describes the visual mood, subject, and style."
+    },
+    "story_caption": {
+      "type": ["string", "null"],
+      "minLength": 10,
+      "maxLength": 200,
+      "description": "Short caption for Instagram/Facebook story format. Under 200 characters. Punchy, headline-style. Null when story output is not requested."
+    },
+    "story_background_hint": {
+      "type": ["string", "null"],
+      "maxLength": 200,
+      "description": "Visual style hint for the story background (e.g. 'dark financial chart overlay', 'clean gradient with market data'). Null when story output is not requested."
+    },
+    "cta": {
+      "type": ["string", "null"],
+      "maxLength": 150,
+      "description": "Optional call-to-action appended to the post caption (e.g. 'Read the full analysis — link in bio.'). Null when no CTA is appropriate."
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "post_caption": "Bitcoin ETF inflows hit a record $500M in a single session as institutional demand accelerates. BTC briefly touched the $50K level before settling at $49,400. Ethereum ETFs also saw their second-best inflow day since approval, signalling broad institutional appetite across the crypto market.",
+      "hashtags": [
+        "#crypto",
+        "#bitcoin",
+        "#BTC",
+        "#ethereum",
+        "#ETH",
+        "#ETF",
+        "#institutionalcrypto",
+        "#cryptonews",
+        "#blockchain",
+        "#digitalassets"
+      ],
+      "image_prompt": "Professional financial chart showing Bitcoin price rally with upward trend line, dark background with orange Bitcoin symbol, clean modern style",
+      "story_caption": "BTC ETFs record $500M single-day inflows 🚀 Bitcoin touches $50K",
+      "story_background_hint": "Dark gradient with orange Bitcoin symbol and upward arrow",
+      "cta": "Full daily crypto briefing — link in bio."
+    }
+  ]
+}

@@ -548,6 +548,44 @@
       ],
       "continueOnFail": true,
       "notes": "Render step: generates SRT captions and submits image+audio to render provider (Shotstack/Creatomate). Non-blocking \u2014 pipeline continues on failure."
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $vars.DAILY_GENERATE_META_SOCIAL_WORKFLOW_ID }}"
+        },
+        "options": {}
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000022",
+      "name": "11 Generate Meta Social",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        5520,
+        600
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $vars.DAILY_PUBLISH_META_WORKFLOW_ID }}"
+        },
+        "options": {}
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000023",
+      "name": "12 Publish Meta Daily",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        5740,
+        600
+      ],
+      "continueOnFail": true
     }
   ],
   "connections": {
@@ -814,6 +852,11 @@
             "node": "Process Topics",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "11 Generate Meta Social",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -863,6 +906,17 @@
         [
           {
             "node": "07 YouTube Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "11 Generate Meta Social": {
+      "main": [
+        [
+          {
+            "node": "12 Publish Meta Daily",
             "type": "main",
             "index": 0
           }

@@ -74,3 +74,8 @@ export { default as PROVIDER_CONFIG_X_ONLY_NEWSAPI_KEY_IGNORED } from '@fixtures
 export { default as PROVIDER_CONFIG_INVALID_BOTH_DISABLED } from '@fixtures/provider-configs/invalid-both-disabled.json'
 export { default as PROVIDER_CONFIG_INVALID_X_MISSING_KEY } from '@fixtures/provider-configs/invalid-x-missing-key.json'
 export { default as PROVIDER_CONFIG_INVALID_NEWSAPI_MISSING_KEY } from '@fixtures/provider-configs/invalid-newsapi-missing-key.json'
+
+// ---- Meta social assets (meta_social_asset contract, per topic/day) ----
+
+export { default as CRYPTO_META_DAILY_POST } from '@fixtures/meta-social/crypto-2025-01-15-daily-post.json'
+export { default as CRYPTO_META_STORY }      from '@fixtures/meta-social/crypto-2025-01-15-story.json'
