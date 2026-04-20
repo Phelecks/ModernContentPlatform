@@ -1,0 +1,177 @@
+{
+  "name": "Intraday — 10 Meta Story Delivery",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "e1f2a3b4-0010-0010-0010-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Check whether Meta story delivery is enabled and filter to story-eligible alerts.\n// Eligible: importance_score >= META_ALERT_STORY_THRESHOLD (default 80)\n// and at least one Meta platform has stories enabled.\n\nconst enableInstagram = ($vars.ENABLE_META_INSTAGRAM || '').toLowerCase() === 'true';\nconst enableFacebook  = ($vars.ENABLE_META_FACEBOOK  || '').toLowerCase() === 'true';\nconst enableIgStory   = ($vars.ENABLE_META_INSTAGRAM_STORIES || '').toLowerCase() === 'true';\nconst enableFbStory   = ($vars.ENABLE_META_FACEBOOK_STORIES  || '').toLowerCase() === 'true';\n\nconst storyEnabled = (enableInstagram && enableIgStory) || (enableFacebook && enableFbStory);\n\nif (!storyEnabled) {\n  return [{ json: { _meta_skip: true, reason: 'No Meta story platforms enabled' } }];\n}\n\nconst threshold = parseInt($vars.META_ALERT_STORY_THRESHOLD || '80', 10);\n\nconst input = $input.first().json;\nconst items = Array.isArray(input.items) ? input.items : [];\n\nconst eligible = items.filter(i =>\n  i.importance_score >= threshold &&\n  (i.channels || []).includes('telegram') // already approved for alerting\n);\n\nif (eligible.length === 0) {\n  return [{ json: { _meta_skip: true, reason: `No alerts met story threshold (>= ${threshold})` } }];\n}\n\nreturn eligible.map(item => ({\n  json: {\n    ...item,\n    _meta_enable_ig_story: enableInstagram && enableIgStory,\n    _meta_enable_fb_story: enableFacebook  && enableFbStory,\n    _meta_skip: false\n  }\n}));"
+      },
+      "id": "e1f2a3b4-0010-0010-0010-000000000002",
+      "name": "Filter Story-Eligible Alerts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true },
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ $json._meta_skip }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ]
+        }
+      },
+      "id": "e1f2a3b4-0010-0010-0010-000000000003",
+      "name": "Has Story Alerts?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{ json: { _meta_skip: true, reason: 'No story-eligible alerts — Meta story delivery skipped' } }];"
+      },
+      "id": "e1f2a3b4-0010-0010-0010-000000000004",
+      "name": "Skip — No Eligible Alerts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 500]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Format the alert as a Meta story asset.\n// Stories are short, visual, and punchy — no long body text.\nconst item = $input.item.json;\n\nconst topicEmoji = {\n  crypto:     '🪙',\n  finance:    '📈',\n  economy:    '🏦',\n  health:     '🏥',\n  ai:         '🤖',\n  energy:     '⚡',\n  technology: '💻'\n};\nconst emoji = topicEmoji[item.topic_slug] || '📰';\n\n// Truncate headline to ~120 chars for story caption\nconst truncate = (s, n) => s && s.length > n ? s.slice(0, n - 1) + '…' : (s || '');\nconst storyCaption = `${emoji} ${truncate(item.headline, 120)}`;\n\n// Build per-platform story caption (same for now, but kept separate for future divergence)\nconst igStoryCaption = item._meta_enable_ig_story ? storyCaption : null;\nconst fbStoryCaption = item._meta_enable_fb_story ? storyCaption : null;\n\nconst storyAsset = {\n  topic_slug:   item.topic_slug,\n  date_key:     item.event_at ? item.event_at.slice(0, 10) : new Date().toISOString().slice(0, 10),\n  asset_type:   'story',\n  source_type:  'alert',\n  source_id:    item.item_id || item.alert_id?.toString() || null,\n  publish_job_id: null,\n  ai_output: {\n    post_caption:          item.summary_text || item.headline,\n    hashtags:              [`#${item.topic_slug}`, '#breakingnews'],\n    image_prompt:          `Urgent news background for ${item.topic_slug} story`,\n    story_caption:         storyCaption,\n    story_background_hint: `High-impact ${item.topic_slug} news visual`,\n    cta:                   null\n  },\n  instagram: {\n    enabled:       !!item._meta_enable_ig_story,\n    caption:       igStoryCaption || '',\n    story_caption: igStoryCaption,\n    story_enabled: !!item._meta_enable_ig_story\n  },\n  facebook: {\n    enabled:       !!item._meta_enable_fb_story,\n    caption:       fbStoryCaption || '',\n    story_caption: fbStoryCaption,\n    story_enabled: !!item._meta_enable_fb_story\n  },\n  generated_at: new Date().toISOString(),\n  // carry original alert fields for downstream D1 logging\n  _source_alert: {\n    item_id:          item.item_id,\n    importance_score: item.importance_score,\n    severity_score:   item.severity_score,\n    headline:         item.headline\n  }\n};\n\nreturn [{ json: storyAsset }];"
+      },
+      "id": "e1f2a3b4-0010-0010-0010-000000000005",
+      "name": "Format Story Asset",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Dispatch the story to Instagram and/or Facebook.\n// Stories go to the appropriate Meta Graph API story endpoints.\n//\n// Instagram Story: POST /{ig-user-id}/media  with media_type=STORIES\n// Facebook Story:  POST /{page-id}/photo_stories  (requires image URL)\n//\n// For v1, caption-only stories (no image URL) are submitted.\n// Production deployments should attach an image URL from the image pipeline.\n\nconst asset = $input.item.json;\nconst results = [];\n\nconst igUserId = $vars.META_INSTAGRAM_USER_ID  || null;\nconst fbPageId = $vars.META_FACEBOOK_PAGE_ID   || null;\nconst igToken  = $vars.META_INSTAGRAM_TOKEN    || null;\nconst fbToken  = $vars.META_FACEBOOK_PAGE_TOKEN|| null;\n\n// Collect tasks\nconst tasks = [];\n\nif (asset.instagram.story_enabled && igUserId && igToken) {\n  tasks.push({\n    platform: 'instagram',\n    url:   `https://graph.facebook.com/v19.0/${igUserId}/media`,\n    body:  { caption: asset.instagram.story_caption, media_type: 'STORIES', access_token: igToken },\n    caption: asset.instagram.story_caption,\n    source_id: asset.source_id\n  });\n}\n\nif (asset.facebook.story_enabled && fbPageId && fbToken) {\n  tasks.push({\n    platform: 'facebook',\n    url:   `https://graph.facebook.com/v19.0/${fbPageId}/photo_stories`,\n    body:  { message: asset.facebook.story_caption, access_token: fbToken },\n    caption: asset.facebook.story_caption,\n    source_id: asset.source_id\n  });\n}\n\nif (tasks.length === 0) {\n  return [{ json: {\n    _meta_skip: true,\n    reason: 'No valid credentials or enabled story platforms for this alert',\n    topic_slug: asset.topic_slug,\n    date_key:   asset.date_key,\n    source_id:  asset.source_id\n  } }];\n}\n\n// Return each task as a separate item for individual dispatch\nreturn tasks.map(t => ({ json: {\n  ...t,\n  topic_slug:   asset.topic_slug,\n  date_key:     asset.date_key,\n  asset_type:   'story',\n  source_type:  'alert'\n} }));"
+      },
+      "id": "e1f2a3b4-0010-0010-0010-000000000006",
+      "name": "Resolve Story API Tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.body }}",
+        "options": {
+          "timeout": 15000,
+          "ignoreResponseCode": true
+        }
+      },
+      "id": "e1f2a3b4-0010-0010-0010-000000000007",
+      "name": "Send Story to Meta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1340, 300],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Log result to D1.\nconst response = $input.item.json;\nconst task     = $('Resolve Story API Tasks').item.json;\n\nconst hasError = !!response.error;\nconst status   = hasError ? 'failed' : 'published';\nconst errMsg   = hasError ? `${response.error.message} [code: ${response.error.code}]` : null;\nconst postId   = response.id || null;\n\nreturn [{ json: {\n  _d1_sql: `INSERT INTO meta_social_publish_log\n    (topic_slug, date_key, asset_type, source_type, source_id, platform, post_type,\n     status, platform_post_id, error_message, attempt, created_at, updated_at)\n  VALUES (?, ?, 'story', 'alert', ?, ?, 'story', ?, ?, ?, 1,\n    strftime('%Y-%m-%dT%H:%M:%SZ','now'),\n    strftime('%Y-%m-%dT%H:%M:%SZ','now')\n  )`,\n  _d1_params: [\n    task.topic_slug,\n    task.date_key,\n    task.source_id || null,\n    task.platform,\n    status,\n    postId,\n    errMsg\n  ],\n  platform:  task.platform,\n  status,\n  post_id:   postId,\n  error:     errMsg\n} }];"
+      },
+      "id": "e1f2a3b4-0010-0010-0010-000000000008",
+      "name": "Build D1 Story Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.cloudflare.com/client/v4/accounts/{{ $vars.CF_ACCOUNT_ID }}/d1/database/{{ $vars.CF_D1_DATABASE_ID }}/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { sql: $json._d1_sql, params: $json._d1_params } }}",
+        "options": { "timeout": 10000 }
+      },
+      "id": "e1f2a3b4-0010-0010-0010-000000000009",
+      "name": "Write Story Log to D1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1780, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cloudflare-d1-api",
+          "name": "CloudflareD1Api"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [[{ "node": "Filter Story-Eligible Alerts", "type": "main", "index": 0 }]]
+    },
+    "Filter Story-Eligible Alerts": {
+      "main": [[{ "node": "Has Story Alerts?", "type": "main", "index": 0 }]]
+    },
+    "Has Story Alerts?": {
+      "main": [
+        [{ "node": "Skip — No Eligible Alerts", "type": "main", "index": 0 }],
+        [{ "node": "Format Story Asset",        "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Story Asset": {
+      "main": [[{ "node": "Resolve Story API Tasks", "type": "main", "index": 0 }]]
+    },
+    "Resolve Story API Tasks": {
+      "main": [[{ "node": "Send Story to Meta", "type": "main", "index": 0 }]]
+    },
+    "Send Story to Meta": {
+      "main": [[{ "node": "Build D1 Story Log", "type": "main", "index": 0 }]]
+    },
+    "Build D1 Story Log": {
+      "main": [[{ "node": "Write Story Log to D1", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": true,
+    "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
+  },
+  "id": "intraday-10-meta-story-delivery-v1",
+  "tags": ["intraday", "meta", "instagram", "facebook", "story", "v1"]
+}

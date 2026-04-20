@@ -1,5 +1,5 @@
 {
-  "name": "Intraday — Orchestrator",
+  "name": "Intraday \u2014 Orchestrator",
   "nodes": [
     {
       "parameters": {
@@ -16,7 +16,10 @@
       "name": "Schedule Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
@@ -31,7 +34,10 @@
       "name": "01 Source Ingestion",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
@@ -46,7 +52,10 @@
       "name": "02 Normalization",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [680, 300]
+      "position": [
+        680,
+        300
+      ]
     },
     {
       "parameters": {
@@ -61,7 +70,10 @@
       "name": "03 Deduplication",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [900, 300]
+      "position": [
+        900,
+        300
+      ]
     },
     {
       "parameters": {
@@ -76,7 +88,10 @@
       "name": "04 Clustering",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [1120, 300]
+      "position": [
+        1120,
+        300
+      ]
     },
     {
       "parameters": {
@@ -91,7 +106,10 @@
       "name": "05 AI Classification",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [1340, 300]
+      "position": [
+        1340,
+        300
+      ]
     },
     {
       "parameters": {
@@ -106,7 +124,10 @@
       "name": "06 Alert Decision",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [1560, 300]
+      "position": [
+        1560,
+        300
+      ]
     },
     {
       "parameters": {
@@ -121,7 +142,10 @@
       "name": "07 D1 Persistence",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [1780, 300]
+      "position": [
+        1780,
+        300
+      ]
     },
     {
       "parameters": {
@@ -136,7 +160,10 @@
       "name": "08 Telegram Delivery",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [2000, 200]
+      "position": [
+        2000,
+        200
+      ]
     },
     {
       "parameters": {
@@ -151,17 +178,25 @@
       "name": "09 Discord Delivery",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [2000, 400]
+      "position": [
+        2000,
+        400
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": false },
+          "options": {
+            "caseSensitive": false
+          },
           "conditions": [
             {
               "leftValue": "={{ $json.items.length }}",
               "rightValue": 0,
-              "operator": { "type": "number", "operation": "gt" }
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
             }
           ]
         }
@@ -170,65 +205,157 @@
       "name": "Has Approved Alerts?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1780, 500]
+      "position": [
+        1780,
+        500
+      ]
     },
     {
       "parameters": {},
       "id": "a1b2c3d4-0001-0001-0001-000000000012",
-      "name": "No Alerts — Stop",
+      "name": "No Alerts \u2014 Stop",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [2000, 600]
+      "position": [
+        2000,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $vars.INTRADAY_META_STORY_WORKFLOW_ID }}"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000011",
+      "name": "10 Meta Story Delivery",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        2000,
+        600
+      ],
+      "continueOnFail": true
     }
   ],
   "connections": {
     "Schedule Trigger": {
       "main": [
-        [{ "node": "01 Source Ingestion", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "01 Source Ingestion",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "01 Source Ingestion": {
       "main": [
-        [{ "node": "02 Normalization", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "02 Normalization",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "02 Normalization": {
       "main": [
-        [{ "node": "03 Deduplication", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "03 Deduplication",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "03 Deduplication": {
       "main": [
-        [{ "node": "04 Clustering", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "04 Clustering",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "04 Clustering": {
       "main": [
-        [{ "node": "05 AI Classification", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "05 AI Classification",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "05 AI Classification": {
       "main": [
-        [{ "node": "06 Alert Decision", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "06 Alert Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "06 Alert Decision": {
       "main": [
-        [{ "node": "07 D1 Persistence", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "07 D1 Persistence",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "07 D1 Persistence": {
       "main": [
-        [{ "node": "Has Approved Alerts?", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Has Approved Alerts?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Has Approved Alerts?": {
       "main": [
         [
-          { "node": "08 Telegram Delivery", "type": "main", "index": 0 },
-          { "node": "09 Discord Delivery", "type": "main", "index": 0 }
+          {
+            "node": "08 Telegram Delivery",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "09 Discord Delivery",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "10 Meta Story Delivery",
+            "type": "main",
+            "index": 0
+          }
         ],
-        [{ "node": "No Alerts — Stop", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "No Alerts \u2014 Stop",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -241,5 +368,9 @@
     "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
   },
   "id": "intraday-orchestrator-v1",
-  "tags": ["intraday", "orchestrator", "v1"]
+  "tags": [
+    "intraday",
+    "orchestrator",
+    "v1"
+  ]
 }

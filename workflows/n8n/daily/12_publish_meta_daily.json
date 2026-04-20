@@ -1,0 +1,269 @@
+{
+  "name": "Daily — 12 Publish Meta Daily",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "d1e2f3a4-0012-0012-0012-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Validate input and guard against skipped/disabled cases.\nconst asset = $input.first().json;\n\nif (asset._meta_skip) {\n  return [{ json: { _publish_skip: true, reason: asset.reason || 'Meta publishing skipped' } }];\n}\n\nconst required = ['topic_slug', 'date_key', 'asset_type', 'instagram', 'facebook'];\nfor (const f of required) {\n  if (!asset[f]) {\n    throw new Error(`meta_social_asset missing required field: ${f}`);\n  }\n}\n\nreturn [{ json: { ...asset, _publish_skip: false } }];"
+      },
+      "id": "d1e2f3a4-0012-0012-0012-000000000002",
+      "name": "Validate Asset",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true },
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ $json._publish_skip }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ]
+        }
+      },
+      "id": "d1e2f3a4-0012-0012-0012-000000000003",
+      "name": "Should Publish?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{ json: { _publish_skip: true, reason: 'Publishing skipped — platforms disabled or no asset' } }];"
+      },
+      "id": "d1e2f3a4-0012-0012-0012-000000000004",
+      "name": "Skip — Nothing to Publish",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 500]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Expand asset into per-platform publish tasks.\n// Each enabled platform produces one 'feed' task and optionally one 'story' task.\nconst asset = $input.first().json;\nconst tasks = [];\n\nif (asset.instagram && asset.instagram.enabled) {\n  tasks.push({\n    platform:  'instagram',\n    post_type: 'feed',\n    caption:   asset.instagram.caption,\n    topic_slug:     asset.topic_slug,\n    date_key:       asset.date_key,\n    publish_job_id: asset.publish_job_id,\n    image_prompt:   asset.ai_output?.image_prompt || null\n  });\n  if (asset.instagram.story_enabled && asset.instagram.story_caption) {\n    tasks.push({\n      platform:  'instagram',\n      post_type: 'story',\n      caption:   asset.instagram.story_caption,\n      topic_slug:     asset.topic_slug,\n      date_key:       asset.date_key,\n      publish_job_id: asset.publish_job_id,\n      image_prompt:   asset.ai_output?.story_background_hint || null\n    });\n  }\n}\n\nif (asset.facebook && asset.facebook.enabled) {\n  tasks.push({\n    platform:  'facebook',\n    post_type: 'feed',\n    caption:   asset.facebook.caption,\n    topic_slug:     asset.topic_slug,\n    date_key:       asset.date_key,\n    publish_job_id: asset.publish_job_id,\n    image_prompt:   asset.ai_output?.image_prompt || null\n  });\n  if (asset.facebook.story_enabled && asset.facebook.story_caption) {\n    tasks.push({\n      platform:  'facebook',\n      post_type: 'story',\n      caption:   asset.facebook.story_caption,\n      topic_slug:     asset.topic_slug,\n      date_key:       asset.date_key,\n      publish_job_id: asset.publish_job_id,\n      image_prompt:   asset.ai_output?.story_background_hint || null\n    });\n  }\n}\n\nif (tasks.length === 0) {\n  return [{ json: { _publish_skip: true, reason: 'No publish tasks — all platform post types disabled' } }];\n}\n\nreturn tasks.map(t => ({ json: t }));"
+      },
+      "id": "d1e2f3a4-0012-0012-0012-000000000005",
+      "name": "Expand Publish Tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Dispatch to the correct Meta Graph API endpoint based on platform.\n// Instagram: POST /{ig-user-id}/media  then  POST /{ig-user-id}/media_publish\n// Facebook:  POST /{page-id}/feed\n//\n// This node resolves the API endpoint and credentials for each task.\n// Actual HTTP call happens in the next node.\n//\n// NOTE: Image upload (creating a media container with an image URL) is a\n// two-step process for Instagram. Step 1 creates a container, step 2 publishes\n// it. For v1, captions-only (text posts or link posts) are supported.\n// Image upload requires an externally-hosted image URL from the image pipeline.\n\nconst task = $input.item.json;\n\nconst igUserId  = $vars.META_INSTAGRAM_USER_ID  || null;\nconst fbPageId  = $vars.META_FACEBOOK_PAGE_ID   || null;\nconst igToken   = $vars.META_INSTAGRAM_TOKEN     || null;\nconst fbToken   = $vars.META_FACEBOOK_PAGE_TOKEN || null;\n\nif (task.platform === 'instagram') {\n  if (!igUserId || !igToken) {\n    throw new Error('Instagram publishing requires META_INSTAGRAM_USER_ID and META_INSTAGRAM_TOKEN');\n  }\n  // For a simple caption-only post via Instagram Graph API:\n  // Step 1: Create media container\n  return [{ json: {\n    ...task,\n    _api_url:    `https://graph.facebook.com/v19.0/${igUserId}/media`,\n    _api_method: 'POST',\n    _api_token:  igToken,\n    _api_body: {\n      caption:      task.caption,\n      media_type:   task.post_type === 'story' ? 'STORIES' : undefined,\n      access_token: igToken\n    },\n    _step: 'create_container'\n  } }];\n}\n\nif (task.platform === 'facebook') {\n  if (!fbPageId || !fbToken) {\n    throw new Error('Facebook publishing requires META_FACEBOOK_PAGE_ID and META_FACEBOOK_PAGE_TOKEN');\n  }\n  const endpoint = task.post_type === 'story'\n    ? `https://graph.facebook.com/v19.0/${fbPageId}/photo_stories`\n    : `https://graph.facebook.com/v19.0/${fbPageId}/feed`;\n  return [{ json: {\n    ...task,\n    _api_url:    endpoint,\n    _api_method: 'POST',\n    _api_token:  fbToken,\n    _api_body: {\n      message:      task.caption,\n      access_token: fbToken\n    },\n    _step: 'publish'\n  } }];\n}\n\nthrow new Error(`Unknown platform: ${task.platform}`);"
+      },
+      "id": "d1e2f3a4-0012-0012-0012-000000000006",
+      "name": "Resolve API Endpoint",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json._api_url }}",
+        "method": "={{ $json._api_method }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json._api_body }}",
+        "options": {
+          "timeout": 15000,
+          "ignoreResponseCode": true
+        }
+      },
+      "id": "d1e2f3a4-0012-0012-0012-000000000007",
+      "name": "Call Meta Graph API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1340, 300],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Handle Instagram two-step publish: after creating a container, publish it.\n// For Facebook feed posts, the response already contains the post ID.\nconst response = $input.item.json;\nconst task     = $('Resolve API Endpoint').item.json;\n\n// Check for Meta API error\nif (response.error) {\n  throw new Error(\n    `Meta API error (${task.platform}/${task.post_type}): ` +\n    `${response.error.message} [code: ${response.error.code}]`\n  );\n}\n\n// Facebook feed: response.id is the post ID\nif (task.platform === 'facebook') {\n  return [{ json: {\n    platform:         task.platform,\n    post_type:        task.post_type,\n    topic_slug:       task.topic_slug,\n    date_key:         task.date_key,\n    status:           'published',\n    platform_post_id: response.id || null\n  } }];\n}\n\n// Instagram: after container creation, publish the container\nif (task.platform === 'instagram' && task._step === 'create_container') {\n  const containerId = response.id;\n  if (!containerId) {\n    throw new Error(`Instagram media container creation did not return an ID. Response: ${JSON.stringify(response).slice(0, 300)}`);\n  }\n  const igUserId = $vars.META_INSTAGRAM_USER_ID;\n  const igToken  = $vars.META_INSTAGRAM_TOKEN;\n  // We need to call the publish endpoint — store container_id for the next HTTP node\n  return [{ json: {\n    ...task,\n    _container_id: containerId,\n    _publish_url:  `https://graph.facebook.com/v19.0/${igUserId}/media_publish`,\n    _publish_body: { creation_id: containerId, access_token: igToken },\n    _step:         'publish_container'\n  } }];\n}\n\n// Instagram publish step: response.id is the published media ID\nreturn [{ json: {\n  platform:         task.platform,\n  post_type:        task.post_type,\n  topic_slug:       task.topic_slug,\n  date_key:         task.date_key,\n  status:           'published',\n  platform_post_id: response.id || null\n} }];"
+      },
+      "id": "d1e2f3a4-0012-0012-0012-000000000008",
+      "name": "Handle API Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true },
+          "conditions": [
+            {
+              "id": "ig-container",
+              "leftValue": "={{ $json._step }}",
+              "rightValue": "publish_container",
+              "operator": { "type": "string", "operation": "equals" }
+            }
+          ]
+        }
+      },
+      "id": "d1e2f3a4-0012-0012-0012-000000000009",
+      "name": "Instagram Two-Step?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json._publish_url }}",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json._publish_body }}",
+        "options": {
+          "timeout": 15000,
+          "ignoreResponseCode": true
+        }
+      },
+      "id": "d1e2f3a4-0012-0012-0012-000000000010",
+      "name": "Instagram Publish Container",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2000, 200],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Extract published media ID from Instagram container publish response.\nconst response = $input.item.json;\nconst task     = $('Handle API Response').item.json;\n\nif (response.error) {\n  throw new Error(\n    `Instagram container publish error: ${response.error.message} [code: ${response.error.code}]`\n  );\n}\n\nreturn [{ json: {\n  platform:         'instagram',\n  post_type:        task.post_type,\n  topic_slug:       task.topic_slug,\n  date_key:         task.date_key,\n  status:           'published',\n  platform_post_id: response.id || null\n} }];"
+      },
+      "id": "d1e2f3a4-0012-0012-0012-000000000011",
+      "name": "Extract Instagram Post ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2220, 200]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Collect all publish results and write to D1 meta_social_publish_log.\n// Gathers items from both the Facebook/direct-Instagram path and the\n// two-step Instagram container publish path.\nconst results = $input.all().map(i => i.json);\nreturn results.map(r => ({ json: r }));"
+      },
+      "id": "d1e2f3a4-0012-0012-0012-000000000012",
+      "name": "Collect Publish Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 400]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Write publish result to D1 meta_social_publish_log.\nconst r = $input.item.json;\nreturn [{ json: {\n  _d1_sql: `INSERT INTO meta_social_publish_log\n    (topic_slug, date_key, asset_type, source_type, platform, post_type,\n     status, platform_post_id, attempt, created_at, updated_at)\n  VALUES (?, ?, 'daily_post', 'daily_summary', ?, ?, ?, ?, 1,\n    strftime('%Y-%m-%dT%H:%M:%SZ','now'),\n    strftime('%Y-%m-%dT%H:%M:%SZ','now')\n  )`,\n  _d1_params: [\n    r.topic_slug,\n    r.date_key,\n    r.platform,\n    r.post_type || 'feed',\n    r.status || 'published',\n    r.platform_post_id || null\n  ],\n  ...r\n} }];"
+      },
+      "id": "d1e2f3a4-0012-0012-0012-000000000013",
+      "name": "Build D1 Log Write",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2220, 400]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.cloudflare.com/client/v4/accounts/{{ $vars.CF_ACCOUNT_ID }}/d1/database/{{ $vars.CF_D1_DATABASE_ID }}/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { sql: $json._d1_sql, params: $json._d1_params } }}",
+        "options": { "timeout": 10000 }
+      },
+      "id": "d1e2f3a4-0012-0012-0012-000000000014",
+      "name": "Write Publish Log to D1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2440, 400],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cloudflare-d1-api",
+          "name": "CloudflareD1Api"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [[{ "node": "Validate Asset", "type": "main", "index": 0 }]]
+    },
+    "Validate Asset": {
+      "main": [[{ "node": "Should Publish?", "type": "main", "index": 0 }]]
+    },
+    "Should Publish?": {
+      "main": [
+        [{ "node": "Skip — Nothing to Publish", "type": "main", "index": 0 }],
+        [{ "node": "Expand Publish Tasks",      "type": "main", "index": 0 }]
+      ]
+    },
+    "Expand Publish Tasks": {
+      "main": [[{ "node": "Resolve API Endpoint", "type": "main", "index": 0 }]]
+    },
+    "Resolve API Endpoint": {
+      "main": [[{ "node": "Call Meta Graph API", "type": "main", "index": 0 }]]
+    },
+    "Call Meta Graph API": {
+      "main": [[{ "node": "Handle API Response", "type": "main", "index": 0 }]]
+    },
+    "Handle API Response": {
+      "main": [[{ "node": "Instagram Two-Step?", "type": "main", "index": 0 }]]
+    },
+    "Instagram Two-Step?": {
+      "main": [
+        [{ "node": "Instagram Publish Container", "type": "main", "index": 0 }],
+        [{ "node": "Collect Publish Results",     "type": "main", "index": 0 }]
+      ]
+    },
+    "Instagram Publish Container": {
+      "main": [[{ "node": "Extract Instagram Post ID", "type": "main", "index": 0 }]]
+    },
+    "Extract Instagram Post ID": {
+      "main": [[{ "node": "Collect Publish Results", "type": "main", "index": 0 }]]
+    },
+    "Collect Publish Results": {
+      "main": [[{ "node": "Build D1 Log Write", "type": "main", "index": 0 }]]
+    },
+    "Build D1 Log Write": {
+      "main": [[{ "node": "Write Publish Log to D1", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": true,
+    "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
+  },
+  "id": "daily-12-publish-meta-daily-v1",
+  "tags": ["daily", "meta", "instagram", "facebook", "publishing", "v1"]
+}
