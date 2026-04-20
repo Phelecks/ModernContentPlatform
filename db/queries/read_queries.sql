@@ -187,3 +187,60 @@
 -- WHERE trust_tier = :trust_tier
 --   AND is_active  = 1
 -- ORDER BY topic_slug ASC, trust_score DESC;
+
+
+-- ============================================================
+-- META SOCIAL PUBLISH LOG: Recent publish attempts for a topic/day
+-- Used by: operational dashboards, retry visibility
+-- ============================================================
+-- SELECT
+--   id, topic_slug, date_key, asset_type, source_type, source_id,
+--   platform, post_type, status, platform_post_id,
+--   attempt, error_message, created_at
+-- FROM meta_social_publish_log
+-- WHERE topic_slug = :topic_slug
+--   AND date_key   = :date_key
+-- ORDER BY created_at DESC
+-- LIMIT 50;
+
+
+-- ============================================================
+-- META SOCIAL PUBLISH LOG: Recent failures across all topics
+-- Used by: operational monitoring, retry queue
+-- ============================================================
+-- SELECT
+--   id, topic_slug, date_key, asset_type, source_type,
+--   platform, post_type, status, attempt,
+--   error_message, created_at
+-- FROM meta_social_publish_log
+-- WHERE status = 'failed'
+-- ORDER BY created_at DESC
+-- LIMIT 100;
+
+
+-- ============================================================
+-- META SOCIAL PUBLISH LOG: Latest publish state per platform per topic/day
+-- Used by: publish state check before re-attempting
+-- ============================================================
+-- SELECT
+--   platform, post_type, status, platform_post_id, attempt, created_at
+-- FROM (
+--   SELECT
+--     id,
+--     platform,
+--     post_type,
+--     status,
+--     platform_post_id,
+--     attempt,
+--     created_at,
+--     ROW_NUMBER() OVER (
+--       PARTITION BY platform, post_type
+--       ORDER BY created_at DESC, id DESC
+--     ) AS rn
+--   FROM meta_social_publish_log
+--   WHERE topic_slug = :topic_slug
+--     AND date_key   = :date_key
+--     AND asset_type = :asset_type
+-- )
+-- WHERE rn = 1
+-- ORDER BY platform ASC, post_type ASC;

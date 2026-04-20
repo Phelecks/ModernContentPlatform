@@ -432,3 +432,39 @@ export async function updatePublishJob(db, { id, status, error_message = null })
 
   return { success: result.success ?? true }
 }
+
+/**
+ * Insert a new meta_social_publish_log row.
+ *
+ * Records a single Meta platform publish attempt (Instagram or Facebook,
+ * feed or story).  Used by modules 12 (daily) and 10 (intraday) to
+ * persist publish results for operational monitoring.
+ *
+ * @param {D1Database} db
+ * @param {{ topic_slug: string, date_key: string, asset_type: string, source_type: string, source_id?: string|null, platform: string, post_type: string, status?: string, platform_post_id?: string|null, attempt?: number, error_message?: string|null }} params
+ * @returns {Promise<{ id: number }>}
+ */
+export async function createMetaSocialPublishLog(db, {
+  topic_slug, date_key, asset_type, source_type,
+  source_id = null, platform, post_type,
+  status = 'pending', platform_post_id = null,
+  attempt = 1, error_message = null
+}) {
+  const sql = `
+    INSERT INTO meta_social_publish_log
+      (topic_slug, date_key, asset_type, source_type, source_id,
+       platform, post_type, status, platform_post_id, attempt, error_message)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    RETURNING id`
+
+  const row = await db.prepare(sql)
+    .bind(topic_slug, date_key, asset_type, source_type, source_id,
+      platform, post_type, status, platform_post_id, attempt, error_message)
+    .first()
+
+  if (!row || row.id == null) {
+    throw new Error('Failed to create meta social publish log: no id returned from D1')
+  }
+
+  return { id: row.id }
+}

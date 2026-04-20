@@ -419,7 +419,7 @@ class MockStatement {
 // ---- Database ----
 
 const KNOWN_TABLES = new Set([
-  'topics', 'alerts', 'event_clusters', 'daily_status', 'publish_jobs', 'workflow_logs', 'openai_usage_log', 'sources'
+  'topics', 'alerts', 'event_clusters', 'daily_status', 'publish_jobs', 'workflow_logs', 'openai_usage_log', 'sources', 'meta_social_publish_log'
 ])
 
 // UNIQUE constraints per table (mirrors D1 schema constraints).
@@ -726,6 +726,8 @@ export function createSeededDb() {
       published_at: null
     }
   ])
+
+  db.seed('meta_social_publish_log', [])
 
   return db
 }
