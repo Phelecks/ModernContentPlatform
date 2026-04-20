@@ -1,0 +1,25 @@
+{
+  "description": "Google-only configuration. Uses GOOGLE_API_KEY; AI_PROVIDER set to 'google'.",
+  "env": {
+    "GOOGLE_API_KEY": "google-test-key",
+    "AI_PROVIDER": "google"
+  },
+  "expected": {
+    "provider": "google",
+    "apiKeyEnvVar": "GOOGLE_API_KEY",
+    "defaultModels": {
+      "alertClassification": "gemini-2.5-flash",
+      "timelineFormatting": "gemini-2.5-flash",
+      "dailySummary": "gemini-2.5-pro",
+      "articleGeneration": "gemini-2.5-pro",
+      "expectationCheck": "gemini-2.5-pro",
+      "tomorrowOutlook": "gemini-2.5-pro",
+      "videoScript": "gemini-2.5-pro",
+      "youtubeMetadata": "gemini-2.5-flash",
+      "imageGeneration": "imagen-3.0-generate-001",
+      "tts": "en-US-Chirp3-HD-Aoede"
+    },
+    "ttsVoice": "en-US-Chirp3-HD-Aoede",
+    "imageGenerationModel": "imagen-3.0-generate-001"
+  }
+}

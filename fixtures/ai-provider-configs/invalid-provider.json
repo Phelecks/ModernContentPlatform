@@ -1,0 +1,11 @@
+{
+  "description": "Invalid AI provider configuration. AI_PROVIDER is set to an unsupported value.",
+  "env": {
+    "OPENAI_API_KEY": "sk-test-key",
+    "AI_PROVIDER": "anthropic"
+  },
+  "expected": {
+    "errorPrefix": "AI_PROVIDER_CONFIG_ERROR",
+    "errorIncludes": ["anthropic"]
+  }
+}
