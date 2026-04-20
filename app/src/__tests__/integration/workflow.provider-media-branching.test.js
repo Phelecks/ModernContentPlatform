@@ -205,8 +205,10 @@ describe('provider selection — invalid configuration', () => {
 
   it('fixture invalid-provider.json error message includes expected strings', () => {
     const fixture = loadAIProviderFixture('invalid-provider.json')
+    expect.assertions(fixture.expected.errorIncludes.length)
     try {
       parseAIProviderConfig(fixture.env)
+      throw new Error('Expected parseAIProviderConfig to throw for invalid-provider.json')
     } catch (e) {
       fixture.expected.errorIncludes.forEach(term => {
         expect(e.message).toContain(term)
