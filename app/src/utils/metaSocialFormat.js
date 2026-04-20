@@ -202,7 +202,7 @@ export function formatAlertStoryAsset(alert, { igStoryEnabled, fbStoryEnabled })
     publish_job_id: null,
     ai_output: {
       post_caption:          alert.summary_text || alert.headline,
-      hashtags:              [`#${alert.topic_slug}`, '#breakingnews'],
+      hashtags:              [`#${alert.topic_slug}`, '#breakingnews', '#newsupdate'],
       image_prompt:          `Urgent news background for ${alert.topic_slug} story`,
       story_caption:         storyCaption,
       story_background_hint: `High-impact ${alert.topic_slug} news visual`,

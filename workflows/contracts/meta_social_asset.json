@@ -46,7 +46,7 @@
     "ai_output": {
       "type": "object",
       "description": "Raw validated AI output from the meta_social_post schema.",
-      "$ref": "../../schemas/ai/meta_social_post.json"
+      "$ref": "../../../schemas/ai/meta_social_post.json"
     },
     "instagram": {
       "type": "object",

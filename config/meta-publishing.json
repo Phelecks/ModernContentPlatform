@@ -1,5 +1,5 @@
 {
-  "_comment": "Meta publishing configuration. Controls which platforms are active and sets formatting limits. All values are read by n8n workflows via $vars.META_PUBLISHING_CONFIG or directly from n8n Variables. Enable/disable toggles are the primary runtime control — set the corresponding n8n variables to override.",
+  "_comment": "Meta publishing configuration. Controls which platforms are active and sets formatting limits. This file is a reference for platform limits, topic hashtags, and account requirements. Runtime toggles are read from individual n8n Variables (ENABLE_META_INSTAGRAM, ENABLE_META_FACEBOOK, etc.). Workflows currently hardcode formatting rules; this config is the canonical reference and can be wired into workflows via an n8n variable in a future version.",
   "platforms": {
     "instagram": {
       "enabled": false,

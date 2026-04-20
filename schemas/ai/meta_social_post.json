@@ -18,7 +18,7 @@
     },
     "hashtags": {
       "type": "array",
-      "minItems": 3,
+      "minItems": 2,
       "maxItems": 30,
       "items": {
         "type": "string",
