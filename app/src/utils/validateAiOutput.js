@@ -894,3 +894,84 @@ export function parseAndValidateNarrationAsset(obj) {
   }
   return obj
 }
+
+// ---------------------------------------------------------------------------
+// Meta social post (AI-generated social content for Instagram / Facebook)
+// ---------------------------------------------------------------------------
+
+/**
+ * Validates a parsed Meta social post AI output.
+ *
+ * Required fields: post_caption, hashtags, image_prompt.
+ * Optional fields: story_caption, story_background_hint, cta.
+ *
+ * Mirrors the schema in schemas/ai/meta_social_post.json.
+ *
+ * @param {unknown} obj - Parsed AI output object.
+ * @returns {{ ok: boolean, errors: string[] }}
+ */
+export function validateMetaSocialPost(obj) {
+  const errors = []
+
+  if (!obj || typeof obj !== 'object') {
+    return { ok: false, errors: ['Output is not an object.'] }
+  }
+
+  if (!isString(obj.post_caption, 20, 2000)) {
+    errors.push('post_caption must be a string of 20–2000 characters.')
+  }
+
+  if (!Array.isArray(obj.hashtags) || obj.hashtags.length < 2) {
+    errors.push('hashtags must be an array with at least 2 items.')
+  } else if (obj.hashtags.length > 30) {
+    errors.push('hashtags must have at most 30 items.')
+  } else {
+    obj.hashtags.forEach((h, i) => {
+      if (typeof h !== 'string' || !/^#[A-Za-z0-9_]+$/.test(h)) {
+        errors.push(`hashtags[${i}] must be a string matching "^#[A-Za-z0-9_]+$".`)
+      }
+    })
+  }
+
+  if (!isString(obj.image_prompt, 20, 500)) {
+    errors.push('image_prompt must be a string of 20–500 characters.')
+  }
+
+  if (obj.story_caption !== null && obj.story_caption !== undefined) {
+    if (!isString(obj.story_caption, 10, 200)) {
+      errors.push('story_caption must be a string of 10–200 characters or null.')
+    }
+  }
+
+  if (obj.story_background_hint !== null && obj.story_background_hint !== undefined) {
+    if (typeof obj.story_background_hint !== 'string' || obj.story_background_hint.length > 200) {
+      errors.push('story_background_hint must be a string of up to 200 characters or null.')
+    }
+  }
+
+  if (obj.cta !== null && obj.cta !== undefined) {
+    if (typeof obj.cta !== 'string' || obj.cta.length > 150) {
+      errors.push('cta must be a string of up to 150 characters or null.')
+    }
+  }
+
+  return { ok: errors.length === 0, errors }
+}
+
+/**
+ * Parses raw AI content and validates it as a Meta social post output.
+ *
+ * @param {string} rawContent - Raw string returned by the AI API.
+ * @returns {object} Validated Meta social post output.
+ * @throws {Error} AI_PARSE_ERROR or AI_VALIDATION_ERROR.
+ */
+export function parseAndValidateMetaSocialPost(rawContent) {
+  const obj = parseJsonOutput(rawContent)
+  const { ok, errors } = validateMetaSocialPost(obj)
+  if (!ok) {
+    throw new Error(
+      `AI_VALIDATION_ERROR: Meta social post output is invalid.\n${errors.join('\n')}`
+    )
+  }
+  return obj
+}

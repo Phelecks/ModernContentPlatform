@@ -25,6 +25,7 @@ import {
   validateVideoScript,
   validateYoutubeMetadata,
   validateNarrationAsset,
+  validateMetaSocialPost,
   parseAndValidateAlertClassification,
   parseAndValidateTimelineEntry,
   parseAndValidateDailySummary,
@@ -33,6 +34,7 @@ import {
   parseAndValidateVideoScript,
   parseAndValidateYoutubeMetadata,
   parseAndValidateNarrationAsset,
+  parseAndValidateMetaSocialPost,
   VALID_TOPICS,
   VALID_SENTIMENTS,
   VALID_SEVERITY_LEVELS,
@@ -1546,5 +1548,229 @@ describe('parseAndValidateNarrationAsset', () => {
 
   it('throws AI_VALIDATION_ERROR when the input is null', () => {
     expect(() => parseAndValidateNarrationAsset(null)).toThrow('AI_VALIDATION_ERROR')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// validateMetaSocialPost
+// ---------------------------------------------------------------------------
+
+const VALID_META_SOCIAL_POST = {
+  post_caption: 'Bitcoin ETF inflows hit a record $500M in a single session as institutional demand accelerates.',
+  hashtags: ['#crypto', '#bitcoin', '#BTC', '#ETF'],
+  image_prompt: 'Professional financial chart showing Bitcoin price rally with upward trend line',
+  story_caption: 'BTC ETFs record $500M single-day inflows 🚀',
+  story_background_hint: 'Dark gradient with orange Bitcoin symbol',
+  cta: 'Full daily crypto briefing — link in bio.'
+}
+
+describe('validateMetaSocialPost', () => {
+  it('returns ok=true for a valid complete object', () => {
+    const { ok, errors } = validateMetaSocialPost(VALID_META_SOCIAL_POST)
+    expect(ok).toBe(true)
+    expect(errors).toHaveLength(0)
+  })
+
+  it('returns ok=true with minimal required fields only', () => {
+    const { ok } = validateMetaSocialPost({
+      post_caption: 'Short but valid caption text here.',
+      hashtags: ['#crypto', '#bitcoin'],
+      image_prompt: 'Professional chart background style'
+    })
+    expect(ok).toBe(true)
+  })
+
+  it('returns ok=false when the input is not an object', () => {
+    const { ok, errors } = validateMetaSocialPost('string')
+    expect(ok).toBe(false)
+    expect(errors).toContain('Output is not an object.')
+  })
+
+  it('returns ok=false when the input is null', () => {
+    const { ok } = validateMetaSocialPost(null)
+    expect(ok).toBe(false)
+  })
+
+  it('reports an error when post_caption is too short', () => {
+    const { ok, errors } = validateMetaSocialPost({
+      ...VALID_META_SOCIAL_POST,
+      post_caption: 'Too short.'
+    })
+    expect(ok).toBe(false)
+    expect(errors[0]).toMatch(/post_caption/)
+  })
+
+  it('reports an error when post_caption exceeds 2000 characters', () => {
+    const { ok, errors } = validateMetaSocialPost({
+      ...VALID_META_SOCIAL_POST,
+      post_caption: 'X'.repeat(2001)
+    })
+    expect(ok).toBe(false)
+    expect(errors[0]).toMatch(/post_caption/)
+  })
+
+  it('reports an error when hashtags is not an array', () => {
+    const { ok, errors } = validateMetaSocialPost({
+      ...VALID_META_SOCIAL_POST,
+      hashtags: '#crypto'
+    })
+    expect(ok).toBe(false)
+    expect(errors[0]).toMatch(/hashtags/)
+  })
+
+  it('reports an error when hashtags has fewer than 2 items', () => {
+    const { ok, errors } = validateMetaSocialPost({
+      ...VALID_META_SOCIAL_POST,
+      hashtags: ['#crypto']
+    })
+    expect(ok).toBe(false)
+    expect(errors[0]).toMatch(/hashtags/)
+  })
+
+  it('reports an error when hashtags has more than 30 items', () => {
+    const { ok, errors } = validateMetaSocialPost({
+      ...VALID_META_SOCIAL_POST,
+      hashtags: Array.from({ length: 31 }, (_, i) => `#tag${i}`)
+    })
+    expect(ok).toBe(false)
+    expect(errors[0]).toMatch(/hashtags/)
+  })
+
+  it('reports an error when a hashtag does not match the pattern', () => {
+    const { ok, errors } = validateMetaSocialPost({
+      ...VALID_META_SOCIAL_POST,
+      hashtags: ['#crypto', 'no_hash_prefix']
+    })
+    expect(ok).toBe(false)
+    expect(errors[0]).toMatch(/hashtags\[1\]/)
+  })
+
+  it('reports an error when image_prompt is too short', () => {
+    const { ok, errors } = validateMetaSocialPost({
+      ...VALID_META_SOCIAL_POST,
+      image_prompt: 'Too short.'
+    })
+    expect(ok).toBe(false)
+    expect(errors[0]).toMatch(/image_prompt/)
+  })
+
+  it('reports an error when image_prompt exceeds 500 characters', () => {
+    const { ok, errors } = validateMetaSocialPost({
+      ...VALID_META_SOCIAL_POST,
+      image_prompt: 'X'.repeat(501)
+    })
+    expect(ok).toBe(false)
+    expect(errors[0]).toMatch(/image_prompt/)
+  })
+
+  it('accepts null story_caption', () => {
+    const { ok } = validateMetaSocialPost({
+      ...VALID_META_SOCIAL_POST,
+      story_caption: null
+    })
+    expect(ok).toBe(true)
+  })
+
+  it('accepts undefined story_caption', () => {
+    const { post_caption, hashtags, image_prompt } = VALID_META_SOCIAL_POST
+    const { ok } = validateMetaSocialPost({ post_caption, hashtags, image_prompt })
+    expect(ok).toBe(true)
+  })
+
+  it('reports an error when story_caption is too short', () => {
+    const { ok, errors } = validateMetaSocialPost({
+      ...VALID_META_SOCIAL_POST,
+      story_caption: 'Short'
+    })
+    expect(ok).toBe(false)
+    expect(errors[0]).toMatch(/story_caption/)
+  })
+
+  it('reports an error when story_caption exceeds 200 characters', () => {
+    const { ok, errors } = validateMetaSocialPost({
+      ...VALID_META_SOCIAL_POST,
+      story_caption: 'X'.repeat(201)
+    })
+    expect(ok).toBe(false)
+    expect(errors[0]).toMatch(/story_caption/)
+  })
+
+  it('accepts null story_background_hint', () => {
+    const { ok } = validateMetaSocialPost({
+      ...VALID_META_SOCIAL_POST,
+      story_background_hint: null
+    })
+    expect(ok).toBe(true)
+  })
+
+  it('reports an error when story_background_hint exceeds 200 characters', () => {
+    const { ok, errors } = validateMetaSocialPost({
+      ...VALID_META_SOCIAL_POST,
+      story_background_hint: 'X'.repeat(201)
+    })
+    expect(ok).toBe(false)
+    expect(errors[0]).toMatch(/story_background_hint/)
+  })
+
+  it('accepts null cta', () => {
+    const { ok } = validateMetaSocialPost({
+      ...VALID_META_SOCIAL_POST,
+      cta: null
+    })
+    expect(ok).toBe(true)
+  })
+
+  it('reports an error when cta exceeds 150 characters', () => {
+    const { ok, errors } = validateMetaSocialPost({
+      ...VALID_META_SOCIAL_POST,
+      cta: 'X'.repeat(151)
+    })
+    expect(ok).toBe(false)
+    expect(errors[0]).toMatch(/cta/)
+  })
+
+  it('reports multiple errors when multiple fields are invalid', () => {
+    const { ok, errors } = validateMetaSocialPost({
+      post_caption: 'Short',
+      hashtags: [],
+      image_prompt: 'Short'
+    })
+    expect(ok).toBe(false)
+    expect(errors.length).toBeGreaterThanOrEqual(3)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// parseAndValidateMetaSocialPost
+// ---------------------------------------------------------------------------
+
+describe('parseAndValidateMetaSocialPost', () => {
+  it('returns parsed object on valid JSON string', () => {
+    const result = parseAndValidateMetaSocialPost(JSON.stringify(VALID_META_SOCIAL_POST))
+    expect(result.post_caption).toBe(VALID_META_SOCIAL_POST.post_caption)
+    expect(result.hashtags).toEqual(VALID_META_SOCIAL_POST.hashtags)
+  })
+
+  it('strips markdown fences before parsing', () => {
+    const fenced = '```json\n' + JSON.stringify(VALID_META_SOCIAL_POST) + '\n```'
+    const result = parseAndValidateMetaSocialPost(fenced)
+    expect(result.post_caption).toBe(VALID_META_SOCIAL_POST.post_caption)
+  })
+
+  it('throws AI_VALIDATION_ERROR when post_caption is missing', () => {
+    const { post_caption, ...rest } = VALID_META_SOCIAL_POST
+    expect(() => parseAndValidateMetaSocialPost(JSON.stringify(rest)))
+      .toThrow('AI_VALIDATION_ERROR')
+  })
+
+  it('throws AI_PARSE_ERROR when input is not valid JSON', () => {
+    expect(() => parseAndValidateMetaSocialPost('not json')).toThrow('AI_PARSE_ERROR')
+  })
+
+  it('throws AI_VALIDATION_ERROR when hashtags has fewer than 2 items', () => {
+    expect(() => parseAndValidateMetaSocialPost(JSON.stringify({
+      ...VALID_META_SOCIAL_POST,
+      hashtags: ['#crypto']
+    }))).toThrow('AI_VALIDATION_ERROR')
   })
 })
