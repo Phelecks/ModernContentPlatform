@@ -224,8 +224,23 @@
 -- ============================================================
 -- SELECT
 --   platform, post_type, status, platform_post_id, attempt, created_at
--- FROM meta_social_publish_log
--- WHERE topic_slug = :topic_slug
---   AND date_key   = :date_key
---   AND asset_type  = :asset_type
--- ORDER BY platform ASC, created_at DESC;
+-- FROM (
+--   SELECT
+--     id,
+--     platform,
+--     post_type,
+--     status,
+--     platform_post_id,
+--     attempt,
+--     created_at,
+--     ROW_NUMBER() OVER (
+--       PARTITION BY platform, post_type
+--       ORDER BY created_at DESC, id DESC
+--     ) AS rn
+--   FROM meta_social_publish_log
+--   WHERE topic_slug = :topic_slug
+--     AND date_key   = :date_key
+--     AND asset_type = :asset_type
+-- )
+-- WHERE rn = 1
+-- ORDER BY platform ASC, post_type ASC;
