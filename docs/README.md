@@ -16,6 +16,7 @@ Project documentation lives here.
   - `openai-cost-controls.md` — per-task token budgets, pre-filtering, monitoring queries.
   - `daily-editorial-workflow.md` — daily editorial pipeline design.
   - `intraday-workflow.md` — intraday alert pipeline design.
+  - `meta-social-publishing.md` — Meta (Instagram/Facebook) social publishing: architecture, daily post and story generation, platform toggle configuration, account and token requirements, formatting rules, D1 state tracking, retry behaviour, and recommended v1 setup.
 - `data-model/` for D1 and content model references.
 - `operations/` for operational procedures.
 - `runbooks/` for incident and rerun guidance.

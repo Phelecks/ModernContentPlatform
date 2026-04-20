@@ -17,13 +17,14 @@ fixtures/
   video-scripts/          AI-generated video script outputs per topic/day (matches video_script schema)
   page-states/            Day-status API response snapshots for each page_state scenario
   provider-configs/       Env-var config objects for each source-provider mode scenario
+  meta-social/            Meta (Instagram/Facebook) social asset outputs for daily posts and story alerts
 ```
 
 ---
 
 ## Naming convention
 
-All fixture files in `source-events/`, `normalized-items/`, `classified-alerts/`, `daily-summaries/`, and `page-states/` use the pattern:
+All fixture files in `source-events/`, `normalized-items/`, `classified-alerts/`, `daily-summaries/`, `page-states/`, and `meta-social/` use the pattern:
 
 ```
 {topic}-{YYYY-MM-DD}-{scenario_or_short_name}.json
@@ -122,7 +123,24 @@ Env-var config objects for each source-provider mode scenario. Each fixture file
 
 ---
 
-## Usage
+### meta-social/
+
+Fully-formatted `meta_social_asset` objects produced by the platform formatting utilities (`app/src/utils/metaSocialFormat.js`). Each file is a complete, valid `meta_social_asset` contract object ready for the Meta publish step. Used in integration tests for `workflow.meta-social.test.js` and as reference examples when configuring the Meta publishing workflow.
+
+| File | Topic | asset_type | source_type | Platforms |
+|---|---|---|---|---|
+| `crypto-2025-01-15-daily-post.json` | crypto | `daily_post` | `daily_summary` | Instagram + Facebook (feed, stories disabled) |
+| `crypto-2025-01-15-story.json` | crypto | `story` | `alert` | Instagram story only |
+
+**Field reference:**
+- `asset_type`: `daily_post` for content from the daily editorial pipeline; `story` for content from a high-priority intraday alert.
+- `source_type`: `daily_summary` (module 11) or `alert` (intraday module 10).
+- `source_id`: null for daily posts; alert `item_id` for story assets.
+- `instagram.caption` / `facebook.caption`: per-platform formatted captions with CTA and hashtags appended.
+- `instagram.story_caption` / `facebook.story_caption`: short truncated caption for story format (max 200 chars); null when stories are disabled or not applicable.
+- `instagram.story_enabled` / `facebook.story_enabled`: reflects the combined `ENABLE_META_{PLATFORM}` × `ENABLE_META_{PLATFORM}_STORIES` toggle state at generation time.
+
+---
 
 ### In integration tests
 

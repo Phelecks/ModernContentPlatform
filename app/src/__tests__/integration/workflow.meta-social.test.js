@@ -516,3 +516,192 @@ describe('Meta social fixtures', () => {
     expect(CRYPTO_STORY.source_id.length).toBeGreaterThan(0)
   })
 })
+
+// ---------------------------------------------------------------------------
+// Workflow branching — daily_post vs story
+// ---------------------------------------------------------------------------
+
+describe('Workflow branching — daily_post vs story', () => {
+  function dailyDefaults(overrides = {}) {
+    return {
+      topicSlug:        'finance',
+      dateKey:          '2025-01-15',
+      aiOutput:         makeSampleAiOutput(),
+      instagramEnabled: true,
+      facebookEnabled:  true,
+      igStoriesEnabled: false,
+      fbStoriesEnabled: false,
+      publishJobId:     101,
+      ...overrides
+    }
+  }
+
+  it('formatDailySocialAsset produces asset_type daily_post', () => {
+    const asset = formatDailySocialAsset(dailyDefaults())
+    expect(asset.asset_type).toBe('daily_post')
+  })
+
+  it('formatAlertStoryAsset produces asset_type story', () => {
+    const asset = formatAlertStoryAsset(makeSampleAlert(), { igStoryEnabled: true, fbStoryEnabled: false })
+    expect(asset.asset_type).toBe('story')
+  })
+
+  it('formatDailySocialAsset has source_type daily_summary', () => {
+    const asset = formatDailySocialAsset(dailyDefaults())
+    expect(asset.source_type).toBe('daily_summary')
+  })
+
+  it('formatAlertStoryAsset has source_type alert', () => {
+    const asset = formatAlertStoryAsset(makeSampleAlert(), { igStoryEnabled: true, fbStoryEnabled: false })
+    expect(asset.source_type).toBe('alert')
+  })
+
+  it('daily_post source_id is null', () => {
+    const asset = formatDailySocialAsset(dailyDefaults())
+    expect(asset.source_id).toBeNull()
+  })
+
+  it('story source_id is taken from alert.item_id', () => {
+    const alert = makeSampleAlert({ item_id: 'abc123' })
+    const asset = formatAlertStoryAsset(alert, { igStoryEnabled: true, fbStoryEnabled: false })
+    expect(asset.source_id).toBe('abc123')
+  })
+
+  it('daily_post publish_job_id reflects the provided param', () => {
+    const asset = formatDailySocialAsset(dailyDefaults({ publishJobId: 42 }))
+    expect(asset.publish_job_id).toBe(42)
+  })
+
+  it('story publish_job_id is always null', () => {
+    const asset = formatAlertStoryAsset(makeSampleAlert(), { igStoryEnabled: true, fbStoryEnabled: false })
+    expect(asset.publish_job_id).toBeNull()
+  })
+
+  it('daily_post Instagram caption contains CTA and hashtags; story caption is short', () => {
+    const dailyAsset = formatDailySocialAsset(dailyDefaults())
+    const storyAsset = formatAlertStoryAsset(makeSampleAlert(), { igStoryEnabled: true, fbStoryEnabled: false })
+
+    // Daily post caption must include a CTA line and a hashtag block
+    expect(dailyAsset.instagram.caption).toContain('\n\n')
+    expect(dailyAsset.instagram.caption).toMatch(/#\w+/)
+
+    // Story caption is short and has no embedded hashtag block
+    expect(storyAsset.instagram.story_caption.length).toBeLessThanOrEqual(STORY_CAPTION_MAX)
+  })
+
+  it('daily_post ai_output preserves all six AI fields', () => {
+    const asset = formatDailySocialAsset(dailyDefaults())
+    expect(asset.ai_output).toHaveProperty('post_caption')
+    expect(asset.ai_output).toHaveProperty('hashtags')
+    expect(asset.ai_output).toHaveProperty('image_prompt')
+    expect(asset.ai_output).toHaveProperty('story_caption')
+    expect(asset.ai_output).toHaveProperty('story_background_hint')
+    expect(asset.ai_output).toHaveProperty('cta')
+  })
+
+  it('story ai_output derives hashtags from topic_slug', () => {
+    const asset = formatAlertStoryAsset(makeSampleAlert({ topic_slug: 'finance' }), { igStoryEnabled: true, fbStoryEnabled: false })
+    expect(asset.ai_output.hashtags).toContain('#finance')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Platform disabled / invalid publish configuration
+// ---------------------------------------------------------------------------
+
+describe('Platform disabled / invalid publish configuration', () => {
+  function disabledDefaults(overrides = {}) {
+    return {
+      topicSlug:        'crypto',
+      dateKey:          '2025-01-15',
+      aiOutput:         makeSampleAiOutput(),
+      instagramEnabled: false,
+      facebookEnabled:  false,
+      igStoriesEnabled: false,
+      fbStoriesEnabled: false,
+      ...overrides
+    }
+  }
+
+  it('both platforms disabled still returns a valid meta_social_asset shape', () => {
+    const asset = formatDailySocialAsset(disabledDefaults())
+    expect(asset.topic_slug).toBe('crypto')
+    expect(asset.date_key).toBe('2025-01-15')
+    expect(asset.asset_type).toBe('daily_post')
+    expect(asset.instagram).toBeDefined()
+    expect(asset.facebook).toBeDefined()
+    expect(asset.generated_at).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+  })
+
+  it('both instagram.enabled and facebook.enabled are false when both disabled', () => {
+    const asset = formatDailySocialAsset(disabledDefaults())
+    expect(asset.instagram.enabled).toBe(false)
+    expect(asset.facebook.enabled).toBe(false)
+  })
+
+  it('story_enabled is false on both platforms when platform is disabled, even if stories toggled on', () => {
+    const asset = formatDailySocialAsset(disabledDefaults({ igStoriesEnabled: true, fbStoriesEnabled: true }))
+    expect(asset.instagram.story_enabled).toBe(false)
+    expect(asset.facebook.story_enabled).toBe(false)
+  })
+
+  it('story_enabled is false when only the story toggle is off even if platform is enabled', () => {
+    const asset = formatDailySocialAsset(disabledDefaults({
+      instagramEnabled: true,
+      facebookEnabled:  true,
+      igStoriesEnabled: false,
+      fbStoriesEnabled: false
+    }))
+    expect(asset.instagram.story_enabled).toBe(false)
+    expect(asset.facebook.story_enabled).toBe(false)
+  })
+
+  it('unknown topic_slug in alert produces fallback newspaper emoji in story caption', () => {
+    const alert = makeSampleAlert({ topic_slug: 'unknown_topic' })
+    const asset = formatAlertStoryAsset(alert, { igStoryEnabled: true, fbStoryEnabled: false })
+    expect(asset.instagram.story_caption).toContain('📰')
+  })
+
+  it('alert with missing item_id has null source_id', () => {
+    const alert = makeSampleAlert({ item_id: undefined })
+    const asset = formatAlertStoryAsset(alert, { igStoryEnabled: true, fbStoryEnabled: false })
+    expect(asset.source_id).toBeNull()
+  })
+
+  it('alert with no event_at falls back to today for date_key', () => {
+    const alert = makeSampleAlert({ event_at: undefined })
+    const asset = formatAlertStoryAsset(alert, { igStoryEnabled: true, fbStoryEnabled: false })
+    const todayKey = new Date().toISOString().slice(0, 10)
+    expect(asset.date_key).toBe(todayKey)
+  })
+
+  it('alert with igStoryEnabled false and fbStoryEnabled false produces disabled story asset', () => {
+    const asset = formatAlertStoryAsset(makeSampleAlert(), { igStoryEnabled: false, fbStoryEnabled: false })
+    expect(asset.instagram.enabled).toBe(false)
+    expect(asset.facebook.enabled).toBe(false)
+    expect(asset.instagram.story_enabled).toBe(false)
+    expect(asset.facebook.story_enabled).toBe(false)
+    // Caption fields are empty string when disabled
+    expect(asset.instagram.caption).toBe('')
+    expect(asset.facebook.caption).toBe('')
+  })
+
+  it('formatDailySocialAsset with publish_job_id null defaults to null', () => {
+    const asset = formatDailySocialAsset(disabledDefaults({ publishJobId: null }))
+    expect(asset.publish_job_id).toBeNull()
+  })
+
+  it('isAlertStoryEligible returns false when importance_score is zero', () => {
+    expect(isAlertStoryEligible({ importance_score: 0 })).toBe(false)
+  })
+
+  it('isAlertStoryEligible returns false when importance_score is exactly one below threshold', () => {
+    expect(isAlertStoryEligible({ importance_score: 79 }, 80)).toBe(false)
+  })
+
+  it('story caption is empty string for disabled platform, not null', () => {
+    const asset = formatAlertStoryAsset(makeSampleAlert(), { igStoryEnabled: false, fbStoryEnabled: false })
+    expect(asset.instagram.caption).toBe('')
+    expect(asset.facebook.caption).toBe('')
+  })
+})
