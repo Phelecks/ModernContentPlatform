@@ -1,0 +1,98 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "write_social_publish_log",
+  "title": "Write Social Publish Log Payload",
+  "description": "Payload for POST /api/internal/social-publish-log. Records one X, Telegram, or Discord publish attempt for observability and retry tracking.",
+  "type": "object",
+  "required": ["topic_slug", "date_key", "asset_type", "source_type", "platform", "post_type"],
+  "properties": {
+    "topic_slug": {
+      "type": "string",
+      "enum": ["crypto", "finance", "economy", "health", "ai", "energy", "technology"]
+    },
+    "date_key": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "asset_type": {
+      "type": "string",
+      "enum": ["daily_post", "story"]
+    },
+    "source_type": {
+      "type": "string",
+      "enum": ["daily_summary", "alert"]
+    },
+    "source_id": {
+      "type": ["string", "null"],
+      "maxLength": 200
+    },
+    "platform": {
+      "type": "string",
+      "enum": ["x", "telegram", "discord"]
+    },
+    "post_type": {
+      "type": "string",
+      "enum": ["post", "thread", "digest", "alert", "embed"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "published", "failed", "skipped"],
+      "default": "pending"
+    },
+    "platform_post_id": {
+      "type": ["string", "null"],
+      "maxLength": 200
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10,
+      "default": 1
+    },
+    "error_message": {
+      "type": ["string", "null"]
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "topic_slug": "crypto",
+      "date_key": "2025-01-15",
+      "asset_type": "daily_post",
+      "source_type": "daily_summary",
+      "source_id": null,
+      "platform": "x",
+      "post_type": "post",
+      "status": "published",
+      "platform_post_id": "1750000000000000000",
+      "attempt": 1,
+      "error_message": null
+    },
+    {
+      "topic_slug": "crypto",
+      "date_key": "2025-01-15",
+      "asset_type": "daily_post",
+      "source_type": "daily_summary",
+      "source_id": null,
+      "platform": "telegram",
+      "post_type": "digest",
+      "status": "published",
+      "platform_post_id": "12345",
+      "attempt": 1,
+      "error_message": null
+    },
+    {
+      "topic_slug": "crypto",
+      "date_key": "2025-01-15",
+      "asset_type": "story",
+      "source_type": "alert",
+      "source_id": "c1a2b3d4e5f6",
+      "platform": "discord",
+      "post_type": "embed",
+      "status": "failed",
+      "platform_post_id": null,
+      "attempt": 2,
+      "error_message": "Discord webhook returned 429 Too Many Requests"
+    }
+  ]
+}

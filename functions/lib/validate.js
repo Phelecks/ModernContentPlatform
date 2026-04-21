@@ -718,3 +718,85 @@ export function validateMetaSocialPublishPayload(body) {
     error_message: error_message ?? null
   })
 }
+
+// ── Social Publish Log (X, Telegram, Discord) ──────────────────────
+
+const VALID_SOCIAL_ASSET_TYPES  = ['daily_post', 'story']
+const VALID_SOCIAL_SOURCE_TYPES = ['daily_summary', 'alert']
+const VALID_SOCIAL_PLATFORMS    = ['x', 'telegram', 'discord']
+const VALID_SOCIAL_POST_TYPES   = ['post', 'thread', 'digest', 'alert', 'embed']
+const VALID_SOCIAL_STATUSES     = ['pending', 'published', 'failed', 'skipped']
+
+const SOCIAL_PUBLISH_ALLOWED_KEYS = [
+  'topic_slug', 'date_key', 'asset_type', 'source_type', 'source_id',
+  'platform', 'post_type', 'status', 'platform_post_id', 'attempt',
+  'error_message'
+]
+
+/**
+ * Validate a social_publish_log write payload.
+ *
+ * Required: topic_slug, date_key, asset_type, source_type, platform, post_type
+ * Optional: source_id, status, platform_post_id, attempt, error_message
+ */
+export function validateSocialPublishPayload(body) {
+  if (!body || typeof body !== 'object') return fail('Request body must be a JSON object')
+
+  const unknownError = checkUnknownKeys(body, SOCIAL_PUBLISH_ALLOWED_KEYS)
+  if (unknownError) return fail(unknownError)
+
+  const {
+    topic_slug, date_key, asset_type, source_type, source_id,
+    platform, post_type, status, platform_post_id, attempt, error_message
+  } = body
+
+  if (!isValidTopicSlug(topic_slug) || !VALID_TOPICS.includes(topic_slug)) {
+    return fail(`Invalid topic_slug: must be one of ${VALID_TOPICS.join(', ')}`)
+  }
+  if (!isValidDateKey(date_key)) {
+    return fail('Invalid date_key: expected YYYY-MM-DD format')
+  }
+  if (!VALID_SOCIAL_ASSET_TYPES.includes(asset_type)) {
+    return fail(`Invalid asset_type: must be one of ${VALID_SOCIAL_ASSET_TYPES.join(', ')}`)
+  }
+  if (!VALID_SOCIAL_SOURCE_TYPES.includes(source_type)) {
+    return fail(`Invalid source_type: must be one of ${VALID_SOCIAL_SOURCE_TYPES.join(', ')}`)
+  }
+  if (!VALID_SOCIAL_PLATFORMS.includes(platform)) {
+    return fail(`Invalid platform: must be one of ${VALID_SOCIAL_PLATFORMS.join(', ')}`)
+  }
+  if (!VALID_SOCIAL_POST_TYPES.includes(post_type)) {
+    return fail(`Invalid post_type: must be one of ${VALID_SOCIAL_POST_TYPES.join(', ')}`)
+  }
+  if (!isOptionalString(source_id, 200)) {
+    return fail('source_id must be a string (max 200 chars) or null')
+  }
+  if (status !== undefined && !VALID_SOCIAL_STATUSES.includes(status)) {
+    return fail(`Invalid status: must be one of ${VALID_SOCIAL_STATUSES.join(', ')}`)
+  }
+  if (!isOptionalString(platform_post_id, 200)) {
+    return fail('platform_post_id must be a string (max 200 chars) or null')
+  }
+  if (attempt !== undefined) {
+    if (!Number.isInteger(attempt) || attempt < 1 || attempt > 10) {
+      return fail('attempt must be an integer between 1 and 10')
+    }
+  }
+  if (!isOptionalString(error_message)) {
+    return fail('error_message must be a string or null')
+  }
+
+  return ok({
+    topic_slug,
+    date_key,
+    asset_type,
+    source_type,
+    source_id: source_id ?? null,
+    platform,
+    post_type,
+    status: status ?? 'pending',
+    platform_post_id: platform_post_id ?? null,
+    attempt: attempt ?? 1,
+    error_message: error_message ?? null
+  })
+}

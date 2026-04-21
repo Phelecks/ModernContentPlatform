@@ -1,0 +1,104 @@
+{
+  "name": "Daily — 13 Generate Social Content",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "d1e2f3a4-0013-0013-0013-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Check whether any social channel (X, Telegram, Discord) is enabled.\n// Reads ENABLE_SOCIAL_X, ENABLE_SOCIAL_TELEGRAM, ENABLE_SOCIAL_DISCORD\n// from n8n Variables. If all are disabled, skip generation entirely.\nconst enableX        = ($vars.ENABLE_SOCIAL_X        || '').toLowerCase() === 'true';\nconst enableTelegram = ($vars.ENABLE_SOCIAL_TELEGRAM  || '').toLowerCase() === 'true';\nconst enableDiscord  = ($vars.ENABLE_SOCIAL_DISCORD   || '').toLowerCase() === 'true';\n\nif (!enableX && !enableTelegram && !enableDiscord) {\n  return [{ json: { _social_skip: true, reason: 'All social channels disabled (X, Telegram, Discord)' } }];\n}\n\nconst ctx = $input.first().json;\n\nif (!ctx.topic_slug || !ctx.date_key) {\n  throw new Error('Missing topic_slug or date_key in input context');\n}\n\nif (!ctx.summary) {\n  throw new Error(`No summary found in context for ${ctx.topic_slug}/${ctx.date_key}`);\n}\n\nreturn [{\n  json: {\n    ...ctx,\n    _social_enable_x:        enableX,\n    _social_enable_telegram: enableTelegram,\n    _social_enable_discord:  enableDiscord,\n    _social_skip: false\n  }\n}];"
+      },
+      "id": "d1e2f3a4-0013-0013-0013-000000000002",
+      "name": "Check Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true },
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ $json._social_skip }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ]
+        }
+      },
+      "id": "d1e2f3a4-0013-0013-0013-000000000003",
+      "name": "Social Enabled?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{ json: { _social_skip: true, reason: 'All social channels disabled — generation skipped' } }];"
+      },
+      "id": "d1e2f3a4-0013-0013-0013-000000000004",
+      "name": "Skip — Disabled",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 500]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Reuse the AI output from the Meta social generation step (module 11)\n// or from the shared summary context. The AI output format is identical\n// — the same post_caption, hashtags, image_prompt, story_caption, cta\n// fields feed all platforms. No separate AI call needed.\n//\n// If ai_output is already available from module 11 (Meta), use it directly.\n// Otherwise, build a social content asset from the summary context.\nconst ctx = $input.first().json;\n\n// Check if we already have AI output from Meta module\nconst aiOutput = ctx._ai_output || ctx.meta_ai_output || null;\n\nif (aiOutput) {\n  // Reuse existing AI output — no additional AI call needed\n  return [{ json: { ...ctx, _ai_output: aiOutput } }];\n}\n\n// Build a simple social content asset from summary data directly.\n// This path is used when Meta social is disabled but X/Telegram/Discord\n// are enabled. Uses the summary headline and overview as caption.\nconst summary = ctx.summary;\nconst topicEmoji = {\n  crypto: '🪙', finance: '📈', economy: '🏦',\n  health: '🏥', ai: '🤖', energy: '⚡', technology: '💻'\n};\n\nconst keyEventsText = (summary.key_events || []).slice(0, 3)\n  .map((e, i) => `${i + 1}. ${e.title}: ${e.significance}`)\n  .join('\\n');\n\nconst captionBody = summary.headline + '. ' + (summary.overview || '').slice(0, 400);\n\nconst simpleAiOutput = {\n  post_caption: captionBody,\n  hashtags: [`#${ctx.topic_slug}`, '#news', '#daily'],\n  image_prompt: `Daily ${ctx.topic_slug} news summary visual`,\n  story_caption: summary.headline ? summary.headline.slice(0, 150) : null,\n  story_background_hint: `${ctx.topic_slug} news gradient`,\n  cta: `Follow for daily ${ctx.topic_slug} updates.`\n};\n\nreturn [{ json: { ...ctx, _ai_output: simpleAiOutput } }];"
+      },
+      "id": "d1e2f3a4-0013-0013-0013-000000000005",
+      "name": "Resolve AI Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Apply platform-specific formatting to produce the social_content_asset.\n// X:        post max 280 chars, hashtags inline, optional thread\n// Telegram: HTML-formatted digest, max 4096 chars\n// Discord:  embed with title, description, color, fields\n\nconst ctx = $input.first().json;\nconst ai  = ctx._ai_output;\n\nconst topicEmoji = {\n  crypto: '🪙', finance: '📈', economy: '🏦',\n  health: '🏥', ai: '🤖', energy: '⚡', technology: '💻'\n};\nconst discordColor = {\n  crypto: 0xF7931A, finance: 0x2ECC71, economy: 0x3498DB,\n  health: 0xE74C3C, ai: 0x9B59B6, energy: 0xF1C40F, technology: 0x1ABC9C\n};\n\nconst topicBaseHashtags = {\n  crypto:     ['#crypto', '#blockchain', '#digitalassets', '#web3'],\n  finance:    ['#finance', '#investing', '#markets', '#stocks'],\n  economy:    ['#economy', '#macroeconomics', '#fed', '#inflation'],\n  health:     ['#health', '#wellness', '#medicine', '#healthcare'],\n  ai:         ['#AI', '#artificialintelligence', '#machinelearning', '#tech'],\n  energy:     ['#energy', '#renewableenergy', '#oilandgas', '#cleanenergy'],\n  technology: ['#technology', '#tech', '#innovation', '#software']\n};\n\nconst baseHashtags = topicBaseHashtags[ctx.topic_slug] || [];\nconst allHashtags = [...new Set([...(ai.hashtags || []), ...baseHashtags])].slice(0, 30);\nconst captionBody = (ai.post_caption || '').trim();\nconst ctaText = ai.cta || `Follow for daily ${ctx.topic_slug} updates.`;\nconst emoji = topicEmoji[ctx.topic_slug] || '📰';\nconst topicLabel = ctx.topic_slug.charAt(0).toUpperCase() + ctx.topic_slug.slice(1);\nconst color = discordColor[ctx.topic_slug] || 0x95A5A6;\nconst timestamp = new Date().toISOString();\n\n// ── X formatting ──\nconst xHashtags = allHashtags.slice(0, 5).join(' ');\nconst xHashBlock = xHashtags ? '\\n\\n' + xHashtags : '';\nconst xFull = emoji + ' ' + captionBody + xHashBlock;\nconst xPostText = xFull.length <= 280\n  ? xFull\n  : (emoji + ' ' + captionBody).slice(0, 280 - xHashBlock.length - 2) + '…' + xHashBlock;\n\n// X thread (only if body > 280 chars)\nlet xThread = null;\nif (captionBody.length > 280) {\n  const posts = [];\n  let remaining = captionBody;\n  while (remaining.length > 0) {\n    if (remaining.length <= 280) { posts.push(remaining); break; }\n    let splitAt = remaining.lastIndexOf(' ', 276);\n    if (splitAt <= 0) splitAt = 276;\n    posts.push(remaining.slice(0, splitAt) + ' ...');\n    remaining = remaining.slice(splitAt).trim();\n  }\n  if (posts.length > 1) xThread = posts;\n}\n\n// ── Telegram HTML formatting ──\nconst escHtml = (s) => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst telegramText = [\n  `${emoji} <b>${topicLabel} Daily Briefing</b> — ${escHtml(ctx.date_key)}`,\n  '',\n  escHtml(captionBody),\n  ctaText ? '\\n' + escHtml(ctaText) : '',\n  '\\n' + allHashtags.join(' ')\n].filter(Boolean).join('\\n');\nconst telegramMessage = telegramText.length <= 4096\n  ? telegramText\n  : telegramText.slice(0, 4095) + '…';\n\n// ── Discord embed formatting ──\nconst discordEmbed = {\n  title: (`${emoji} ${topicLabel} Daily Briefing — ${ctx.date_key}`).slice(0, 256),\n  description: captionBody.slice(0, 4096),\n  color,\n  fields: [\n    { name: 'Topic', value: topicLabel, inline: true }\n  ],\n  footer: { text: allHashtags.slice(0, 10).join(' ') },\n  timestamp\n};\nif (ctaText) {\n  discordEmbed.fields.push({ name: 'CTA', value: ctaText, inline: false });\n}\n\nconst enableX        = !!ctx._social_enable_x;\nconst enableTelegram = !!ctx._social_enable_telegram;\nconst enableDiscord  = !!ctx._social_enable_discord;\n\nconst asset = {\n  topic_slug:     ctx.topic_slug,\n  date_key:       ctx.date_key,\n  asset_type:     'daily_post',\n  source_type:    'daily_summary',\n  source_id:      null,\n  publish_job_id: ctx.publish_job_id || null,\n  ai_output: {\n    post_caption:          ai.post_caption,\n    hashtags:              ai.hashtags,\n    image_prompt:          ai.image_prompt,\n    story_caption:         ai.story_caption || null,\n    story_background_hint: ai.story_background_hint || null,\n    cta:                   ai.cta || null\n  },\n  x: {\n    enabled:    enableX,\n    post_text:  xPostText,\n    thread:     xThread,\n    alert_text: null\n  },\n  telegram: {\n    enabled:      enableTelegram,\n    message_html: telegramMessage,\n    alert_html:   null\n  },\n  discord: {\n    enabled:     enableDiscord,\n    embed:       discordEmbed,\n    alert_embed: null\n  },\n  generated_at: timestamp\n};\n\nreturn [{ json: asset }];"
+      },
+      "id": "d1e2f3a4-0013-0013-0013-000000000006",
+      "name": "Format Platform Payloads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [[{ "node": "Check Config", "type": "main", "index": 0 }]]
+    },
+    "Check Config": {
+      "main": [[{ "node": "Social Enabled?", "type": "main", "index": 0 }]]
+    },
+    "Social Enabled?": {
+      "main": [
+        [{ "node": "Skip — Disabled", "type": "main", "index": 0 }],
+        [{ "node": "Resolve AI Output", "type": "main", "index": 0 }]
+      ]
+    },
+    "Resolve AI Output": {
+      "main": [[{ "node": "Format Platform Payloads", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": true,
+    "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
+  },
+  "id": "daily-13-generate-social-content-v1",
+  "tags": ["daily", "social", "x", "telegram", "discord", "v1"]
+}

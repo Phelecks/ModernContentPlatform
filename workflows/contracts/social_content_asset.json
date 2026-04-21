@@ -1,0 +1,203 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "social_content_asset",
+  "title": "Social Content Asset",
+  "description": "Platform-independent social publishing asset that carries shared AI output plus per-platform formatted payloads for X, Telegram, and Discord. Reuses the same internal social content contract as Meta publishing. Produced by module 13 (daily) or module 11-intraday (story). Passed to module 14 (daily) or the intraday social story delivery module.",
+  "type": "object",
+  "required": [
+    "topic_slug",
+    "date_key",
+    "asset_type",
+    "source_type",
+    "ai_output",
+    "x",
+    "telegram",
+    "discord",
+    "generated_at"
+  ],
+  "properties": {
+    "topic_slug": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "description": "Topic slug. Matches the topic the content was generated for."
+    },
+    "date_key": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "Date the content relates to (YYYY-MM-DD)."
+    },
+    "asset_type": {
+      "type": "string",
+      "enum": ["daily_post", "story"],
+      "description": "Whether this is a feed-style daily post or a story-style asset."
+    },
+    "source_type": {
+      "type": "string",
+      "enum": ["daily_summary", "alert"],
+      "description": "What source triggered this asset: a completed daily summary or a high-priority intraday alert."
+    },
+    "source_id": {
+      "type": ["string", "null"],
+      "description": "For alert-sourced assets: the item_id of the originating alert. For daily_summary assets: null or 'daily'."
+    },
+    "publish_job_id": {
+      "type": ["integer", "null"],
+      "description": "D1 publish_jobs row ID for daily_summary-sourced assets. Null for alert-sourced assets."
+    },
+    "ai_output": {
+      "type": "object",
+      "description": "Raw validated AI output from the social_content_post schema (same as meta_social_post — platform-independent).",
+      "required": ["post_caption", "hashtags", "image_prompt"],
+      "properties": {
+        "post_caption": { "type": "string" },
+        "hashtags": { "type": "array", "items": { "type": "string" } },
+        "image_prompt": { "type": "string" },
+        "story_caption": { "type": ["string", "null"] },
+        "story_background_hint": { "type": ["string", "null"] },
+        "cta": { "type": ["string", "null"] }
+      }
+    },
+    "x": {
+      "type": "object",
+      "required": ["enabled", "post_text"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether X publishing is enabled for this asset."
+        },
+        "post_text": {
+          "type": "string",
+          "maxLength": 280,
+          "description": "X-formatted post text. Truncated to 280 characters with hashtags included. Derived from ai_output.post_caption."
+        },
+        "thread": {
+          "type": ["array", "null"],
+          "items": { "type": "string", "maxLength": 280 },
+          "description": "Optional thread continuation posts for longer content. Each item is one tweet in the thread. Null when threading is disabled."
+        },
+        "alert_text": {
+          "type": ["string", "null"],
+          "maxLength": 280,
+          "description": "Short alert/story text for X. Null for daily_post asset_type."
+        }
+      },
+      "additionalProperties": false,
+      "description": "X (formerly Twitter) formatted payload."
+    },
+    "telegram": {
+      "type": "object",
+      "required": ["enabled", "message_html"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether Telegram publishing is enabled for this asset."
+        },
+        "message_html": {
+          "type": "string",
+          "maxLength": 4096,
+          "description": "Telegram HTML-formatted message. Uses Telegram-supported HTML tags (b, i, a, code, pre). Max 4096 characters."
+        },
+        "alert_html": {
+          "type": ["string", "null"],
+          "maxLength": 4096,
+          "description": "Telegram HTML-formatted alert message. Null for daily_post asset_type."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Telegram-specific formatted payload."
+    },
+    "discord": {
+      "type": "object",
+      "required": ["enabled", "embed"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether Discord publishing is enabled for this asset."
+        },
+        "embed": {
+          "type": "object",
+          "description": "Discord embed object ready for webhook delivery.",
+          "properties": {
+            "title": { "type": "string", "maxLength": 256 },
+            "description": { "type": "string", "maxLength": 4096 },
+            "color": { "type": "integer" },
+            "fields": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "value": { "type": "string" },
+                  "inline": { "type": "boolean" }
+                }
+              }
+            },
+            "footer": {
+              "type": "object",
+              "properties": { "text": { "type": "string" } }
+            },
+            "url": { "type": ["string", "null"] },
+            "timestamp": { "type": "string" }
+          }
+        },
+        "alert_embed": {
+          "type": ["object", "null"],
+          "description": "Discord embed for alert/story messages. Null for daily_post asset_type."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Discord-specific formatted payload."
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 UTC timestamp when this asset was generated."
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "topic_slug": "crypto",
+      "date_key": "2025-01-15",
+      "asset_type": "daily_post",
+      "source_type": "daily_summary",
+      "source_id": null,
+      "publish_job_id": 42,
+      "ai_output": {
+        "post_caption": "Bitcoin ETF inflows hit a record $500M in a single session as institutional demand accelerates.",
+        "hashtags": ["#crypto", "#bitcoin", "#BTC", "#ETF"],
+        "image_prompt": "Professional financial chart with Bitcoin price rally",
+        "story_caption": "BTC ETFs record $500M single-day inflows 🚀",
+        "story_background_hint": "Dark gradient with orange Bitcoin symbol",
+        "cta": "Full daily crypto briefing — link in bio."
+      },
+      "x": {
+        "enabled": true,
+        "post_text": "🪙 Bitcoin ETF inflows hit a record $500M in a single session as institutional demand accelerates.\n\n#crypto #bitcoin #BTC #ETF",
+        "thread": null,
+        "alert_text": null
+      },
+      "telegram": {
+        "enabled": true,
+        "message_html": "🪙 <b>CRYPTO Daily Briefing</b> — 2025-01-15\n\nBitcoin ETF inflows hit a record $500M in a single session as institutional demand accelerates.\n\nFull daily crypto briefing — link in bio.\n\n#crypto #bitcoin #BTC #ETF",
+        "alert_html": null
+      },
+      "discord": {
+        "enabled": true,
+        "embed": {
+          "title": "🪙 Crypto Daily Briefing — 2025-01-15",
+          "description": "Bitcoin ETF inflows hit a record $500M in a single session as institutional demand accelerates.",
+          "color": 16159514,
+          "fields": [
+            { "name": "Topic", "value": "Crypto", "inline": true },
+            { "name": "CTA", "value": "Full daily crypto briefing — link in bio.", "inline": false }
+          ],
+          "footer": { "text": "#crypto #bitcoin #BTC #ETF" },
+          "timestamp": "2025-01-15T23:45:00Z"
+        },
+        "alert_embed": null
+      },
+      "generated_at": "2025-01-15T23:45:00Z"
+    }
+  ]
+}
