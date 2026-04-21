@@ -1,0 +1,76 @@
+{
+  "_comment": "Social publishing configuration for X, Telegram, and Discord. Controls platform toggles, formatting limits, and account requirements. Runtime toggles are read from n8n Variables. Workflows reference this config as the canonical documentation for platform limits and defaults.",
+  "platforms": {
+    "x": {
+      "enabled": false,
+      "_comment_enabled": "Set ENABLE_SOCIAL_X=true in n8n Variables to activate X publishing.",
+      "post_max_length": 280,
+      "thread_enabled": false,
+      "_comment_thread": "Set ENABLE_SOCIAL_X_THREADS=true to allow thread-style multi-post publishing for daily summaries.",
+      "hashtag_position": "inline",
+      "max_hashtags": 5,
+      "_comment_hashtags": "X posts have limited space. Include at most 5 hashtags inline at end of post."
+    },
+    "telegram": {
+      "enabled": false,
+      "_comment_enabled": "Set ENABLE_SOCIAL_TELEGRAM=true in n8n Variables to activate Telegram daily digest publishing (separate from intraday alert delivery).",
+      "message_max_length": 4096,
+      "parse_mode": "HTML",
+      "daily_digest_enabled": true,
+      "alert_story_enabled": true,
+      "_comment_channels": "Daily digests and alert stories can be independently toggled. Both use the same bot and chat_id."
+    },
+    "discord": {
+      "enabled": false,
+      "_comment_enabled": "Set ENABLE_SOCIAL_DISCORD=true in n8n Variables to activate Discord daily digest publishing (separate from intraday alert delivery).",
+      "embed_description_max_length": 4096,
+      "embed_title_max_length": 256,
+      "daily_digest_enabled": true,
+      "alert_story_enabled": true,
+      "_comment_channels": "Daily digests and alert stories can be independently toggled. Both use the same webhook URL."
+    }
+  },
+  "alert_story_threshold": {
+    "min_importance_score": 80,
+    "_comment": "Only alerts with importance_score >= this value are eligible for social story generation. Shared with Meta publishing threshold."
+  },
+  "retry": {
+    "max_attempts": 3,
+    "wait_between_ms": 5000,
+    "_comment": "Retry settings for platform API calls. Platform rate limits vary; use exponential backoff in practice."
+  },
+  "formatting": {
+    "topic_hashtags": {
+      "crypto":     ["#crypto", "#blockchain", "#digitalassets", "#web3"],
+      "finance":    ["#finance", "#investing", "#markets", "#stocks"],
+      "economy":    ["#economy", "#macroeconomics", "#fed", "#inflation"],
+      "health":     ["#health", "#wellness", "#medicine", "#healthcare"],
+      "ai":         ["#AI", "#artificialintelligence", "#machinelearning", "#tech"],
+      "energy":     ["#energy", "#renewableenergy", "#oilandgas", "#cleanenergy"],
+      "technology": ["#technology", "#tech", "#innovation", "#software"]
+    },
+    "_comment_topic_hashtags": "Shared with Meta publishing. Base topic hashtags always appended to AI-generated hashtags."
+  },
+  "account_requirements": {
+    "x": {
+      "api": "X API v2",
+      "required_access": "Basic tier or higher (Free tier allows 1,500 posts/month)",
+      "required_permissions": ["tweet.write", "tweet.read", "users.read"],
+      "token_type": "OAuth 2.0 User Access Token (user context) or OAuth 1.0a User Access Token",
+      "_comment_token": "Posting requires user-context authentication for tweet.write (OAuth 2.0 user access, typically via PKCE, or OAuth 1.0a user access). App-only bearer tokens are read-only and cannot create tweets.",
+      "setup_docs": "https://developer.x.com/en/docs/authentication/overview"
+    },
+    "telegram": {
+      "api": "Telegram Bot API",
+      "required": "Bot Token + Chat ID",
+      "_comment": "Create a bot via @BotFather and get the chat ID of the target channel or group.",
+      "setup_docs": "https://core.telegram.org/bots/api"
+    },
+    "discord": {
+      "api": "Discord Webhooks",
+      "required": "Webhook URL for the target channel",
+      "_comment": "Create a webhook in Discord Server Settings → Integrations → Webhooks.",
+      "setup_docs": "https://discord.com/developers/docs/resources/webhook"
+    }
+  }
+}

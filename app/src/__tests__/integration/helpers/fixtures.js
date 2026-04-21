@@ -79,3 +79,8 @@ export { default as PROVIDER_CONFIG_INVALID_NEWSAPI_MISSING_KEY } from '@fixture
 
 export { default as CRYPTO_META_DAILY_POST } from '@fixtures/meta-social/crypto-2025-01-15-daily-post.json'
 export { default as CRYPTO_META_STORY }      from '@fixtures/meta-social/crypto-2025-01-15-story.json'
+
+// ---- Social content assets (social_content_asset contract, per topic/day) ----
+
+export { default as CRYPTO_SOCIAL_DAILY_POST } from '@fixtures/social-content/crypto-2025-01-15-daily-post.json'
+export { default as CRYPTO_SOCIAL_STORY }      from '@fixtures/social-content/crypto-2025-01-15-story.json'

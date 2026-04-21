@@ -1,0 +1,61 @@
+{
+  "topic_slug": "crypto",
+  "date_key": "2025-01-15",
+  "asset_type": "story",
+  "source_type": "alert",
+  "source_id": "c1a2b3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5",
+  "publish_job_id": null,
+  "ai_output": {
+    "post_caption": "US-listed spot Bitcoin ETFs attracted more than $500 million in net inflows on January 15, the largest single-day figure since the products launched.",
+    "hashtags": [
+      "#crypto",
+      "#breakingnews",
+      "#newsupdate"
+    ],
+    "image_prompt": "Urgent news background for crypto story",
+    "story_caption": "🪙 Spot Bitcoin ETFs record $500M inflows in a single session",
+    "story_background_hint": "High-impact crypto news visual",
+    "cta": null
+  },
+  "x": {
+    "enabled": true,
+    "post_text": "🪙 Spot Bitcoin ETFs record $500M inflows in a single session",
+    "thread": null,
+    "alert_text": "🪙 Spot Bitcoin ETFs record $500M inflows in a single session"
+  },
+  "telegram": {
+    "enabled": true,
+    "message_html": "🪙 <b>CRYPTO</b>  |  Importance: 🟩🟩🟩🟩⬜ 82/100\n\n<b>Spot Bitcoin ETFs record $500M inflows in a single session</b>\n\nUS-listed spot Bitcoin ETFs attracted more than $500 million in net inflows on January 15, the largest single-day figure since the products launched.\n<a href=\"https://example.com/btc-etf\">Source: CoinDesk</a>",
+    "alert_html": "🪙 <b>CRYPTO</b>  |  Importance: 🟩🟩🟩🟩⬜ 82/100\n\n<b>Spot Bitcoin ETFs record $500M inflows in a single session</b>\n\nUS-listed spot Bitcoin ETFs attracted more than $500 million in net inflows on January 15, the largest single-day figure since the products launched.\n<a href=\"https://example.com/btc-etf\">Source: CoinDesk</a>"
+  },
+  "discord": {
+    "enabled": true,
+    "embed": {
+      "title": "🪙 Spot Bitcoin ETFs record $500M inflows in a single session",
+      "description": "US-listed spot Bitcoin ETFs attracted more than $500 million in net inflows on January 15, the largest single-day figure since the products launched.",
+      "color": 16159514,
+      "fields": [
+        { "name": "Topic", "value": "Crypto", "inline": true },
+        { "name": "Importance", "value": "82/100", "inline": true },
+        { "name": "Severity", "value": "75/100", "inline": true }
+      ],
+      "footer": { "text": "CoinDesk" },
+      "url": "https://example.com/btc-etf",
+      "timestamp": "2025-01-15T14:30:00Z"
+    },
+    "alert_embed": {
+      "title": "🪙 Spot Bitcoin ETFs record $500M inflows in a single session",
+      "description": "US-listed spot Bitcoin ETFs attracted more than $500 million in net inflows on January 15, the largest single-day figure since the products launched.",
+      "color": 16159514,
+      "fields": [
+        { "name": "Topic", "value": "Crypto", "inline": true },
+        { "name": "Importance", "value": "82/100", "inline": true },
+        { "name": "Severity", "value": "75/100", "inline": true }
+      ],
+      "footer": { "text": "CoinDesk" },
+      "url": "https://example.com/btc-etf",
+      "timestamp": "2025-01-15T14:30:00Z"
+    }
+  },
+  "generated_at": "2025-01-15T14:35:00Z"
+}

@@ -1,0 +1,416 @@
+{
+  "name": "Intraday — 11 Social Story Delivery",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "f2a3b4c5-0011-0011-0011-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Check whether social story delivery is enabled for any of X, Telegram, Discord.\n// Filter to story-eligible alerts (importance_score >= threshold).\n\nconst enableX        = ($vars.ENABLE_SOCIAL_X        || '').toLowerCase() === 'true';\nconst enableTelegram = ($vars.ENABLE_SOCIAL_TELEGRAM  || '').toLowerCase() === 'true';\nconst enableDiscord  = ($vars.ENABLE_SOCIAL_DISCORD   || '').toLowerCase() === 'true';\n\nconst anyEnabled = enableX || enableTelegram || enableDiscord;\n\nif (!anyEnabled) {\n  return [{ json: { _social_skip: true, reason: 'No social channels enabled for story delivery' } }];\n}\n\nconst threshold = parseInt($vars.SOCIAL_ALERT_STORY_THRESHOLD || $vars.META_ALERT_STORY_THRESHOLD || '80', 10);\n\nconst input = $input.first().json;\nconst items = Array.isArray(input.items) ? input.items : [];\n\n// Filter to high-importance alerts already approved for delivery\nconst eligible = items.filter(i =>\n  i.importance_score >= threshold &&\n  ((i.channels || []).includes('telegram') || (i.channels || []).includes('discord'))\n);\n\nif (eligible.length === 0) {\n  return [{ json: { _social_skip: true, reason: `No alerts met story threshold (>= ${threshold})` } }];\n}\n\nreturn eligible.map(item => ({\n  json: {\n    ...item,\n    _social_enable_x:        enableX,\n    _social_enable_telegram: enableTelegram,\n    _social_enable_discord:  enableDiscord,\n    _social_skip: false\n  }\n}));"
+      },
+      "id": "f2a3b4c5-0011-0011-0011-000000000002",
+      "name": "Filter Story-Eligible Alerts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ $json._social_skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "f2a3b4c5-0011-0011-0011-000000000003",
+      "name": "Has Story Alerts?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{ json: { _social_skip: true, reason: 'No story-eligible alerts — social story delivery skipped' } }];"
+      },
+      "id": "f2a3b4c5-0011-0011-0011-000000000004",
+      "name": "Skip — No Eligible Alerts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Format the alert as a social content asset for X, Telegram, and Discord.\nconst item = $input.item.json;\n\nconst topicEmoji = {\n  crypto: '🪙', finance: '📈', economy: '🏦',\n  health: '🏥', ai: '🤖', energy: '⚡', technology: '💻'\n};\nconst discordColor = {\n  crypto: 0xF7931A, finance: 0x2ECC71, economy: 0x3498DB,\n  health: 0xE74C3C, ai: 0x9B59B6, energy: 0xF1C40F, technology: 0x1ABC9C\n};\n\nconst emoji = topicEmoji[item.topic_slug] || '📰';\nconst topicLabel = (item.topic_slug || '').charAt(0).toUpperCase() + (item.topic_slug || '').slice(1);\nconst color = discordColor[item.topic_slug] || 0x95A5A6;\nconst dateKey = item.event_at ? item.event_at.slice(0, 10) : new Date().toISOString().slice(0, 10);\nconst timestamp = new Date().toISOString();\n\nconst truncate = (s, n) => s && s.length > n ? s.slice(0, n - 1) + '…' : (s || '');\nconst escHtml = (s) => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;');\nconst headline = item.headline || '';\nconst summaryText = item.summary_text || '';\n\n// ── X alert post ──\nconst xAlertFull = `${emoji} ${headline}`;\nconst xSourceSuffix = item.source_url ? `\\n\\n${item.source_url}` : '';\nconst xAlertText = (xAlertFull + xSourceSuffix).length <= 280\n  ? xAlertFull + xSourceSuffix\n  : truncate(xAlertFull, 280 - xSourceSuffix.length) + xSourceSuffix;\n\n// ── Telegram alert HTML ──\nconst importanceScore = item.importance_score || 0;\nconst importanceSegments = Math.max(0, Math.min(5, Math.round(importanceScore / 20)));\nconst importanceBar = '🟩'.repeat(importanceSegments) + '⬜'.repeat(5 - importanceSegments);\nconst sourceLink = item.source_url\n  ? `\\n<a href=\"${escHtml(item.source_url)}\">Source: ${escHtml(item.source_name || 'Unknown')}</a>`\n  : `\\nSource: ${escHtml(item.source_name || 'Unknown')}`;\nconst telegramAlert = [\n  `${emoji} <b>${escHtml((item.topic_slug || '').toUpperCase())}</b>  |  Importance: ${importanceBar} ${item.importance_score}/100`,\n  '',\n  `<b>${escHtml(headline)}</b>`,\n  '',\n  escHtml(summaryText),\n  sourceLink\n].join('\\n');\n\n// ── Discord alert embed ──\nconst tsRaw = item.event_at;\nconst embedTimestamp = (tsRaw && !isNaN(Date.parse(tsRaw))) ? tsRaw : timestamp;\nconst discordAlertEmbed = {\n  title: `${emoji} ${headline.slice(0, 252)}`,\n  description: summaryText.slice(0, 4096),\n  color,\n  fields: [\n    { name: 'Topic', value: topicLabel, inline: true },\n    { name: 'Importance', value: `${item.importance_score}/100`, inline: true },\n    { name: 'Severity', value: `${item.severity_score}/100`, inline: true }\n  ],\n  footer: { text: item.source_name || 'Unknown' },\n  timestamp: embedTimestamp\n};\nif (item.source_url) discordAlertEmbed.url = item.source_url;\n\nconst enableX        = !!item._social_enable_x;\nconst enableTelegram = !!item._social_enable_telegram;\nconst enableDiscord  = !!item._social_enable_discord;\n\nconst storyAsset = {\n  topic_slug:     item.topic_slug,\n  date_key:       dateKey,\n  asset_type:     'story',\n  source_type:    'alert',\n  source_id:      item.item_id || item.alert_id?.toString() || null,\n  publish_job_id: null,\n  ai_output: {\n    post_caption:          summaryText || headline,\n    hashtags:              [`#${item.topic_slug}`, '#breakingnews', '#newsupdate'],\n    image_prompt:          `Urgent news background for ${item.topic_slug} story`,\n    story_caption:         truncate(`${emoji} ${headline}`, 200),\n    story_background_hint: `High-impact ${item.topic_slug} news visual`,\n    cta:                   null\n  },\n  x: {\n    enabled:    enableX,\n    post_text:  xAlertText,\n    thread:     null,\n    alert_text: xAlertText\n  },\n  telegram: {\n    enabled:      enableTelegram,\n    message_html: telegramAlert,\n    alert_html:   telegramAlert\n  },\n  discord: {\n    enabled:     enableDiscord,\n    embed:       discordAlertEmbed,\n    alert_embed: discordAlertEmbed\n  },\n  generated_at: timestamp\n};\n\nreturn [{ json: storyAsset }];"
+      },
+      "id": "f2a3b4c5-0011-0011-0011-000000000005",
+      "name": "Format Story Asset",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Expand each story asset into per-platform delivery tasks.\n// One failure should not block delivery to other platforms.\nconst asset = $input.item.json;\nconst tasks = [];\n\nif (asset.x && asset.x.enabled) {\n  tasks.push({\n    platform:   'x',\n    post_type:  'alert',\n    post_text:  asset.x.alert_text || asset.x.post_text,\n    topic_slug: asset.topic_slug,\n    date_key:   asset.date_key,\n    source_id:  asset.source_id\n  });\n}\n\nif (asset.telegram && asset.telegram.enabled) {\n  tasks.push({\n    platform:     'telegram',\n    post_type:    'alert',\n    message_html: asset.telegram.alert_html || asset.telegram.message_html,\n    topic_slug:   asset.topic_slug,\n    date_key:     asset.date_key,\n    source_id:    asset.source_id\n  });\n}\n\nif (asset.discord && asset.discord.enabled) {\n  tasks.push({\n    platform:   'discord',\n    post_type:  'embed',\n    embed:      asset.discord.alert_embed || asset.discord.embed,\n    topic_slug: asset.topic_slug,\n    date_key:   asset.date_key,\n    source_id:  asset.source_id\n  });\n}\n\nif (tasks.length === 0) {\n  return [{ json: {\n    _social_skip: true,\n    reason: 'No enabled social channels for this alert',\n    topic_slug: asset.topic_slug,\n    source_id:  asset.source_id\n  } }];\n}\n\nreturn tasks.map(t => ({ json: t }));"
+      },
+      "id": "f2a3b4c5-0011-0011-0011-000000000006",
+      "name": "Expand Delivery Tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Resolve API endpoint per platform.\nconst task = $input.item.json;\n\nif (task.platform === 'x') {\n  const xBearerToken = $vars.SOCIAL_X_BEARER_TOKEN || null;\n  if (!xBearerToken) {\n    return [{ json: { ...task, _api_skip: true, error_message: 'Missing SOCIAL_X_BEARER_TOKEN' } }];\n  }\n  return [{ json: {\n    ...task,\n    _api_url:     'https://api.twitter.com/2/tweets',\n    _api_method:  'POST',\n    _api_headers: { 'Authorization': `Bearer ${xBearerToken}`, 'Content-Type': 'application/json' },\n    _api_body:    { text: task.post_text }\n  } }];\n}\n\nif (task.platform === 'telegram') {\n  const botToken = $vars.SOCIAL_TELEGRAM_BOT_TOKEN || $vars.TELEGRAM_BOT_TOKEN || null;\n  const chatId   = $vars.SOCIAL_TELEGRAM_CHAT_ID   || $vars.TELEGRAM_CHAT_ID   || null;\n  if (!botToken || !chatId) {\n    return [{ json: { ...task, _api_skip: true, error_message: 'Missing Telegram bot token or chat ID' } }];\n  }\n  return [{ json: {\n    ...task,\n    _api_url:     `https://api.telegram.org/bot${botToken}/sendMessage`,\n    _api_method:  'POST',\n    _api_headers: { 'Content-Type': 'application/json' },\n    _api_body:    { chat_id: chatId, text: task.message_html, parse_mode: 'HTML', disable_web_page_preview: false }\n  } }];\n}\n\nif (task.platform === 'discord') {\n  const webhookUrl = $vars.SOCIAL_DISCORD_WEBHOOK_URL || $vars.DISCORD_WEBHOOK_URL || null;\n  if (!webhookUrl) {\n    return [{ json: { ...task, _api_skip: true, error_message: 'Missing Discord webhook URL' } }];\n  }\n  return [{ json: {\n    ...task,\n    _api_url:     webhookUrl,\n    _api_method:  'POST',\n    _api_headers: { 'Content-Type': 'application/json' },\n    _api_body:    { embeds: [task.embed] }\n  } }];\n}\n\nreturn [{ json: { ...task, _api_skip: true, error_message: `Unknown platform: ${task.platform}` } }];"
+      },
+      "id": "f2a3b4c5-0011-0011-0011-000000000007",
+      "name": "Resolve API Endpoint",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "id": "api-skip",
+              "leftValue": "={{ $json._api_skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "f2a3b4c5-0011-0011-0011-000000000008",
+      "name": "Has API Config?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Skipped — missing credentials. Log as 'skipped' in D1.\nconst task = $input.item.json;\nreturn [{ json: {\n  platform:         task.platform,\n  post_type:        task.post_type,\n  topic_slug:       task.topic_slug,\n  date_key:         task.date_key,\n  source_id:        task.source_id,\n  status:           'skipped',\n  platform_post_id: null,\n  error_message:    task.error_message || 'Missing API credentials'\n} }];"
+      },
+      "id": "f2a3b4c5-0011-0011-0011-000000000009",
+      "name": "Mark Skipped",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1780,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json._api_url }}",
+        "method": "={{ $json._api_method }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json._api_body }}",
+        "options": {
+          "timeout": 15000,
+          "ignoreResponseCode": true
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $json._api_headers?.Authorization || '' }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "={{ $json._api_headers?.['Content-Type'] || 'application/json' }}"
+            }
+          ]
+        }
+      },
+      "id": "f2a3b4c5-0011-0011-0011-000000000010",
+      "name": "Send to Platform",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1780,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Handle API response.\nconst response = $input.item.json;\nconst task     = $('Resolve API Endpoint').item.json;\n\nconst statusCode = response._statusCode || response.statusCode || null;\nconst hasError = !!response.error || !!response.errors || (statusCode && statusCode >= 400);\n\nif (hasError) {\n  const errMsg = response.error\n    ? (typeof response.error === 'string' ? response.error : JSON.stringify(response.error).slice(0, 300))\n    : response.errors\n      ? JSON.stringify(response.errors).slice(0, 300)\n      : `HTTP ${statusCode}`;\n  return [{ json: {\n    platform:         task.platform,\n    post_type:        task.post_type,\n    topic_slug:       task.topic_slug,\n    date_key:         task.date_key,\n    source_id:        task.source_id,\n    status:           'failed',\n    platform_post_id: null,\n    error_message:    errMsg\n  } }];\n}\n\nlet postId = null;\nif (task.platform === 'x') postId = response.data?.id || response.id || null;\nelse if (task.platform === 'telegram') postId = response.result?.message_id?.toString() || null;\nelse if (task.platform === 'discord') postId = response.id || null;\n\nreturn [{ json: {\n  platform:         task.platform,\n  post_type:        task.post_type,\n  topic_slug:       task.topic_slug,\n  date_key:         task.date_key,\n  source_id:        task.source_id,\n  status:           'published',\n  platform_post_id: postId\n} }];"
+      },
+      "id": "f2a3b4c5-0011-0011-0011-000000000011",
+      "name": "Handle API Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Build D1 log entry for social_publish_log.\nconst r = $input.item.json;\nconst attempt = Number.isFinite(Number(r.attempt)) ? Number(r.attempt) : 1;\nreturn [{ json: {\n  _d1_sql: `INSERT INTO social_publish_log\n    (topic_slug, date_key, asset_type, source_type, source_id, platform, post_type,\n     status, platform_post_id, error_message, attempt, created_at, updated_at)\n  VALUES (?, ?, 'story', 'alert', ?, ?, ?, ?, ?, ?, ?,\n    strftime('%Y-%m-%dT%H:%M:%SZ','now'),\n    strftime('%Y-%m-%dT%H:%M:%SZ','now')\n  )`,\n  _d1_params: [\n    r.topic_slug,\n    r.date_key,\n    r.source_id || null,\n    r.platform,\n    r.post_type || 'alert',\n    r.status || 'published',\n    r.platform_post_id || null,\n    r.error_message || null,\n    attempt\n  ],\n  ...r,\n  attempt\n} }];"
+      },
+      "id": "f2a3b4c5-0011-0011-0011-000000000012",
+      "name": "Build D1 Story Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2220,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.cloudflare.com/client/v4/accounts/{{ $vars.CF_ACCOUNT_ID }}/d1/database/{{ $vars.CF_D1_DATABASE_ID }}/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { sql: $json._d1_sql, params: $json._d1_params } }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "f2a3b4c5-0011-0011-0011-000000000013",
+      "name": "Write Story Log to D1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        2440,
+        400
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cloudflare-d1-api",
+          "name": "CloudflareD1Api"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Filter Story-Eligible Alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Story-Eligible Alerts": {
+      "main": [
+        [
+          {
+            "node": "Has Story Alerts?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Story Alerts?": {
+      "main": [
+        [
+          {
+            "node": "Skip — No Eligible Alerts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Story Asset",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Story Asset": {
+      "main": [
+        [
+          {
+            "node": "Expand Delivery Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand Delivery Tasks": {
+      "main": [
+        [
+          {
+            "node": "Resolve API Endpoint",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve API Endpoint": {
+      "main": [
+        [
+          {
+            "node": "Has API Config?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has API Config?": {
+      "main": [
+        [
+          {
+            "node": "Mark Skipped",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send to Platform",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to Platform": {
+      "main": [
+        [
+          {
+            "node": "Handle API Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle API Response": {
+      "main": [
+        [
+          {
+            "node": "Build D1 Story Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Skipped": {
+      "main": [
+        [
+          {
+            "node": "Build D1 Story Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build D1 Story Log": {
+      "main": [
+        [
+          {
+            "node": "Write Story Log to D1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": true,
+    "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
+  },
+  "id": "intraday-11-social-story-delivery-v1",
+  "tags": [
+    "intraday",
+    "social",
+    "x",
+    "telegram",
+    "discord",
+    "story",
+    "v1"
+  ]
+}

@@ -43,7 +43,9 @@ import {
   CRYPTO_NORMALIZED_ITEM_SOCIAL_TELEGRAM,
   CRYPTO_NORMALIZED_ITEM_WEBHOOK_LIQUIDATION,
   CRYPTO_META_DAILY_POST,
-  CRYPTO_META_STORY
+  CRYPTO_META_STORY,
+  CRYPTO_SOCIAL_DAILY_POST,
+  CRYPTO_SOCIAL_STORY
 } from './helpers/fixtures.js'
 
 // ---- Helpers ----
@@ -662,5 +664,85 @@ describe('Meta social asset fixtures', () => {
   it('crypto-2025-01-15-story has a non-empty source_id', () => {
     expect(CRYPTO_META_STORY.source_id).toBeTypeOf('string')
     expect(CRYPTO_META_STORY.source_id.length).toBeGreaterThan(0)
+  })
+})
+
+// ---- Social content asset fixtures (X, Telegram, Discord) ----
+
+const SOCIAL_ASSET_TYPES  = ['daily_post', 'story']
+const SOCIAL_SOURCE_TYPES = ['daily_summary', 'alert']
+
+function assertSocialContentAsset(fixture, label) {
+  expect(fixture, `${label}: must be an object`).toBeTypeOf('object')
+  expect(fixture.topic_slug,  `${label}: topic_slug`).toBeTypeOf('string')
+  expect(TOPIC_SLUGS,         `${label}: topic_slug must be a known slug`).toContain(fixture.topic_slug)
+  expect(fixture.date_key,    `${label}: date_key`).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  expect(SOCIAL_ASSET_TYPES,  `${label}: asset_type`).toContain(fixture.asset_type)
+  expect(SOCIAL_SOURCE_TYPES, `${label}: source_type`).toContain(fixture.source_type)
+  expect(fixture.ai_output,   `${label}: ai_output`).toBeTypeOf('object')
+  expect(fixture.ai_output.post_caption, `${label}: ai_output.post_caption`).toBeTypeOf('string')
+  expect(fixture.ai_output.post_caption.length, `${label}: post_caption non-empty`).toBeGreaterThan(0)
+  expect(Array.isArray(fixture.ai_output.hashtags), `${label}: ai_output.hashtags`).toBe(true)
+  expect(fixture.ai_output.hashtags.length, `${label}: at least one hashtag`).toBeGreaterThan(0)
+  expect(fixture.x,         `${label}: x`).toBeTypeOf('object')
+  expect(typeof fixture.x.enabled, `${label}: x.enabled is boolean`).toBe('boolean')
+  expect(fixture.x.post_text, `${label}: x.post_text`).toBeTypeOf('string')
+  expect(fixture.telegram,  `${label}: telegram`).toBeTypeOf('object')
+  expect(typeof fixture.telegram.enabled, `${label}: telegram.enabled is boolean`).toBe('boolean')
+  expect(fixture.telegram.message_html, `${label}: telegram.message_html`).toBeTypeOf('string')
+  expect(fixture.discord,   `${label}: discord`).toBeTypeOf('object')
+  expect(typeof fixture.discord.enabled, `${label}: discord.enabled is boolean`).toBe('boolean')
+  expect(fixture.discord.embed, `${label}: discord.embed`).toBeTypeOf('object')
+  expect(fixture.generated_at, `${label}: generated_at`).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+}
+
+describe('Social content asset fixtures', () => {
+  it('crypto-2025-01-15-daily-post has correct social_content_asset structure', () => {
+    assertSocialContentAsset(CRYPTO_SOCIAL_DAILY_POST, 'crypto-social-daily-post')
+  })
+
+  it('crypto-2025-01-15-daily-post has asset_type daily_post', () => {
+    expect(CRYPTO_SOCIAL_DAILY_POST.asset_type).toBe('daily_post')
+  })
+
+  it('crypto-2025-01-15-daily-post has source_type daily_summary', () => {
+    expect(CRYPTO_SOCIAL_DAILY_POST.source_type).toBe('daily_summary')
+  })
+
+  it('crypto-2025-01-15-daily-post x post_text does not exceed 280 chars', () => {
+    expect(CRYPTO_SOCIAL_DAILY_POST.x.post_text.length).toBeLessThanOrEqual(280)
+  })
+
+  it('crypto-2025-01-15-daily-post telegram message_html does not exceed 4096 chars', () => {
+    expect(CRYPTO_SOCIAL_DAILY_POST.telegram.message_html.length).toBeLessThanOrEqual(4096)
+  })
+
+  it('crypto-2025-01-15-daily-post discord embed has title and description', () => {
+    expect(CRYPTO_SOCIAL_DAILY_POST.discord.embed.title).toBeTypeOf('string')
+    expect(CRYPTO_SOCIAL_DAILY_POST.discord.embed.description).toBeTypeOf('string')
+    expect(CRYPTO_SOCIAL_DAILY_POST.discord.embed.color).toBeTypeOf('number')
+  })
+
+  it('crypto-2025-01-15-story has correct social_content_asset structure', () => {
+    assertSocialContentAsset(CRYPTO_SOCIAL_STORY, 'crypto-social-story')
+  })
+
+  it('crypto-2025-01-15-story has asset_type story', () => {
+    expect(CRYPTO_SOCIAL_STORY.asset_type).toBe('story')
+  })
+
+  it('crypto-2025-01-15-story has source_type alert', () => {
+    expect(CRYPTO_SOCIAL_STORY.source_type).toBe('alert')
+  })
+
+  it('crypto-2025-01-15-story has a non-empty source_id', () => {
+    expect(CRYPTO_SOCIAL_STORY.source_id).toBeTypeOf('string')
+    expect(CRYPTO_SOCIAL_STORY.source_id.length).toBeGreaterThan(0)
+  })
+
+  it('crypto-2025-01-15-story has alert-specific fields populated', () => {
+    expect(CRYPTO_SOCIAL_STORY.x.alert_text).toBeTypeOf('string')
+    expect(CRYPTO_SOCIAL_STORY.telegram.alert_html).toBeTypeOf('string')
+    expect(CRYPTO_SOCIAL_STORY.discord.alert_embed).toBeTypeOf('object')
   })
 })
