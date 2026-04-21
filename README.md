@@ -97,8 +97,9 @@ Key characteristics:
 │  - publish_jobs  │                 │  - metadata.json           │
 │  - workflow_logs │                 │  - video.json              │
 │  - sources       │                 └──────────────┬─────────────┘
-│  - openai_usage  │                                │
-│  - social logs   │                                │
+│  - openai_usage_log          │                   │
+│  - meta_social_publish_log   │                   │
+│  - social_publish_log        │                   │
 └────────┬─────────┘                                │
          │                                          │
          ▼                                          ▼
@@ -132,7 +133,7 @@ Key characteristics:
 | **Vue.js** | Frontend rendering — topic pages, homepage, timeline UI, placeholder states, source attribution display |
 | **Cloudflare Pages** | Static hosting and auto-deploy on GitHub push |
 | **Cloudflare Pages Functions** | Thin read APIs over D1 (timeline, day status, navigation, topics, sources) and authenticated write APIs for n8n workflow outputs |
-| **Cloudflare D1** | Live operational data — alerts, clusters, daily status, publish jobs, workflow logs, source registry, OpenAI usage, social publish logs |
+| **Cloudflare D1** | Live operational data — alerts, clusters, daily status, publish jobs, workflow logs, source registry, `openai_usage_log`, `meta_social_publish_log`, and `social_publish_log` |
 | **GitHub** | Canonical store for final editorial content — summaries, articles, video metadata |
 | **n8n** | Orchestration — ingestion, normalization, clustering, classification, summarization, publishing, social delivery |
 | **AI** | Classification, summarization, timeline phrasing, video scripts, image generation, narration (TTS), YouTube metadata, tomorrow outlooks |
@@ -252,8 +253,9 @@ Key characteristics:
 │   ├── ai/               # AI output shapes (classification, summary, video script, YouTube metadata,
 │   │                     #   image asset, narration asset, render asset, full video, Meta social post,
 │   │                     #   expectation check, tomorrow outlook, timeline entry)
+│   ├── content/          # Editorial and published content contracts shared across generation and rendering
 │   └── workflow/         # Workflow write payload contracts (alerts, daily status, publish jobs,
-│                         #   sources, workflow logs, OpenAI usage, social publish logs)
+│                         #   sources, workflow logs, openai_usage_log, meta_social_publish_log, social_publish_log)
 │
 ├── config/           # Operator configuration files
 │   ├── sources/          # Per-topic source definitions (JSON arrays for INTRADAY_SOURCES_JSON)
@@ -309,6 +311,8 @@ Key characteristics:
 │   ├── data-model/       # D1 and content model references
 │   │   ├── normalized-source-item.md
 │   │   └── source-registry.md
+│   ├── operations/       # Operational procedures (placeholder)
+│   ├── runbooks/         # Incident and rerun guidance (placeholder)
 │   ├── local-development.md       # Full local setup guide
 │   ├── local-summary-generation.md # Local editorial pipeline walkthrough
 │   ├── staging-environment.md     # Staging environment strategy
@@ -491,7 +495,7 @@ cd app && npm install && cd ..
 # 2. Authenticate Wrangler (handles Cloudflare auth — no .env needed for CLI)
 wrangler login
 
-# 3. Reset local D1: apply all 10 migrations + seed topics, sources, and sample alerts
+# 3. Reset local D1: apply all 10 migrations + seed topics and sample alerts
 bash scripts/local-reset.sh
 
 # 4a. Vue frontend only (hot-reload, no API)
