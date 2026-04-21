@@ -56,8 +56,8 @@
       "api": "X API v2",
       "required_access": "Basic tier or higher (Free tier allows 1,500 posts/month)",
       "required_permissions": ["tweet.write", "tweet.read", "users.read"],
-      "token_type": "OAuth 2.0 User Access Token or App-only Bearer Token",
-      "_comment_token": "For posting on behalf of a user, use OAuth 2.0 with PKCE. For read-only, app-only bearer token is sufficient.",
+      "token_type": "OAuth 2.0 User Access Token (user context) or OAuth 1.0a User Access Token",
+      "_comment_token": "Posting requires user-context authentication for tweet.write (OAuth 2.0 user access, typically via PKCE, or OAuth 1.0a user access). App-only bearer tokens are read-only and cannot create tweets.",
       "setup_docs": "https://developer.x.com/en/docs/authentication/overview"
     },
     "telegram": {

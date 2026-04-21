@@ -207,6 +207,20 @@ describe('Telegram formatting', () => {
     expect(result).toContain('#finance')
   })
 
+  it('buildTelegramDailyMessage HTML-escapes hashtags to prevent markup injection', () => {
+    const result = buildTelegramDailyMessage({
+      topicSlug: 'crypto',
+      dateKey: '2025-01-15',
+      captionBody: 'Test',
+      cta: '',
+      hashtags: ['#crypto', '#test<script>', '#a&b']
+    })
+    expect(result).not.toContain('<script>')
+    expect(result).toContain('&lt;script&gt;')
+    expect(result).not.toContain('#a&b')
+    expect(result).toContain('#a&amp;b')
+  })
+
   it('buildTelegramDailyMessage truncates to 4096 chars', () => {
     const result = buildTelegramDailyMessage({
       topicSlug: 'crypto',
@@ -222,6 +236,24 @@ describe('Telegram formatting', () => {
     const result = buildTelegramAlertMessage(makeSampleAlert())
     expect(result).toContain('🟩')
     expect(result).toContain('82/100')
+  })
+
+  it('buildTelegramAlertMessage clamps importance bar when score > 100', () => {
+    // importance_score > 100 should not cause negative repeat count
+    const result = buildTelegramAlertMessage(makeSampleAlert({ importance_score: 150 }))
+    expect(result).toBeTruthy()
+    // Should have exactly 5 filled bars (clamped to max)
+    const filled = (result.match(/🟩/gu) || []).length
+    expect(filled).toBe(5)
+    expect(result).not.toContain('⬜')
+  })
+
+  it('buildTelegramAlertMessage clamps importance bar when score < 0', () => {
+    const result = buildTelegramAlertMessage(makeSampleAlert({ importance_score: -10 }))
+    expect(result).toBeTruthy()
+    // Should have 0 filled and 5 empty bars
+    const filled = (result.match(/🟩/gu) || []).length
+    expect(filled).toBe(0)
   })
 
   it('buildTelegramAlertMessage includes source link when present', () => {
@@ -443,6 +475,42 @@ describe('daily social content asset formatting', () => {
     expect(asset.x.alert_text).toBeNull()
     expect(asset.telegram.alert_html).toBeNull()
     expect(asset.discord.alert_embed).toBeNull()
+  })
+
+  it('x.thread is null when threadsEnabled is false (default)', () => {
+    const longCaption = 'A very long caption. '.repeat(20)
+    const asset = formatDailySocialContentAsset({
+      topicSlug: 'crypto', dateKey: '2025-01-15',
+      aiOutput: makeSampleAiOutput({ post_caption: longCaption }),
+      xEnabled: true, telegramEnabled: false, discordEnabled: false
+      // threadsEnabled defaults to false
+    })
+    expect(asset.x.thread).toBeNull()
+  })
+
+  it('x.thread is populated when threadsEnabled is true and caption is long', () => {
+    const longCaption = 'A very long caption. '.repeat(20)
+    const asset = formatDailySocialContentAsset({
+      topicSlug: 'crypto', dateKey: '2025-01-15',
+      aiOutput: makeSampleAiOutput({ post_caption: longCaption }),
+      xEnabled: true, telegramEnabled: false, discordEnabled: false,
+      threadsEnabled: true
+    })
+    expect(asset.x.thread).not.toBeNull()
+    expect(asset.x.thread.length).toBeGreaterThan(1)
+    for (const post of asset.x.thread) {
+      expect(post.length).toBeLessThanOrEqual(X_POST_MAX)
+    }
+  })
+
+  it('x.thread is null when threadsEnabled is true but caption is short', () => {
+    const asset = formatDailySocialContentAsset({
+      topicSlug: 'crypto', dateKey: '2025-01-15',
+      aiOutput: makeSampleAiOutput(), // short caption
+      xEnabled: true, telegramEnabled: false, discordEnabled: false,
+      threadsEnabled: true
+    })
+    expect(asset.x.thread).toBeNull()
   })
 })
 

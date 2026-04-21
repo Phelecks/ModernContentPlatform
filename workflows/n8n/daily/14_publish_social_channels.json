@@ -7,7 +7,10 @@
       "name": "Execute Workflow Trigger",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1,
-      "position": [240, 300]
+      "position": [
+        240,
+        300
+      ]
     },
     {
       "parameters": {
@@ -18,18 +21,26 @@
       "name": "Validate Asset",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": true },
+          "options": {
+            "caseSensitive": true
+          },
           "conditions": [
             {
               "id": "skip-check",
               "leftValue": "={{ $json._publish_skip }}",
               "rightValue": true,
-              "operator": { "type": "boolean", "operation": "equals" }
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
             }
           ]
         }
@@ -38,7 +49,10 @@
       "name": "Should Publish?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [680, 300]
+      "position": [
+        680,
+        300
+      ]
     },
     {
       "parameters": {
@@ -49,7 +63,10 @@
       "name": "Skip — Nothing to Publish",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 500]
+      "position": [
+        900,
+        500
+      ]
     },
     {
       "parameters": {
@@ -60,18 +77,24 @@
       "name": "Expand Publish Tasks",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 300]
+      "position": [
+        900,
+        300
+      ]
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Resolve the API endpoint and credentials for each platform task.\n// Each platform is handled independently so one failure does not block others.\n\nconst task = $input.item.json;\n\nif (task.platform === 'x') {\n  const xBearerToken = $vars.SOCIAL_X_BEARER_TOKEN || null;\n  if (!xBearerToken) {\n    throw new Error('X publishing requires SOCIAL_X_BEARER_TOKEN in n8n Variables');\n  }\n  return [{ json: {\n    ...task,\n    _api_url:    'https://api.x.com/2/tweets',\n    _api_method: 'POST',\n    _api_headers: { 'Authorization': `Bearer ${xBearerToken}`, 'Content-Type': 'application/json' },\n    _api_body:   { text: task.post_text }\n  } }];\n}\n\nif (task.platform === 'telegram') {\n  const botToken = $vars.SOCIAL_TELEGRAM_BOT_TOKEN || $vars.TELEGRAM_BOT_TOKEN || null;\n  const chatId   = $vars.SOCIAL_TELEGRAM_CHAT_ID   || $vars.TELEGRAM_CHAT_ID   || null;\n  if (!botToken || !chatId) {\n    throw new Error('Telegram publishing requires SOCIAL_TELEGRAM_BOT_TOKEN and SOCIAL_TELEGRAM_CHAT_ID');\n  }\n  return [{ json: {\n    ...task,\n    _api_url:    `https://api.telegram.org/bot${botToken}/sendMessage`,\n    _api_method: 'POST',\n    _api_headers: { 'Content-Type': 'application/json' },\n    _api_body:   { chat_id: chatId, text: task.message_html, parse_mode: 'HTML', disable_web_page_preview: false }\n  } }];\n}\n\nif (task.platform === 'discord') {\n  const webhookUrl = $vars.SOCIAL_DISCORD_WEBHOOK_URL || $vars.DISCORD_WEBHOOK_URL || null;\n  if (!webhookUrl) {\n    throw new Error('Discord publishing requires SOCIAL_DISCORD_WEBHOOK_URL');\n  }\n  return [{ json: {\n    ...task,\n    _api_url:    webhookUrl,\n    _api_method: 'POST',\n    _api_headers: { 'Content-Type': 'application/json' },\n    _api_body:   { embeds: [task.embed] }\n  } }];\n}\n\nthrow new Error(`Unknown platform: ${task.platform}`);"
+        "jsCode": "// Resolve the API endpoint and credentials for each platform task.\n// Returns _api_skip: true (with a reason) instead of throwing when credentials\n// are missing, so other platform tasks in the same execution can still proceed.\n\nconst task = $input.item.json;\n\nfunction skipTask(reason) {\n  console.log(`[Resolve API Endpoint] Skipping ${task.platform || 'unknown'} task: ${reason}`);\n  return [{ json: { ...task, _api_skip: true, _api_skip_reason: reason } }];\n}\n\nif (task.platform === 'x') {\n  const xBearerToken = $vars.SOCIAL_X_BEARER_TOKEN || null;\n  if (!xBearerToken) {\n    return skipTask('X publishing skipped: missing SOCIAL_X_BEARER_TOKEN in n8n Variables');\n  }\n  return [{ json: {\n    ...task,\n    _api_url:    'https://api.twitter.com/2/tweets',\n    _api_method: 'POST',\n    _api_headers: { 'Authorization': `Bearer ${xBearerToken}`, 'Content-Type': 'application/json' },\n    _api_body:   { text: task.post_text }\n  } }];\n}\n\nif (task.platform === 'telegram') {\n  const botToken = $vars.SOCIAL_TELEGRAM_BOT_TOKEN || $vars.TELEGRAM_BOT_TOKEN || null;\n  const chatId   = $vars.SOCIAL_TELEGRAM_CHAT_ID   || $vars.TELEGRAM_CHAT_ID   || null;\n  if (!botToken || !chatId) {\n    return skipTask('Telegram publishing skipped: missing SOCIAL_TELEGRAM_BOT_TOKEN and/or SOCIAL_TELEGRAM_CHAT_ID');\n  }\n  return [{ json: {\n    ...task,\n    _api_url:    `https://api.telegram.org/bot${botToken}/sendMessage`,\n    _api_method: 'POST',\n    _api_headers: { 'Content-Type': 'application/json' },\n    _api_body:   { chat_id: chatId, text: task.message_html, parse_mode: 'HTML', disable_web_page_preview: false }\n  } }];\n}\n\nif (task.platform === 'discord') {\n  const webhookUrl = $vars.SOCIAL_DISCORD_WEBHOOK_URL || $vars.DISCORD_WEBHOOK_URL || null;\n  if (!webhookUrl) {\n    return skipTask('Discord publishing skipped: missing SOCIAL_DISCORD_WEBHOOK_URL');\n  }\n  return [{ json: {\n    ...task,\n    _api_url:    webhookUrl,\n    _api_method: 'POST',\n    _api_headers: { 'Content-Type': 'application/json' },\n    _api_body:   { embeds: [task.embed] }\n  } }];\n}\n\nreturn skipTask(`Unknown platform: ${task.platform}`);"
       },
       "id": "d1e2f3a4-0014-0014-0014-000000000006",
       "name": "Resolve API Endpoint",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1120, 300]
+      "position": [
+        1120,
+        300
+      ]
     },
     {
       "parameters": {
@@ -79,7 +102,16 @@
         "method": "={{ $json._api_method }}",
         "sendHeaders": true,
         "headerParameters": {
-          "parameters": []
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $json._api_headers?.Authorization || '' }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "={{ $json._api_headers?.['Content-Type'] || 'application/json' }}"
+            }
+          ]
         },
         "sendBody": true,
         "specifyBody": "json",
@@ -93,7 +125,10 @@
       "name": "Call Platform API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1340, 300],
+      "position": [
+        1340,
+        300
+      ],
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 5000
@@ -107,7 +142,10 @@
       "name": "Handle API Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1560, 300]
+      "position": [
+        1560,
+        300
+      ]
     },
     {
       "parameters": {
@@ -118,7 +156,10 @@
       "name": "Build D1 Log Write",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1780, 300]
+      "position": [
+        1780,
+        300
+      ]
     },
     {
       "parameters": {
@@ -128,19 +169,27 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ { sql: $json._d1_sql, params: $json._d1_params } }}",
-        "options": { "timeout": 10000 }
+        "options": {
+          "timeout": 10000
+        }
       },
       "id": "d1e2f3a4-0014-0014-0014-000000000010",
       "name": "Write Publish Log to D1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [2000, 300],
+      "position": [
+        2000,
+        300
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "cloudflare-d1-api",
@@ -151,35 +200,174 @@
       "maxTries": 3,
       "waitBetweenTries": 2000,
       "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "id": "api-skip",
+              "leftValue": "={{ $json._api_skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "d1e2f3a4-0014-0014-0014-000000000015",
+      "name": "Has API Config?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Log the skipped platform task so D1 can record it as 'skipped'.\nconst task = $input.item.json;\nreturn [{ json: {\n  platform:         task.platform,\n  post_type:        task.post_type,\n  topic_slug:       task.topic_slug,\n  date_key:         task.date_key,\n  status:           'skipped',\n  platform_post_id: null,\n  error_message:    task._api_skip_reason || 'Missing API credentials'\n} }];"
+      },
+      "id": "d1e2f3a4-0014-0014-0014-000000000016",
+      "name": "Skip — Skipped Platform",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        500
+      ]
     }
   ],
   "connections": {
     "Execute Workflow Trigger": {
-      "main": [[{ "node": "Validate Asset", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Validate Asset",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Validate Asset": {
-      "main": [[{ "node": "Should Publish?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Should Publish?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Should Publish?": {
       "main": [
-        [{ "node": "Skip — Nothing to Publish", "type": "main", "index": 0 }],
-        [{ "node": "Expand Publish Tasks",      "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Skip — Nothing to Publish",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Expand Publish Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Expand Publish Tasks": {
-      "main": [[{ "node": "Resolve API Endpoint", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Resolve API Endpoint",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Resolve API Endpoint": {
-      "main": [[{ "node": "Call Platform API", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Has API Config?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Call Platform API": {
-      "main": [[{ "node": "Handle API Response", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Handle API Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Handle API Response": {
-      "main": [[{ "node": "Build D1 Log Write", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Build D1 Log Write",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Build D1 Log Write": {
-      "main": [[{ "node": "Write Publish Log to D1", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Write Publish Log to D1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has API Config?": {
+      "main": [
+        [
+          {
+            "node": "Skip — Skipped Platform",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Call Platform API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip — Skipped Platform": {
+      "main": [
+        [
+          {
+            "node": "Build D1 Log Write",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
@@ -191,5 +379,13 @@
     "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
   },
   "id": "daily-14-publish-social-channels-v1",
-  "tags": ["daily", "social", "x", "telegram", "discord", "publishing", "v1"]
+  "tags": [
+    "daily",
+    "social",
+    "x",
+    "telegram",
+    "discord",
+    "publishing",
+    "v1"
+  ]
 }

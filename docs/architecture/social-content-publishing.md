@@ -202,11 +202,11 @@ D1 write failures are **non-blocking** (`continueOnFail: true` on the D1 HTTP no
 
 | Step | Retry | Failure behaviour |
 |---|---|---|
-| Social content generation (module 13) | N/A (reuses existing AI output) | Throws → errorWorkflow notified, core pipeline unaffected |
-| X API call (module 14 / intraday 11) | 3 attempts, 5 s backoff | Throws → D1 log records `failed`, other platforms unaffected |
+| Social content generation (module 13) | N/A (reuses existing AI output) | If the shared social asset is missing or invalid, the social branch fails and `errorWorkflow` is notified; the core pipeline remains unaffected |
+| X API call (module 14 / intraday 11) | 3 attempts, 5 s backoff | HTTP/network failures may retry/fail the branch; non-2xx platform responses are handled in workflow code (`ignoreResponseCode: true`), marked as `failed`, and logged to D1; other platforms remain unaffected |
 | Telegram API call (module 14 / intraday 11) | 3 attempts, 5 s backoff | Same as above |
 | Discord webhook call (module 14 / intraday 11) | 3 attempts, 5 s backoff | Same as above |
-| D1 log write (modules 13, 14, intraday 11) | 3 attempts, 2 s backoff | `continueOnFail: true` — logged but does not halt execution |
+| D1 log write (module 14 / intraday 11) | 3 attempts, 2 s backoff | `continueOnFail: true` — D1 logging failures are recorded but do not halt execution |
 
 All modules run as **parallel branches** from the orchestrator, so failures do not
 block the core editorial or alert pipeline. Each platform is dispatched independently

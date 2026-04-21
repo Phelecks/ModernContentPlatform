@@ -184,7 +184,8 @@ export function escapeHtml(text) {
 export function buildTelegramDailyMessage({ topicSlug, dateKey, captionBody, cta, hashtags }) {
   const emoji = TOPIC_EMOJI[topicSlug] || '📰'
   const topicLabel = topicSlug.charAt(0).toUpperCase() + topicSlug.slice(1)
-  const hashLine = hashtags.length > 0 ? '\n\n' + hashtags.join(' ') : ''
+  const safeHashtags = hashtags.map(tag => escapeHtml(tag))
+  const hashLine = safeHashtags.length > 0 ? '\n\n' + safeHashtags.join(' ') : ''
   const ctaLine = cta ? `\n\n${escapeHtml(cta)}` : ''
 
   const text = [
@@ -208,8 +209,9 @@ export function buildTelegramDailyMessage({ topicSlug, dateKey, captionBody, cta
  */
 export function buildTelegramAlertMessage(alert) {
   const emoji = TOPIC_EMOJI[alert.topic_slug] || '📰'
-  const importanceBar = '🟩'.repeat(Math.round((alert.importance_score || 0) / 20))
-    + '⬜'.repeat(5 - Math.round((alert.importance_score || 0) / 20))
+  const importanceScore = alert.importance_score || 0
+  const importanceSegments = Math.max(0, Math.min(5, Math.round(importanceScore / 20)))
+  const importanceBar = '🟩'.repeat(importanceSegments) + '⬜'.repeat(5 - importanceSegments)
   const sourceLink = alert.source_url
     ? `\n<a href="${escapeHtml(alert.source_url)}">Source: ${escapeHtml(alert.source_name || 'Unknown')}</a>`
     : `\nSource: ${escapeHtml(alert.source_name || 'Unknown')}`
@@ -320,6 +322,7 @@ export function buildDiscordAlertEmbed(alert) {
  * @param {boolean}  params.xEnabled
  * @param {boolean}  params.telegramEnabled
  * @param {boolean}  params.discordEnabled
+ * @param {boolean}  [params.threadsEnabled]  Whether X thread-style posting is enabled. Defaults to false.
  * @param {number|null} params.publishJobId
  * @returns {object}  social_content_asset contract object
  */
@@ -330,6 +333,7 @@ export function formatDailySocialContentAsset({
   xEnabled,
   telegramEnabled,
   discordEnabled,
+  threadsEnabled = false,
   publishJobId = null
 }) {
   const allHashtags = mergeHashtags(aiOutput.hashtags, topicSlug)
@@ -355,7 +359,7 @@ export function formatDailySocialContentAsset({
     x: {
       enabled:    xEnabled,
       post_text:  buildXPost(captionBody, allHashtags, topicSlug),
-      thread:     buildXThread(captionBody, allHashtags),
+      thread:     threadsEnabled ? buildXThread(captionBody, allHashtags) : null,
       alert_text: null
     },
     telegram: {
