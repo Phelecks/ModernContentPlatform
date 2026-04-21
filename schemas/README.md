@@ -32,6 +32,7 @@ The reusable validation logic for all AI output schemas is implemented in `app/s
 | `video_script.json` | Video script generation | n8n module 06 → module 08 → GitHub | Daily editorial |
 | `youtube_metadata.json` | YouTube metadata generation | n8n module 07 → module 08 → YouTube | Daily editorial |
 | `full_video_generation_asset.json` | Full-video generation output *(reserved — not available in v1)* | n8n module `06_full_video_generation` → module 08 → GitHub | Daily editorial (future) |
+| `meta_social_post.json` | Meta social post generation | n8n daily module 11 → module 12 (Instagram/Facebook) and intraday module 10 | Both flows |
 
 ---
 
@@ -183,3 +184,26 @@ The reusable validation logic for all AI output schemas is implemented in `app/s
 - `tags` 5–15 items; mix of broad topic keywords and specific event keywords for discoverability.
 - `visibility` defaults to `public`; set to `unlisted` for testing or delayed publish.
 - Validated by module 08 before the YouTube publish step.
+
+---
+
+### `meta_social_post.json`
+
+**AI step:** Meta social post generation (daily module 11 and intraday module 10).
+
+**Purpose:** Produces a platform-ready social post from a completed daily summary or from a high-priority intraday alert. The raw AI output is validated before per-platform formatting (caption limits, hashtag merging, CTA) is applied by the `Format Platform Payloads` code node in module 11 or the `Format Story Asset` node in intraday module 10.
+
+**Required fields:** `post_caption`, `hashtags`, `image_prompt`
+
+**Optional fields:** `story_caption`, `story_background_hint`, `cta`
+
+**Usage notes:**
+- Validated in the `Parse and Validate AI Output` code node immediately after the AI call.
+- `post_caption` max 2000 characters at the AI output level; per-platform truncation is applied afterwards (2200 for Instagram, 63206 for Facebook).
+- `hashtags` must be an array with at least 2 items; each tag must already include the `#` prefix and match the validator's hashtag format.
+- `story_caption` should be under 200 characters and is used as-is in story-format posts. Null when the story format is not requested.
+- `story_background_hint` is a visual guidance string for the image pipeline; it is not sent to Meta.
+- `cta` is optional; when null the workflow falls back to a topic-level default (`"Follow for daily {topic} updates."`).
+- The formatted output of this step conforms to the `meta_social_asset` contract (`workflows/contracts/meta_social_asset.json`), which adds per-platform captions, enable flags, and story toggle state.
+- Platform-specific formatting utilities are extracted into `app/src/utils/metaSocialFormat.js` and tested in `app/src/__tests__/integration/workflow.meta-social.test.js`.
+- See `docs/architecture/meta-social-publishing.md` for the full workflow design, configuration, and account setup guide.
