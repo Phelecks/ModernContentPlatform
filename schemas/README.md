@@ -200,7 +200,7 @@ The reusable validation logic for all AI output schemas is implemented in `app/s
 **Usage notes:**
 - Validated in the `Parse and Validate AI Output` code node immediately after the AI call.
 - `post_caption` max 2000 characters at the AI output level; per-platform truncation is applied afterwards (2200 for Instagram, 63206 for Facebook).
-- `hashtags` must be an array with at least 3 items; each tag must include the `#` prefix. The code node normalises missing prefixes.
+- `hashtags` must be an array with at least 2 items; each tag must already include the `#` prefix and match the validator's hashtag format.
 - `story_caption` should be under 200 characters and is used as-is in story-format posts. Null when the story format is not requested.
 - `story_background_hint` is a visual guidance string for the image pipeline; it is not sent to Meta.
 - `cta` is optional; when null the workflow falls back to a topic-level default (`"Follow for daily {topic} updates."`).

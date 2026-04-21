@@ -669,9 +669,9 @@ describe('Platform disabled / invalid publish configuration', () => {
   })
 
   it('alert with no event_at falls back to today for date_key', () => {
+    const todayKey = new Date().toISOString().slice(0, 10)
     const alert = makeSampleAlert({ event_at: undefined })
     const asset = formatAlertStoryAsset(alert, { igStoryEnabled: true, fbStoryEnabled: false })
-    const todayKey = new Date().toISOString().slice(0, 10)
     expect(asset.date_key).toBe(todayKey)
   })
 
