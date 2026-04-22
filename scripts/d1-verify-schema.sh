@@ -76,11 +76,48 @@ ERRORS=0
 
 # ---------------------------------------------------------------------------
 # Helper: run a SQL command against the target D1 database
+# Returns Wrangler JSON on stdout; stderr is left separate for errors/warnings.
 # ---------------------------------------------------------------------------
 run_sql() {
   local sql="$1"
   # shellcheck disable=SC2086
-  wrangler d1 execute ${DB_NAME} ${WRANGLER_ENV} ${LOCATION_FLAG} --command "${sql}" 2>&1
+  wrangler d1 execute ${DB_NAME} ${WRANGLER_ENV} ${LOCATION_FLAG} --json --command "${sql}"
+}
+
+# ---------------------------------------------------------------------------
+# Helper: extract a flat list of values for a given key from Wrangler JSON
+# Wrangler --json output is an array of result objects. Each has a "results"
+# array of row objects. This extracts all values for the given field name.
+# ---------------------------------------------------------------------------
+extract_json_field() {
+  local json="$1"
+  local field="$2"
+  echo "${json}" | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for block in data:
+    for row in block.get('results', []):
+        val = row.get('${field}')
+        if val is not None:
+            print(val)
+"
+}
+
+# ---------------------------------------------------------------------------
+# Helper: extract a single scalar value from Wrangler JSON (e.g. COUNT(*))
+# ---------------------------------------------------------------------------
+extract_json_scalar() {
+  local json="$1"
+  echo "${json}" | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for block in data:
+    for row in block.get('results', []):
+        for v in row.values():
+            print(v)
+            sys.exit(0)
+print(0)
+"
 }
 
 # ---------------------------------------------------------------------------
@@ -102,10 +139,11 @@ EXPECTED_TABLES=(
 echo "Check 1: Expected tables"
 echo "------------------------"
 
-TABLE_LIST=$(run_sql "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'd1_%' AND name NOT LIKE 'sqlite_%' ORDER BY name;")
+TABLE_OUTPUT=$(run_sql "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'd1_%' AND name NOT LIKE 'sqlite_%' ORDER BY name;")
+TABLE_LIST=$(extract_json_field "${TABLE_OUTPUT}" "name")
 
 for TABLE in "${EXPECTED_TABLES[@]}"; do
-  if echo "${TABLE_LIST}" | grep -qw "${TABLE}"; then
+  if echo "${TABLE_LIST}" | grep -qx "${TABLE}"; then
     echo "  ✓ ${TABLE}"
   else
     echo "  ✗ ${TABLE} — MISSING"
@@ -121,14 +159,16 @@ echo ""
 echo "Check 2: Applied migrations"
 echo "----------------------------"
 
-MIGRATION_LIST=$(run_sql "SELECT name FROM d1_migrations ORDER BY id;")
+MIGRATION_OUTPUT=$(run_sql "SELECT name FROM d1_migrations ORDER BY id;")
+MIGRATION_LIST=$(extract_json_field "${MIGRATION_OUTPUT}" "name")
 echo "${MIGRATION_LIST}"
 echo ""
 
 # Count expected migration files (exclude .gitkeep)
 EXPECTED_COUNT=$(find "${REPO_ROOT}/db/migrations" -name '*.sql' | wc -l | tr -d ' ')
 # Count applied migrations from d1_migrations table
-APPLIED_COUNT=$(run_sql "SELECT COUNT(*) AS cnt FROM d1_migrations;" | grep -oE '[0-9]+' | tail -1)
+APPLIED_COUNT_OUTPUT=$(run_sql "SELECT COUNT(*) AS cnt FROM d1_migrations;")
+APPLIED_COUNT=$(extract_json_scalar "${APPLIED_COUNT_OUTPUT}")
 
 if [[ "${APPLIED_COUNT}" -ge "${EXPECTED_COUNT}" ]]; then
   echo "  ✓ Applied migrations (${APPLIED_COUNT}) >= expected files (${EXPECTED_COUNT})"
@@ -178,10 +218,11 @@ EXPECTED_INDEXES=(
 echo "Check 3: Expected indexes"
 echo "-------------------------"
 
-INDEX_LIST=$(run_sql "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%' ORDER BY name;")
+INDEX_OUTPUT=$(run_sql "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%' ORDER BY name;")
+INDEX_LIST=$(extract_json_field "${INDEX_OUTPUT}" "name")
 
 for IDX in "${EXPECTED_INDEXES[@]}"; do
-  if echo "${INDEX_LIST}" | grep -qw "${IDX}"; then
+  if echo "${INDEX_LIST}" | grep -qx "${IDX}"; then
     echo "  ✓ ${IDX}"
   else
     echo "  ✗ ${IDX} — MISSING"
@@ -198,8 +239,12 @@ echo "Check 4: Row counts (informational)"
 echo "------------------------------------"
 
 for TABLE in topics alerts event_clusters daily_status; do
-  COUNT=$(run_sql "SELECT COUNT(*) AS cnt FROM ${TABLE};" | grep -oE '[0-9]+' | tail -1)
-  echo "  ${TABLE}: ${COUNT:-0} rows"
+  if COUNT_OUTPUT=$(run_sql "SELECT COUNT(*) AS cnt FROM ${TABLE};" 2>/dev/null); then
+    COUNT=$(extract_json_scalar "${COUNT_OUTPUT}")
+    echo "  ${TABLE}: ${COUNT:-0} rows"
+  else
+    echo "  ${TABLE}: unavailable (table missing or query failed)"
+  fi
 done
 
 echo ""

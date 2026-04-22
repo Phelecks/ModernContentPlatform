@@ -316,14 +316,17 @@ Before applying migrations to production, export critical tables:
 ```bash
 # Export topics
 wrangler d1 execute modern-content-platform-db --remote \
+  --json \
   --command "SELECT * FROM topics;" > /tmp/backup_topics.json
 
 # Export alerts (recent)
 wrangler d1 execute modern-content-platform-db --remote \
+  --json \
   --command "SELECT * FROM alerts WHERE date_key >= '2025-01-01';" > /tmp/backup_alerts.json
 
 # Export daily_status
 wrangler d1 execute modern-content-platform-db --remote \
+  --json \
   --command "SELECT * FROM daily_status;" > /tmp/backup_daily_status.json
 ```
 
