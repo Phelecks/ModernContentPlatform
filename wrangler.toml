@@ -4,14 +4,38 @@ compatibility_date = "2024-01-01"
 pages_build_output_dir = "app/dist"
 
 # ------------------------------------------------------------------
-# Cloudflare D1 database binding
-# Replace YOUR_D1_DATABASE_ID with your actual database ID after
-# running: wrangler d1 create modern-content-platform-db
+# Cloudflare D1 database binding — production (default)
+#
+# Replace YOUR_PRODUCTION_D1_DATABASE_ID with your actual database ID
+# after running:
+#   wrangler d1 create modern-content-platform-db
+#
+# See docs/operations/d1-provisioning.md for the full setup guide.
 # ------------------------------------------------------------------
 [[d1_databases]]
 binding = "DB"
 database_name = "modern-content-platform-db"
-database_id = "YOUR_D1_DATABASE_ID"
+database_id = "YOUR_PRODUCTION_D1_DATABASE_ID"
+migrations_dir = "db/migrations"
+
+# ------------------------------------------------------------------
+# Staging environment overrides
+#
+# Activated with: wrangler d1 migrations apply ... --env staging
+#
+# Replace YOUR_STAGING_D1_DATABASE_ID with your actual staging
+# database ID after running:
+#   wrangler d1 create modern-content-platform-staging-db
+#
+# See docs/operations/d1-provisioning.md for the full setup guide.
+# ------------------------------------------------------------------
+[env.staging]
+name = "modern-content-platform-staging"
+
+[[env.staging.d1_databases]]
+binding = "DB"
+database_name = "modern-content-platform-staging-db"
+database_id = "YOUR_STAGING_D1_DATABASE_ID"
 migrations_dir = "db/migrations"
 
 # ------------------------------------------------------------------
