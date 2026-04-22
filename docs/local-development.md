@@ -240,6 +240,9 @@ Recommended extensions are defined in `.vscode/extensions.json`:
 | Seed topics (local) | `wrangler d1 execute modern-content-platform-db --file=db/seeds/topics.sql --local` |
 | Seed sample alerts (local) | `wrangler d1 execute modern-content-platform-db --file=db/seeds/sample_alerts.sql --local` |
 | Reset local D1 (wipe + reseed) | `bash scripts/local-reset.sh` |
+| Migrate staging D1 (remote) | `bash scripts/d1-migrate-remote.sh staging` |
+| Migrate production D1 (remote) | `bash scripts/d1-migrate-remote.sh production` |
+| Verify D1 schema (any env) | `bash scripts/d1-verify-schema.sh <staging\|production\|local>` |
 | Query D1 locally | `wrangler d1 execute modern-content-platform-db --local --command "SELECT ..."` |
 | Authenticate Wrangler | `wrangler login` |
 | Start local n8n | `docker compose -f n8n/docker-compose.yml --env-file .env up -d` |
@@ -329,8 +332,8 @@ Run `npm install -g wrangler` and ensure your global npm bin directory is in you
 **D1 binding error when running Pages dev**
 Ensure you pass `--d1=DB` to `wrangler pages dev`. The binding name `DB` must match the `binding` field in `wrangler.toml`.
 
-**`database_id` is still `YOUR_D1_DATABASE_ID` in wrangler.toml**
-You need to provision D1 first: `wrangler d1 create modern-content-platform-db`. Copy the returned ID into `wrangler.toml`.
+**`database_id` is still `YOUR_PRODUCTION_D1_DATABASE_ID` in wrangler.toml**
+You need to provision D1 first: `wrangler d1 create modern-content-platform-db`. Copy the returned ID into `wrangler.toml`. See `docs/operations/d1-provisioning.md` for the full provisioning guide including staging environments.
 
 **Vue hot-reload not working with wrangler pages dev**
 Use the two-terminal setup described in Option B: run `wrangler pages dev app/dist --d1=DB` in one terminal and `cd app && npm run dev` in another. Vite's dev server proxies `/api/*` to wrangler, so you get hot reload and live API data simultaneously.
