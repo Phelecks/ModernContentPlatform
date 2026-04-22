@@ -62,8 +62,9 @@ Phase 9 (end-to-end) depends on all prior phases.
   - `0002_event_clusters_unique.sql`
 - [ ] Topic seed data loaded (`db/seeds/topics.sql`)
 - [ ] Cloudflare Pages project created and connected to this GitHub repository
+  (see [`docs/operations/cloudflare-pages-deployment.md`](operations/cloudflare-pages-deployment.md) for the full guide)
 - [ ] Pages build settings confirmed:
-  - Build command: `npm run build` (from `app/`)
+  - Build command: `cd app && npm ci --legacy-peer-deps && npm run build`
   - Build output directory: `app/dist`
 - [ ] Wrangler CLI authenticated and confirmed working
 - [ ] D1 binding `DB` confirmed available to Pages Functions
