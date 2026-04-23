@@ -162,7 +162,21 @@ This is more reliable than simple upload for files larger than 5 MB.
 
 ## video.json Content Model
 
-After a successful YouTube upload, `video.json` contains:
+Module 16 updates whatever `video.json` shape already exists on GitHub by
+injecting `video_id` and `youtube_video_id`. The file shape depends on how
+it was originally published:
+
+**Minimal shape** (legacy or manually created files):
+
+```json
+{
+  "video_id": "dQw4w9WgXcQ",
+  "title": "Crypto Daily — January 15, 2025: Bitcoin ETF Inflows Drive Broad Rally",
+  "published_at": "2025-01-15T22:00:00Z"
+}
+```
+
+**Full shape** (written by module 09 for new daily runs):
 
 ```json
 {
@@ -170,7 +184,7 @@ After a successful YouTube upload, `video.json` contains:
   "date_key": "2025-01-15",
   "title": "Bitcoin Breaks $50K on Record ETF Inflows | Crypto Daily Briefing Jan 15 2025",
   "video_id": "dQw4w9WgXcQ",
-  "script": { ... },
+  "script": { "..." : "..." },
   "youtube_metadata": {
     "title": "...",
     "description": "...",
@@ -183,14 +197,20 @@ After a successful YouTube upload, `video.json` contains:
 }
 ```
 
+Module 16 only writes `video_id` and `youtube_video_id` — all other fields
+are preserved from the existing file. The table below describes the full
+shape written by module 09; `video_id`/`youtube_video_id` are null at
+module 09 publish time and populated later by module 16.
+
 | Field | When populated | By module |
 |-------|----------------|-----------|
-| `title` | Always (at module 09 publish time) | 09 |
-| `script` | Always | 09 |
-| `youtube_metadata` | Always | 09 |
-| `video_id` | After YouTube upload | 16 |
-| `youtube_video_id` | After YouTube upload | 16 |
-| `generated_at` | Always | 09 |
+| `title` | At publish time | 09 |
+| `script` | At publish time | 09 |
+| `youtube_metadata` | At publish time | 09 |
+| `video_id` | After YouTube upload (null before) | 16 |
+| `youtube_video_id` | After YouTube upload (null before) | 16 |
+| `generated_at` | At publish time | 09 |
+| `published_at` | At publish time (minimal shape) | manual / legacy |
 
 ---
 

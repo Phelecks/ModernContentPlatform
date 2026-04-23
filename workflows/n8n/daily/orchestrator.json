@@ -589,7 +589,11 @@
     },
     {
       "parameters": {
-        "workflowId": "={{ $vars.DAILY_YOUTUBE_UPLOAD_WORKFLOW_ID }}",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $vars.DAILY_YOUTUBE_UPLOAD_WORKFLOW_ID }}"
+        },
         "options": {}
       },
       "id": "d0e0f1a2-0000-0000-0000-000000000015",
@@ -599,11 +603,16 @@
       "position": [
         5960,
         600
-      ]
+      ],
+      "continueOnFail": true
     },
     {
       "parameters": {
-        "workflowId": "={{ $vars.DAILY_UPDATE_VIDEO_REFERENCE_WORKFLOW_ID }}",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $vars.DAILY_UPDATE_VIDEO_REFERENCE_WORKFLOW_ID }}"
+        },
         "options": {}
       },
       "id": "d0e0f1a2-0000-0000-0000-000000000016",
@@ -613,7 +622,8 @@
       "position": [
         6180,
         600
-      ]
+      ],
+      "continueOnFail": true
     }
   ],
   "connections": {
