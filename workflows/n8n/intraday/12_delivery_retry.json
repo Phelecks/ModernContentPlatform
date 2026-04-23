@@ -1,0 +1,263 @@
+{
+  "name": "Intraday — 12 Delivery Retry",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "e1f2a3b4-0012-0012-0012-000000000001",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.cloudflare.com/client/v4/accounts/{{ $vars.CF_ACCOUNT_ID }}/d1/database/{{ $vars.CF_D1_DATABASE_ID }}/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"sql\": \"SELECT a.id, a.topic_slug, a.date_key, a.headline, a.summary_text, a.source_url, a.source_name, a.severity_score, a.importance_score, a.event_at, a.delivered_telegram, a.delivered_discord, a.metadata_json FROM alerts a WHERE a.status = 'active' AND (a.delivered_telegram = 0 OR a.delivered_discord = 0) AND a.created_at > datetime('now', '-24 hours') AND json_extract(a.metadata_json, '$.item_id') NOT IN (SELECT spl.source_id FROM social_publish_log spl WHERE spl.status = 'failed' AND spl.platform IN ('telegram','discord') GROUP BY spl.source_id HAVING COUNT(*) >= 5) ORDER BY a.event_at ASC LIMIT 50\"\n}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "e1f2a3b4-0012-0012-0012-000000000002",
+      "name": "Query Undelivered Alerts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [460, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cloudflare-d1-api",
+          "name": "CloudflareD1Api"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Extract rows and build delivery payloads for retry.\nconst d1 = $input.first().json;\nconst rows = d1?.result?.[0]?.results || [];\n\nif (rows.length === 0) {\n  return [{ json: { _skip: true, message: 'No undelivered alerts found.' } }];\n}\n\nreturn rows.map(row => {\n  let meta = {};\n  try {\n    meta = typeof row.metadata_json === 'string'\n      ? JSON.parse(row.metadata_json)\n      : (row.metadata_json || {});\n  } catch (e) {\n    console.warn('Invalid metadata_json for alert id=' + row.id + ': ' + e.message);\n  }\n  const channels = [];\n  if (!row.delivered_telegram) channels.push('telegram');\n  if (!row.delivered_discord) channels.push('discord');\n  return { json: {\n    alert_id:         row.id,\n    item_id:          meta.item_id || null,\n    topic_slug:       row.topic_slug,\n    date_key:         row.date_key,\n    headline:         row.headline,\n    summary_text:     row.summary_text,\n    source_url:       row.source_url,\n    source_name:      row.source_name,\n    severity_score:   row.severity_score,\n    importance_score: row.importance_score,\n    event_at:         row.event_at,\n    channels\n  } };\n});"
+      },
+      "id": "e1f2a3b4-0012-0012-0012-000000000003",
+      "name": "Build Retry Payloads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json._skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEqual"
+              }
+            }
+          ]
+        }
+      },
+      "id": "e1f2a3b4-0012-0012-0012-000000000004",
+      "name": "Has Retry Items?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {},
+      "id": "e1f2a3b4-0012-0012-0012-000000000005",
+      "name": "No Items — Stop",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1120, 500]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Wrap all retry items into the same { items: [...] } envelope\n// expected by modules 08 and 09.\nconst allItems = $input.all().map(i => i.json);\nreturn [{ json: { items: allItems } }];"
+      },
+      "id": "e1f2a3b4-0012-0012-0012-000000000006",
+      "name": "Wrap Delivery Envelope",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $vars.INTRADAY_TELEGRAM_WORKFLOW_ID }}"
+        },
+        "options": {}
+      },
+      "id": "e1f2a3b4-0012-0012-0012-000000000007",
+      "name": "Retry Telegram Delivery",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [1340, 100],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $vars.INTRADAY_DISCORD_WORKFLOW_ID }}"
+        },
+        "options": {}
+      },
+      "id": "e1f2a3b4-0012-0012-0012-000000000008",
+      "name": "Retry Discord Delivery",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [1340, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Log retry summary.\nconst tgResult = $('Retry Telegram Delivery').first()?.json || {};\nconst dcResult = $('Retry Discord Delivery').first()?.json || {};\nconst summary = {\n  retry_run_at: new Date().toISOString(),\n  telegram_ok: !tgResult.error,\n  discord_ok: !dcResult.error\n};\nconsole.log(JSON.stringify(summary, null, 2));\nreturn [{ json: summary }];"
+      },
+      "id": "e1f2a3b4-0012-0012-0012-000000000009",
+      "name": "Log Retry Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 200]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Query Undelivered Alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Undelivered Alerts": {
+      "main": [
+        [
+          {
+            "node": "Build Retry Payloads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Retry Payloads": {
+      "main": [
+        [
+          {
+            "node": "Has Retry Items?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Retry Items?": {
+      "main": [
+        [
+          {
+            "node": "Wrap Delivery Envelope",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Items — Stop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wrap Delivery Envelope": {
+      "main": [
+        [
+          {
+            "node": "Retry Telegram Delivery",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Retry Discord Delivery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Telegram Delivery": {
+      "main": [
+        [
+          {
+            "node": "Log Retry Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Discord Delivery": {
+      "main": [
+        [
+          {
+            "node": "Log Retry Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": true,
+    "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
+  },
+  "id": "intraday-12-delivery-retry-v1",
+  "tags": [
+    "intraday",
+    "delivery",
+    "retry",
+    "telegram",
+    "discord",
+    "v1"
+  ]
+}

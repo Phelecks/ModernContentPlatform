@@ -1,5 +1,5 @@
 {
-  "name": "Intraday — 08 Telegram Delivery",
+  "name": "Intraday \u2014 08 Telegram Delivery",
   "nodes": [
     {
       "parameters": {},
@@ -29,7 +29,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Format the alert as a Telegram message using HTML parse mode.\n// All dynamic fields are HTML-escaped to prevent parse errors or injection.\nconst item = $input.item.json;\n\nconst escHtml = (s) =>\n  (s || '')\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;');\n\nconst topicEmoji = {\n  crypto:     '🪙',\n  finance:    '📈',\n  economy:    '🏦',\n  health:     '🏥',\n  ai:         '🤖',\n  energy:     '⚡',\n  technology: '💻'\n};\nconst emoji = topicEmoji[item.topic_slug] || '📰';\nconst importanceBar = '🟩'.repeat(Math.round(item.importance_score / 20)) + '⬜'.repeat(5 - Math.round(item.importance_score / 20));\nconst sourceLink = item.source_url\n  ? `\\n<a href=\"${escHtml(item.source_url)}\">Source: ${escHtml(item.source_name)}</a>`\n  : `\\nSource: ${escHtml(item.source_name)}`;\n\nconst text = [\n  `${emoji} <b>${item.topic_slug.toUpperCase()}</b>  |  Importance: ${importanceBar} ${item.importance_score}/100`,\n  ``,\n  `<b>${escHtml(item.headline)}</b>`,\n  ``,\n  escHtml(item.summary_text),\n  sourceLink\n].join('\\n');\n\nreturn [{ json: { ...item, telegram_text: text } }];"
+        "jsCode": "// Format the alert as a Telegram message using HTML parse mode.\n// All dynamic fields are HTML-escaped to prevent parse errors or injection.\nconst item = $input.item.json;\n\nconst escHtml = (s) =>\n  (s || '')\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;');\n\nconst topicEmoji = {\n  crypto:     '\ud83e\ude99',\n  finance:    '\ud83d\udcc8',\n  economy:    '\ud83c\udfe6',\n  health:     '\ud83c\udfe5',\n  ai:         '\ud83e\udd16',\n  energy:     '\u26a1',\n  technology: '\ud83d\udcbb'\n};\nconst emoji = topicEmoji[item.topic_slug] || '\ud83d\udcf0';\nconst importanceBar = '\ud83d\udfe9'.repeat(Math.round(item.importance_score / 20)) + '\u2b1c'.repeat(5 - Math.round(item.importance_score / 20));\nconst sourceLink = item.source_url\n  ? `\\n<a href=\"${escHtml(item.source_url)}\">Source: ${escHtml(item.source_name)}</a>`\n  : `\\nSource: ${escHtml(item.source_name)}`;\n\nconst text = [\n  `${emoji} <b>${item.topic_slug.toUpperCase()}</b>  |  Importance: ${importanceBar} ${item.importance_score}/100`,\n  ``,\n  `<b>${escHtml(item.headline)}</b>`,\n  ``,\n  escHtml(item.summary_text),\n  sourceLink\n].join('\\n');\n\nreturn [{ json: { ...item, telegram_text: text } }];"
       },
       "id": "c9d0e1f2-0009-0009-0009-000000000003",
       "name": "Format Telegram Message",
@@ -65,7 +65,8 @@
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 3000
+      "waitBetweenTries": 3000,
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -83,7 +84,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"sql\": \"UPDATE alerts SET delivered_telegram = 1, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ?\",\n  \"params\": [ {{ $('Format Telegram Message').item.json.alert_id }} ]\n}",
+        "jsonBody": "={\n  \"sql\": \"UPDATE alerts SET delivered_telegram = 1, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ? AND ? = 'published'\",\n  \"params\": [ {{ $('Handle Delivery Result').item.json.alert_id }}, \"{{ $('Handle Delivery Result').item.json.status }}\" ]\n}",
         "options": {
           "timeout": 10000
         }
@@ -104,7 +105,76 @@
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 2000
+      "waitBetweenTries": 2000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Inspect the Telegram API response and route to success or failure.\nconst response = $input.item.json;\nconst alert = $('Format Telegram Message').item.json;\n\nconst hasError = !!response.error_code || !!response.error || response.ok === false;\n\nif (hasError) {\n  const errMsg = response.description\n    ? response.description.slice(0, 300)\n    : response.error\n      ? (typeof response.error === 'string' ? response.error : JSON.stringify(response.error).slice(0, 300))\n      : 'Unknown Telegram API error';\n  return [{ json: {\n    alert_id:         alert.alert_id,\n    topic_slug:       alert.topic_slug,\n    date_key:         alert.date_key,\n    item_id:          alert.item_id || null,\n    status:           'failed',\n    platform_post_id: null,\n    error_message:    errMsg\n  } }];\n}\n\nconst messageId = response.result?.message_id?.toString() || null;\nreturn [{ json: {\n  alert_id:         alert.alert_id,\n  topic_slug:       alert.topic_slug,\n  date_key:         alert.date_key,\n  item_id:          alert.item_id || null,\n  status:           'published',\n  platform_post_id: messageId,\n  error_message:    null\n} }];"
+      },
+      "id": "c9d0e1f2-0009-0009-0009-000000000006",
+      "name": "Handle Delivery Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Build a social_publish_log entry for Telegram alert delivery.\nconst r = $input.item.json;\nreturn [{ json: {\n  _d1_sql: `INSERT INTO social_publish_log\n    (topic_slug, date_key, asset_type, source_type, source_id, platform, post_type,\n     status, platform_post_id, error_message, attempt, created_at, updated_at)\n  VALUES (?, ?, 'story', 'alert', ?, 'telegram', 'alert', ?, ?, ?, 1,\n    strftime('%Y-%m-%dT%H:%M:%SZ','now'),\n    strftime('%Y-%m-%dT%H:%M:%SZ','now')\n  )`,\n  _d1_params: [\n    r.topic_slug,\n    r.date_key,\n    r.item_id || null,\n    r.status || 'published',\n    r.platform_post_id || null,\n    r.error_message || null\n  ],\n  ...r\n} }];"
+      },
+      "id": "c9d0e1f2-0009-0009-0009-000000000007",
+      "name": "Build Delivery Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.cloudflare.com/client/v4/accounts/{{ $vars.CF_ACCOUNT_ID }}/d1/database/{{ $vars.CF_D1_DATABASE_ID }}/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { sql: $json._d1_sql, params: $json._d1_params } }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "c9d0e1f2-0009-0009-0009-000000000008",
+      "name": "Write Delivery Log",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1340,
+        500
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cloudflare-d1-api",
+          "name": "CloudflareD1Api"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "continueOnFail": true
     }
   ],
   "connections": {
@@ -145,7 +215,34 @@
       "main": [
         [
           {
+            "node": "Handle Delivery Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Delivery Result": {
+      "main": [
+        [
+          {
             "node": "Mark Telegram Delivered",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Build Delivery Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Delivery Log": {
+      "main": [
+        [
+          {
+            "node": "Write Delivery Log",
             "type": "main",
             "index": 0
           }

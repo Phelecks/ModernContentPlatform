@@ -1,0 +1,61 @@
+{
+  "items": [
+    {
+      "item_id": "c1a2b3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5",
+      "alert_id": 4821,
+      "cluster_id": 312,
+      "topic_slug": "crypto",
+      "headline": "Spot Bitcoin ETFs record $500M inflows in a single session",
+      "summary_text": "US-listed spot Bitcoin ETFs attracted more than $500 million in net inflows on January 15, the largest single-day figure since the products launched.",
+      "source_url": "https://example.com/crypto/btc-etf-inflows",
+      "source_name": "CryptoNews",
+      "severity_score": 60,
+      "importance_score": 82,
+      "confidence_score": 90,
+      "event_at": "2025-01-15T14:32:00Z",
+      "date_key": "2025-01-15",
+      "cluster_label": "Bitcoin ETF inflows",
+      "channels": ["telegram", "discord"],
+      "secondary_topics": ["finance"],
+      "alert_reason": "Record-setting ETF inflow day is a significant milestone for institutional crypto adoption."
+    },
+    {
+      "item_id": "d2b3c4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6",
+      "alert_id": 4822,
+      "cluster_id": 313,
+      "topic_slug": "ai",
+      "headline": "OpenAI launches GPT-5 with reasoning capabilities",
+      "summary_text": "OpenAI unveiled GPT-5 with significantly improved reasoning and multi-step problem solving, marking a major leap in large language model capabilities.",
+      "source_url": "https://example.com/ai/gpt5-launch",
+      "source_name": "TechCrunch",
+      "severity_score": 75,
+      "importance_score": 95,
+      "confidence_score": 88,
+      "event_at": "2025-01-15T16:00:00Z",
+      "date_key": "2025-01-15",
+      "cluster_label": "GPT-5 launch",
+      "channels": ["telegram", "discord"],
+      "secondary_topics": ["technology"],
+      "alert_reason": "Major model launch from leading AI lab warrants immediate alert."
+    },
+    {
+      "item_id": "e3c4d5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7",
+      "alert_id": 4823,
+      "cluster_id": null,
+      "topic_slug": "finance",
+      "headline": "Fed holds interest rates steady at 4.25-4.50%",
+      "summary_text": "The Federal Reserve maintained the federal funds rate, citing ongoing inflation concerns despite signs of economic cooling.",
+      "source_url": null,
+      "source_name": "Reuters",
+      "severity_score": 55,
+      "importance_score": 78,
+      "confidence_score": 95,
+      "event_at": "2025-01-15T19:00:00Z",
+      "date_key": "2025-01-15",
+      "cluster_label": null,
+      "channels": ["telegram"],
+      "secondary_topics": ["economy"],
+      "alert_reason": "Fed rate decision is always a high-importance event for finance audiences."
+    }
+  ]
+}

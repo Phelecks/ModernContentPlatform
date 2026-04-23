@@ -4,15 +4,20 @@ This directory contains the v1 n8n workflow files for the live alert pipeline.
 
 ## How it works
 
-The orchestrator runs every 15 minutes and chains nine modules in sequence.
+The orchestrator runs every 15 minutes and chains modules in sequence.
 Each module is a standalone sub-workflow that receives a JSON payload and
 returns a JSON payload. Persistence always completes before delivery.
+Delivery modules run with `continueOnFail` so one channel failure does not
+block the others.
 
 ```
 Schedule → Ingestion → Normalization → Deduplication → Clustering
          → AI Classification → Alert Decision → D1 Persistence
-         → Telegram Delivery (parallel)
-         → Discord Delivery  (parallel)
+         → Telegram Delivery (parallel, continueOnFail)
+         → Discord Delivery  (parallel, continueOnFail)
+         → Meta Story Delivery (parallel, continueOnFail)
+
+Delivery Retry (every 30 min) → re-deliver undelivered alerts
 ```
 
 ## Files
@@ -28,8 +33,12 @@ Schedule → Ingestion → Normalization → Deduplication → Clustering
 | `05_ai_classification.json` | 05 | AI topic, score, and summary generation |
 | `06_alert_decision.json` | 06 | Apply importance/severity thresholds |
 | `07_d1_persistence.json` | 07 | Write clusters, alerts, and daily_status to D1 |
-| `08_telegram_delivery.json` | 08 | Send approved alerts to Telegram |
-| `09_discord_delivery.json` | 09 | Send approved alerts to Discord |
+| `08_telegram_delivery.json` | 08 | Send approved alerts to Telegram; log delivery to `social_publish_log` |
+| `09_discord_delivery.json` | 09 | Send approved alerts to Discord; log delivery to `social_publish_log` |
+| `10_meta_story_delivery.json` | 10 | Publish high-importance alert stories to Meta platforms |
+| `11_social_story_delivery.json` | 11 | Publish high-importance alert stories to X, Telegram, Discord |
+| `12_delivery_retry.json` | 12 | Re-deliver alerts with `delivered_telegram = 0` or `delivered_discord = 0` (runs every 30 min) |
+| `00_delivery_smoke_test.json` | Smoke Test | **Local dev.** Manual trigger, sends test messages to Telegram and Discord channels |
 
 The shared `failure_notifier.json` lives in `../shared/` and is set as the
 `errorWorkflow` in every module's settings.
@@ -48,7 +57,7 @@ See `docs/alert-write-flow.md` for the full step-by-step guide.
 ### Full intraday pipeline
 
 1. Import `../shared/failure_notifier.json` first and note its workflow ID.
-2. Import modules `01` through `09` and note each workflow ID.
+2. Import modules `01` through `12` and note each workflow ID.
 3. Import `orchestrator.json` last.
 4. Set the workflow ID variables (see below) in n8n Settings → Variables.
 5. Set the credential and environment variables (see below).
@@ -191,7 +200,7 @@ news) by default.
 
 | Credential name | Type | Used by |
 |----------------|------|--------|
-| `CloudflareD1Api` | HTTP Header Auth | Modules 03, 07, 08, 09 |
+| `CloudflareD1Api` | HTTP Header Auth | Modules 03, 07, 08, 09, 12 |
 | `OpenAiApi` | OpenAI API | Module 05 |
 | `TelegramBotApi` | Telegram Bot API | Modules 08, shared notifier |
 | `X Bearer Token` | HTTP Header Auth | Module 01 (X sources only) |
@@ -217,10 +226,10 @@ The API token needs the **D1:Edit** permission for the target database.
 
 After all retries are exhausted n8n triggers the `failure_notifier` workflow.
 
-Alerts that have been written to D1 but not yet delivered can be recovered
-by querying the `alerts` table for rows where `delivered_telegram = 0` or
-`delivered_discord = 0` and reprocessing them via a separate delivery retry
-workflow (not included in v1 — add in v1.1 as needed).
+Alerts that have been written to D1 but not yet delivered are automatically
+recovered by the **Delivery Retry** workflow (`12_delivery_retry.json`), which
+runs every 30 minutes and queries the `alerts` table for rows where
+`delivered_telegram = 0` or `delivered_discord = 0` within the last 24 hours.
 
 ## Contract files
 

@@ -1,5 +1,5 @@
 {
-  "name": "Intraday — 09 Discord Delivery",
+  "name": "Intraday \u2014 09 Discord Delivery",
   "nodes": [
     {
       "parameters": {},
@@ -29,7 +29,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Format the alert as a Discord embed payload.\n// Discord embeds support color coding, fields, and footer.\nconst item = $input.item.json;\n\n// Map topic to a Discord embed sidebar color (decimal)\nconst topicColor = {\n  crypto:     0xF7931A, // Bitcoin orange\n  finance:    0x2ECC71, // green\n  economy:    0x3498DB, // blue\n  health:     0xE74C3C, // red\n  ai:         0x9B59B6, // purple\n  energy:     0xF1C40F, // yellow\n  technology: 0x1ABC9C  // teal\n};\nconst color = topicColor[item.topic_slug] || 0x95A5A6;\n\nconst topicEmoji = {\n  crypto: '🪙', finance: '📈', economy: '🏦',\n  health: '🏥', ai: '🤖', energy: '⚡', technology: '💻'\n};\nconst emoji = topicEmoji[item.topic_slug] || '📰';\n\n// Only set timestamp when event_at is a valid ISO-8601 string\nconst tsRaw = item.event_at;\nconst timestamp = (tsRaw && !isNaN(Date.parse(tsRaw)))\n  ? tsRaw\n  : new Date().toISOString();\n\nconst embed = {\n  title:       `${emoji} ${item.headline}`,\n  description: item.summary_text,\n  color,\n  fields: [\n    { name: 'Topic',       value: item.topic_slug.charAt(0).toUpperCase() + item.topic_slug.slice(1), inline: true },\n    { name: 'Importance',  value: `${item.importance_score}/100`, inline: true },\n    { name: 'Severity',    value: `${item.severity_score}/100`,   inline: true }\n  ],\n  footer: { text: item.source_name },\n  timestamp\n};\n\nif (item.source_url) {\n  embed.url = item.source_url;\n}\n\nreturn [{ json: { ...item, discord_payload: { embeds: [embed] } } }];"
+        "jsCode": "// Format the alert as a Discord embed payload.\n// Discord embeds support color coding, fields, and footer.\nconst item = $input.item.json;\n\n// Map topic to a Discord embed sidebar color (decimal)\nconst topicColor = {\n  crypto:     0xF7931A, // Bitcoin orange\n  finance:    0x2ECC71, // green\n  economy:    0x3498DB, // blue\n  health:     0xE74C3C, // red\n  ai:         0x9B59B6, // purple\n  energy:     0xF1C40F, // yellow\n  technology: 0x1ABC9C  // teal\n};\nconst color = topicColor[item.topic_slug] || 0x95A5A6;\n\nconst topicEmoji = {\n  crypto: '\ud83e\ude99', finance: '\ud83d\udcc8', economy: '\ud83c\udfe6',\n  health: '\ud83c\udfe5', ai: '\ud83e\udd16', energy: '\u26a1', technology: '\ud83d\udcbb'\n};\nconst emoji = topicEmoji[item.topic_slug] || '\ud83d\udcf0';\n\n// Only set timestamp when event_at is a valid ISO-8601 string\nconst tsRaw = item.event_at;\nconst timestamp = (tsRaw && !isNaN(Date.parse(tsRaw)))\n  ? tsRaw\n  : new Date().toISOString();\n\nconst embed = {\n  title:       `${emoji} ${item.headline}`,\n  description: item.summary_text,\n  color,\n  fields: [\n    { name: 'Topic',       value: item.topic_slug.charAt(0).toUpperCase() + item.topic_slug.slice(1), inline: true },\n    { name: 'Importance',  value: `${item.importance_score}/100`, inline: true },\n    { name: 'Severity',    value: `${item.severity_score}/100`,   inline: true }\n  ],\n  footer: { text: item.source_name },\n  timestamp\n};\n\nif (item.source_url) {\n  embed.url = item.source_url;\n}\n\nreturn [{ json: { ...item, discord_payload: { embeds: [embed] } } }];"
       },
       "id": "d0e1f2a3-0010-0010-0010-000000000003",
       "name": "Format Discord Embed",
@@ -60,7 +60,8 @@
       ],
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 3000
+      "waitBetweenTries": 3000,
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -78,7 +79,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"sql\": \"UPDATE alerts SET delivered_discord = 1, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ?\",\n  \"params\": [ {{ $('Format Discord Embed').item.json.alert_id }} ]\n}",
+        "jsonBody": "={\n  \"sql\": \"UPDATE alerts SET delivered_discord = 1, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now') WHERE id = ? AND ? = 'published'\",\n  \"params\": [ {{ $('Handle Delivery Result').item.json.alert_id }}, \"{{ $('Handle Delivery Result').item.json.status }}\" ]\n}",
         "options": {
           "timeout": 10000
         }
@@ -99,7 +100,76 @@
       },
       "retryOnFail": true,
       "maxTries": 3,
-      "waitBetweenTries": 2000
+      "waitBetweenTries": 2000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Inspect the Discord webhook response and route to success or failure.\nconst response = $input.item.json;\nconst alert = $('Format Discord Embed').item.json;\n\nconst statusCode = response._statusCode || response.statusCode || null;\nconst hasError = !!response.error || !!response.message || (statusCode && statusCode >= 400);\n\nif (hasError) {\n  const errMsg = response.message\n    ? (typeof response.message === 'string' ? response.message : JSON.stringify(response.message)).slice(0, 300)\n    : response.error\n      ? (typeof response.error === 'string' ? response.error : JSON.stringify(response.error).slice(0, 300))\n      : `HTTP ${statusCode || 'unknown'}`;\n  return [{ json: {\n    alert_id:         alert.alert_id,\n    topic_slug:       alert.topic_slug,\n    date_key:         alert.date_key,\n    item_id:          alert.item_id || null,\n    status:           'failed',\n    platform_post_id: null,\n    error_message:    errMsg\n  } }];\n}\n\nconst postId = response.id || null;\nreturn [{ json: {\n  alert_id:         alert.alert_id,\n  topic_slug:       alert.topic_slug,\n  date_key:         alert.date_key,\n  item_id:          alert.item_id || null,\n  status:           'published',\n  platform_post_id: postId,\n  error_message:    null\n} }];"
+      },
+      "id": "d0e1f2a3-0010-0010-0010-000000000006",
+      "name": "Handle Delivery Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Build a social_publish_log entry for Discord alert delivery.\nconst r = $input.item.json;\nreturn [{ json: {\n  _d1_sql: `INSERT INTO social_publish_log\n    (topic_slug, date_key, asset_type, source_type, source_id, platform, post_type,\n     status, platform_post_id, error_message, attempt, created_at, updated_at)\n  VALUES (?, ?, 'story', 'alert', ?, 'discord', 'embed', ?, ?, ?, 1,\n    strftime('%Y-%m-%dT%H:%M:%SZ','now'),\n    strftime('%Y-%m-%dT%H:%M:%SZ','now')\n  )`,\n  _d1_params: [\n    r.topic_slug,\n    r.date_key,\n    r.item_id || null,\n    r.status || 'published',\n    r.platform_post_id || null,\n    r.error_message || null\n  ],\n  ...r\n} }];"
+      },
+      "id": "d0e1f2a3-0010-0010-0010-000000000007",
+      "name": "Build Delivery Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.cloudflare.com/client/v4/accounts/{{ $vars.CF_ACCOUNT_ID }}/d1/database/{{ $vars.CF_D1_DATABASE_ID }}/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { sql: $json._d1_sql, params: $json._d1_params } }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "d0e1f2a3-0010-0010-0010-000000000008",
+      "name": "Write Delivery Log",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1340,
+        500
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cloudflare-d1-api",
+          "name": "CloudflareD1Api"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "continueOnFail": true
     }
   ],
   "connections": {
@@ -140,7 +210,34 @@
       "main": [
         [
           {
+            "node": "Handle Delivery Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Delivery Result": {
+      "main": [
+        [
+          {
             "node": "Mark Discord Delivered",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Build Delivery Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Delivery Log": {
+      "main": [
+        [
+          {
+            "node": "Write Delivery Log",
             "type": "main",
             "index": 0
           }
