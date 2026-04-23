@@ -84,3 +84,7 @@ export { default as CRYPTO_META_STORY }      from '@fixtures/meta-social/crypto-
 
 export { default as CRYPTO_SOCIAL_DAILY_POST } from '@fixtures/social-content/crypto-2025-01-15-daily-post.json'
 export { default as CRYPTO_SOCIAL_STORY }      from '@fixtures/social-content/crypto-2025-01-15-story.json'
+
+// ---- Delivery payloads (intraday_delivery_payload contract, per topic/day) ----
+
+export { default as CRYPTO_DELIVERY_PAYLOAD } from '@fixtures/delivery-payloads/crypto-2025-01-15-telegram-discord.json'

@@ -58,7 +58,13 @@ never loses an alert.
      ▼            ▼
 ┌─────────┐  ┌──────────┐
 │ 08 Tele │  │ 09 Disc  │  Deliver in parallel; mark delivered_* flags in D1
-└─────────┘  └──────────┘
+└────┬────┘  └────┬─────┘  Log each attempt to social_publish_log
+     │            │
+     └──────┬─────┘
+            ▼
+     ┌──────────────┐
+     │ 12 Retry     │  Every 30 min: re-deliver alerts with delivered_* = 0
+     └──────────────┘
 ```
 
 ---
@@ -76,6 +82,7 @@ never loses an alert.
 | 07 | D1 Persistence | Execute Workflow | `persisted_alert[]` |
 | 08 | Telegram Delivery | Execute Workflow | delivery result |
 | 09 | Discord Delivery | Execute Workflow | delivery result |
+| 12 | Delivery Retry | Schedule (30 min) | retry results |
 
 A shared `failure_notifier` sub-workflow is used by every module to emit
 structured error events to a monitoring channel.
@@ -92,6 +99,9 @@ structured error events to a monitoring channel.
 | D1 Persistence | `daily_status` | Upsert `alert_count`, `cluster_count` |
 | Telegram Delivery | `alerts` | Sets `delivered_telegram = 1` |
 | Discord Delivery | `alerts` | Sets `delivered_discord = 1` |
+| Telegram Delivery | `social_publish_log` | Logs delivery attempt (success or failure) |
+| Discord Delivery | `social_publish_log` | Logs delivery attempt (success or failure) |
+| Delivery Retry | `alerts` | Re-triggers undelivered alerts within 24 hours |
 
 Writes use the **Cloudflare D1 REST API**:
 `POST https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/d1/database/{DATABASE_ID}/query`
@@ -176,7 +186,7 @@ Set the required credentials and environment variables before activating the orc
 
 | Credential name | Used by |
 |----------------|--------|
-| `CloudflareD1Api` | Modules 03, 07, 08, 09 |
+| `CloudflareD1Api` | Modules 03, 07, 08, 09, 12 |
 | `OpenAiApi` | Module 05 |
 | `TelegramBotApi` | Modules 08, shared failure notifier |
 
@@ -191,3 +201,5 @@ Set the required credentials and environment variables before activating the orc
 | `TELEGRAM_CHAT_ID` | Target Telegram chat/channel ID |
 | `DISCORD_WEBHOOK_URL` | Discord incoming webhook URL (module 09 sends via HTTP Request; no named credential needed) |
 | `FAILURE_ALERT_CHANNEL` | Telegram chat ID for failure notifications |
+| `INTRADAY_TELEGRAM_WORKFLOW_ID` | n8n ID of module 08 (used by orchestrator and retry) |
+| `INTRADAY_DISCORD_WORKFLOW_ID` | n8n ID of module 09 (used by orchestrator and retry) |

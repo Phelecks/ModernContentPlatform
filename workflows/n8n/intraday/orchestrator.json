@@ -163,7 +163,8 @@
       "position": [
         2000,
         200
-      ]
+      ],
+      "continueOnFail": true
     },
     {
       "parameters": {
@@ -181,7 +182,8 @@
       "position": [
         2000,
         400
-      ]
+      ],
+      "continueOnFail": true
     },
     {
       "parameters": {
