@@ -48,7 +48,7 @@ services:
   # n8n — workflow automation engine
   # --------------------------------------------------------------------------
   n8n:
-    image: n8nio/n8n:${N8N_VERSION:-latest}
+    image: n8nio/n8n:${N8N_VERSION:?N8N_VERSION is required — pin to a specific tag, e.g. 1.70.0}
     restart: unless-stopped
     depends_on:
       postgres:

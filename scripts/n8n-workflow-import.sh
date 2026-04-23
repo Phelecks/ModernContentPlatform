@@ -7,8 +7,11 @@
 #
 # Usage:
 #
-#   # Import into production/staging stack
+#   # Import into the production n8n stack
 #   bash scripts/n8n-workflow-import.sh production
+#
+#   # Import into the staging n8n stack
+#   bash scripts/n8n-workflow-import.sh staging
 #
 #   # Import into the local development stack
 #   bash scripts/n8n-workflow-import.sh local
@@ -46,21 +49,31 @@ if [[ -z "$ENV" ]]; then
   echo ""
   echo "Environments:"
   echo "  local       — import into the local Docker n8n (docker-compose.yml)"
+  echo "  staging     — import into the staging Docker n8n (docker-compose.production.yml, project: n8n-staging)"
   echo "  production  — import into the production Docker n8n (docker-compose.production.yml)"
   exit 1
 fi
+
+# COMPOSE_PROJECT overrides the Docker Compose project name (maps to the -p flag).
+# Leave empty to use the default project name derived from the compose file directory.
+COMPOSE_PROJECT=""
 
 case "$ENV" in
   local)
     COMPOSE_FILE="${REPO_ROOT}/n8n/docker-compose.yml"
     SERVICE_NAME="n8n"
     ;;
+  staging)
+    COMPOSE_FILE="${REPO_ROOT}/n8n/docker-compose.production.yml"
+    SERVICE_NAME="n8n"
+    COMPOSE_PROJECT="n8n-staging"
+    ;;
   production)
     COMPOSE_FILE="${REPO_ROOT}/n8n/docker-compose.production.yml"
     SERVICE_NAME="n8n"
     ;;
   *)
-    echo "Error: Unknown environment '${ENV}'. Use 'local' or 'production'."
+    echo "Error: Unknown environment '${ENV}'. Use 'local', 'staging', or 'production'."
     exit 1
     ;;
 esac
@@ -70,19 +83,31 @@ if [[ ! -f "$COMPOSE_FILE" ]]; then
   exit 1
 fi
 
+# Build the base docker compose command, including -p when a project name is set.
+COMPOSE_CMD=(docker compose -f "$COMPOSE_FILE")
+if [[ -n "$COMPOSE_PROJECT" ]]; then
+  COMPOSE_CMD+=(-p "$COMPOSE_PROJECT")
+fi
+
 # ---------------------------------------------------------------------------
 # Detect the running container
 # ---------------------------------------------------------------------------
-CONTAINER_ID=$(docker compose -f "$COMPOSE_FILE" ps -q "$SERVICE_NAME" 2>/dev/null || true)
+CONTAINER_ID=$("${COMPOSE_CMD[@]}" ps -q "$SERVICE_NAME" 2>/dev/null || true)
 
 if [[ -z "$CONTAINER_ID" ]]; then
   echo "Error: n8n container is not running. Start it first:"
   echo ""
-  if [[ "$ENV" == "local" ]]; then
-    echo "  docker compose -f n8n/docker-compose.yml --env-file .env up -d"
-  else
-    echo "  docker compose -f n8n/docker-compose.production.yml --env-file n8n/.env.production up -d"
-  fi
+  case "$ENV" in
+    local)
+      echo "  docker compose -f n8n/docker-compose.yml --env-file .env up -d"
+      ;;
+    staging)
+      echo "  docker compose -f n8n/docker-compose.production.yml --env-file n8n/.env.staging -p n8n-staging up -d"
+      ;;
+    production)
+      echo "  docker compose -f n8n/docker-compose.production.yml --env-file n8n/.env.production up -d"
+      ;;
+  esac
   exit 1
 fi
 
@@ -95,9 +120,10 @@ echo ""
 # ---------------------------------------------------------------------------
 # Collect workflow JSON files in the recommended import order:
 #   1. shared/ (failure notifier — referenced by all other workflows)
-#   2. intraday/ modules (01-11, excluding orchestrator and adapters)
+#   2. intraday/ modules (00_local_alert_smoke_test and 01-11, excluding orchestrator and adapters)
 #   3. intraday/ orchestrator
-#   4. daily/ modules (01-14, excluding orchestrator)
+#   4. daily/ modules (all numeric-prefixed files: 01-14 plus 06_full_video_generation,
+#      06b/06c/06d variants; excluding orchestrator)
 #   5. daily/ orchestrator
 # ---------------------------------------------------------------------------
 IMPORT_FILES=()
@@ -152,12 +178,15 @@ for i in "${!IMPORT_FILES[@]}"; do
   # Copy file into the container
   docker cp "$FILE" "${CONTAINER_ID}:/tmp/${BASENAME}"
 
-  # Import via the n8n CLI
-  if docker exec "$CONTAINER_ID" n8n import:workflow --input="/tmp/${BASENAME}" 2>/dev/null; then
+  # Import via the n8n CLI — capture output for diagnostics on failure
+  if IMPORT_OUTPUT="$(docker exec "$CONTAINER_ID" n8n import:workflow --input="/tmp/${BASENAME}" 2>&1)"; then
     echo "  ✓ ${LABEL}"
     IMPORTED=$((IMPORTED + 1))
   else
     echo "  ✗ ${LABEL} — import failed"
+    if [[ -n "$IMPORT_OUTPUT" ]]; then
+      echo "$IMPORT_OUTPUT" | sed 's/^/    /'
+    fi
     FAILED=$((FAILED + 1))
   fi
 

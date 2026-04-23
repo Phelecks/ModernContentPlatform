@@ -251,7 +251,7 @@ The script imports workflows in this order:
 1. **Shared** — `failure_notifier.json`
 2. **Intraday modules** — `00_local_alert_smoke_test.json` through `11_social_story_delivery.json`
 3. **Intraday orchestrator** — `orchestrator.json`
-4. **Daily modules** — `01_aggregate_alerts.json` through `14_publish_social_channels.json`
+4. **Daily modules** — all numeric-prefixed workflow files in `workflows/n8n/daily/`, including `01_aggregate_alerts.json` through `14_publish_social_channels.json` as well as `06_full_video_generation.json` and the `06b`/`06c`/`06d` media pipeline variants
 5. **Daily orchestrator** — `orchestrator.json`
 
 ### Manual import (alternative)
@@ -309,6 +309,7 @@ Set the following variables in **n8n Settings → Variables**.
 |---|---|
 | `CF_ACCOUNT_ID` | Your Cloudflare account ID |
 | `CF_D1_DATABASE_ID` | Target D1 database ID |
+| `CF_API_TOKEN` | Cloudflare API token with D1:Edit permission (used by workflow nodes that call the D1 REST API) |
 
 ### GitHub publishing
 
@@ -533,6 +534,12 @@ docker compose -f n8n/docker-compose.production.yml \
   --env-file n8n/.env.staging -p n8n-staging up -d
 ```
 
+Import workflows into the staging instance:
+
+```bash
+bash scripts/n8n-workflow-import.sh staging
+```
+
 > **Important:** Use separate `N8N_ENCRYPTION_KEY` and `POSTGRES_PASSWORD`
 > values for staging and production.
 
@@ -613,7 +620,8 @@ docker compose -f n8n/docker-compose.production.yml logs n8n
 | Start the stack | `docker compose -f n8n/docker-compose.production.yml --env-file n8n/.env.production up -d` |
 | Stop the stack | `docker compose -f n8n/docker-compose.production.yml down` |
 | View n8n logs | `docker compose -f n8n/docker-compose.production.yml logs -f n8n` |
-| Import workflows | `bash scripts/n8n-workflow-import.sh production` |
+| Import workflows (production) | `bash scripts/n8n-workflow-import.sh production` |
+| Import workflows (staging) | `bash scripts/n8n-workflow-import.sh staging` |
 | Update n8n | Edit `N8N_VERSION` in `.env.production`, then `docker compose pull && up -d` |
 | Back up database | `docker compose exec postgres pg_dump -U n8n -d n8n > backup.sql` |
 | Check health | `curl -s https://n8n.example.com/healthz` |

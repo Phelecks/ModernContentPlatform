@@ -39,8 +39,11 @@ See `docs/local-summary-generation.md` for details on the full editorial path.
 ### Import n8n workflows
 
 ```bash
-# Import into a production/staging n8n instance
+# Import into a production n8n instance
 bash scripts/n8n-workflow-import.sh production
+
+# Import into a staging n8n instance
+bash scripts/n8n-workflow-import.sh staging
 
 # Import into the local Docker n8n instance
 bash scripts/n8n-workflow-import.sh local
