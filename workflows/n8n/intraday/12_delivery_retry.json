@@ -34,7 +34,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"sql\": \"SELECT id, topic_slug, date_key, headline, summary_text, source_url, source_name, severity_score, importance_score, event_at, delivered_telegram, delivered_discord, metadata_json FROM alerts WHERE status = 'active' AND (delivered_telegram = 0 OR delivered_discord = 0) AND created_at > datetime('now', '-24 hours') ORDER BY event_at ASC LIMIT 50\"\n}",
+        "jsonBody": "={\n  \"sql\": \"SELECT a.id, a.topic_slug, a.date_key, a.headline, a.summary_text, a.source_url, a.source_name, a.severity_score, a.importance_score, a.event_at, a.delivered_telegram, a.delivered_discord, a.metadata_json FROM alerts a WHERE a.status = 'active' AND (a.delivered_telegram = 0 OR a.delivered_discord = 0) AND a.created_at > datetime('now', '-24 hours') AND a.id NOT IN (SELECT CAST(spl.source_id AS INTEGER) FROM social_publish_log spl WHERE spl.status = 'failed' AND spl.platform IN ('telegram','discord') GROUP BY spl.source_id HAVING COUNT(*) >= 5) ORDER BY a.event_at ASC LIMIT 50\"\n}",
         "options": {
           "timeout": 10000
         }
