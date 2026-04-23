@@ -45,7 +45,9 @@ import {
   CRYPTO_META_DAILY_POST,
   CRYPTO_META_STORY,
   CRYPTO_SOCIAL_DAILY_POST,
-  CRYPTO_SOCIAL_STORY
+  CRYPTO_SOCIAL_STORY,
+  FINANCE_SOCIAL_DAILY_POST,
+  FINANCE_DELIVERY_PAYLOAD
 } from './helpers/fixtures.js'
 
 // ---- Helpers ----
@@ -744,5 +746,74 @@ describe('Social content asset fixtures', () => {
     expect(CRYPTO_SOCIAL_STORY.x.alert_text).toBeTypeOf('string')
     expect(CRYPTO_SOCIAL_STORY.telegram.alert_html).toBeTypeOf('string')
     expect(CRYPTO_SOCIAL_STORY.discord.alert_embed).toBeTypeOf('object')
+  })
+
+  it('finance-2025-01-15-daily-post has correct social_content_asset structure', () => {
+    assertSocialContentAsset(FINANCE_SOCIAL_DAILY_POST, 'finance-social-daily-post')
+  })
+
+  it('finance-2025-01-15-daily-post has asset_type daily_post', () => {
+    expect(FINANCE_SOCIAL_DAILY_POST.asset_type).toBe('daily_post')
+  })
+
+  it('finance-2025-01-15-daily-post has source_type daily_summary', () => {
+    expect(FINANCE_SOCIAL_DAILY_POST.source_type).toBe('daily_summary')
+  })
+
+  it('finance-2025-01-15-daily-post x post_text does not exceed 280 chars', () => {
+    expect(FINANCE_SOCIAL_DAILY_POST.x.post_text.length).toBeLessThanOrEqual(280)
+  })
+
+  it('finance-2025-01-15-daily-post telegram message_html does not exceed 4096 chars', () => {
+    expect(FINANCE_SOCIAL_DAILY_POST.telegram.message_html.length).toBeLessThanOrEqual(4096)
+  })
+
+  it('finance-2025-01-15-daily-post discord embed has title and description', () => {
+    expect(FINANCE_SOCIAL_DAILY_POST.discord.embed.title).toBeTypeOf('string')
+    expect(FINANCE_SOCIAL_DAILY_POST.discord.embed.description).toBeTypeOf('string')
+    expect(FINANCE_SOCIAL_DAILY_POST.discord.embed.color).toBeTypeOf('number')
+  })
+})
+
+// ---- Finance delivery payload fixtures ----
+
+describe('Finance delivery payload fixtures', () => {
+  it('finance delivery payload has items array', () => {
+    expect(Array.isArray(FINANCE_DELIVERY_PAYLOAD.items)).toBe(true)
+    expect(FINANCE_DELIVERY_PAYLOAD.items.length).toBeGreaterThan(0)
+  })
+
+  it('each finance delivery item has required fields', () => {
+    for (const item of FINANCE_DELIVERY_PAYLOAD.items) {
+      expect(item.item_id).toBeTypeOf('string')
+      expect(item.item_id.length).toBeGreaterThanOrEqual(32)
+      expect(typeof item.alert_id).toBe('number')
+      expect(item.topic_slug).toBe('finance')
+      expect(item.headline).toBeTypeOf('string')
+      expect(item.headline.length).toBeGreaterThan(0)
+      expect(item.summary_text).toBeTypeOf('string')
+      expect(item.date_key).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    }
+  })
+
+  it('each finance delivery item has valid channels', () => {
+    const validChannels = ['telegram', 'discord']
+    for (const item of FINANCE_DELIVERY_PAYLOAD.items) {
+      expect(Array.isArray(item.channels)).toBe(true)
+      for (const ch of item.channels) {
+        expect(validChannels).toContain(ch)
+      }
+    }
+  })
+
+  it('each finance delivery item has valid scores', () => {
+    for (const item of FINANCE_DELIVERY_PAYLOAD.items) {
+      expect(item.severity_score).toBeGreaterThanOrEqual(0)
+      expect(item.severity_score).toBeLessThanOrEqual(100)
+      expect(item.importance_score).toBeGreaterThanOrEqual(0)
+      expect(item.importance_score).toBeLessThanOrEqual(100)
+      expect(item.confidence_score).toBeGreaterThanOrEqual(0)
+      expect(item.confidence_score).toBeLessThanOrEqual(100)
+    }
   })
 })
