@@ -4,6 +4,9 @@ This directory contains the Docker Compose setup for running n8n locally during 
 
 > **This setup is for local development only.** It uses SQLite storage, no TLS, and no
 > production-grade credential hardening. Do not expose this instance to the internet.
+>
+> For **production/staging deployment**, see
+> [`docs/operations/n8n-deployment.md`](../docs/operations/n8n-deployment.md).
 
 ---
 
