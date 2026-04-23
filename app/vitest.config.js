@@ -8,7 +8,9 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
       '@functions': fileURLToPath(new URL('../functions', import.meta.url)),
-      '@fixtures': fileURLToPath(new URL('../fixtures', import.meta.url))
+      '@fixtures': fileURLToPath(new URL('../fixtures', import.meta.url)),
+      '@content': fileURLToPath(new URL('../content', import.meta.url)),
+      '@config': fileURLToPath(new URL('../config', import.meta.url))
     }
   },
   test: {
