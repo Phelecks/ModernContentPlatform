@@ -553,6 +553,10 @@ See [`n8n/README.md`](n8n/README.md) for the full local n8n setup guide.
 
 ### Deployment
 
+The platform deploys on Cloudflare Pages with Pages Functions for the API layer.
+
+See [`docs/operations/cloudflare-pages-deployment.md`](docs/operations/cloudflare-pages-deployment.md) for the full deployment guide, including build configuration, preview/production deploy flow, SPA routing, Pages Functions, D1 bindings, and verification steps.
+
 See [`docs/roadmap.md`](docs/roadmap.md) for the phase-by-phase deployment guide, including
 Cloudflare infrastructure provisioning, D1 migration steps, n8n workflow import order, and
 required credentials and environment variables per phase.
