@@ -1,0 +1,9 @@
+{
+  "topic_slug": "finance",
+  "date_key": "2025-01-15",
+  "status": "failed",
+  "youtube_video_id": null,
+  "visibility": "public",
+  "attempt": 2,
+  "error_message": "YouTube Data API returned 403 quotaExceeded"
+}

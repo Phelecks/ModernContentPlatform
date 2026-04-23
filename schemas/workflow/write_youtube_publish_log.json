@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "write_youtube_publish_log",
+  "title": "Write YouTube Publish Log Payload",
+  "description": "Payload for POST /api/internal/youtube-publish-log. Records one YouTube video upload attempt for observability and retry tracking.",
+  "type": "object",
+  "required": ["topic_slug", "date_key"],
+  "properties": {
+    "topic_slug": {
+      "type": "string",
+      "enum": ["crypto", "finance", "economy", "health", "ai", "energy", "technology"]
+    },
+    "date_key": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "uploading", "published", "failed", "skipped"],
+      "default": "pending"
+    },
+    "youtube_video_id": {
+      "type": ["string", "null"],
+      "maxLength": 200,
+      "description": "YouTube video ID returned by the YouTube Data API on successful upload."
+    },
+    "visibility": {
+      "type": ["string", "null"],
+      "enum": ["public", "unlisted", "private", null],
+      "description": "Publish visibility used for the upload."
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10,
+      "default": 1
+    },
+    "error_message": {
+      "type": ["string", "null"]
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "topic_slug": "crypto",
+      "date_key": "2025-01-15",
+      "status": "published",
+      "youtube_video_id": "dQw4w9WgXcQ",
+      "visibility": "public",
+      "attempt": 1,
+      "error_message": null
+    },
+    {
+      "topic_slug": "finance",
+      "date_key": "2025-01-15",
+      "status": "failed",
+      "youtube_video_id": null,
+      "visibility": "public",
+      "attempt": 2,
+      "error_message": "YouTube Data API returned 403 quotaExceeded"
+    }
+  ]
+}

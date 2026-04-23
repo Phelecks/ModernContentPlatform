@@ -1,0 +1,325 @@
+{
+  "name": "Daily — 16 Update Video Reference",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "d1e2f3a4-0016-0016-0016-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Check if a YouTube video ID is available to write back.\n// If the upload was skipped or failed, skip the video.json update.\nconst ctx = $input.first().json;\n\nif (!ctx.youtube_video_id) {\n  return [{\n    json: {\n      ...ctx,\n      video_reference_updated: false,\n      video_reference_skip_reason: 'No youtube_video_id available (upload was skipped or failed)'\n    }\n  }];\n}\n\nreturn [{ json: { ...ctx, video_reference_updated: null } }];"
+      },
+      "id": "d1e2f3a4-0016-0016-0016-000000000002",
+      "name": "Check Video ID Available",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.video_reference_updated === false }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "d1e2f3a4-0016-0016-0016-000000000003",
+      "name": "Skip Update?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "d1e2f3a4-0016-0016-0016-000000000004",
+      "name": "Return Skip",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        900,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.github.com/repos/{{ $vars.GITHUB_REPO_OWNER }}/{{ $vars.GITHUB_REPO_NAME }}/contents/content/topics/{{ $json.topic_slug }}/{{ $json.date_key }}/video.json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000,
+          "ignoreResponseCode": true
+        }
+      },
+      "id": "d1e2f3a4-0016-0016-0016-000000000005",
+      "name": "Get Existing video.json",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        900,
+        400
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "github-api-credentials",
+          "name": "GitHubApi"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Parse the existing video.json, inject youtube_video_id and video_id,\n// and prepare the updated content for GitHub PUT.\nconst ctx = $('Check Video ID Available').first().json;\nconst ghResponse = $input.first().json;\n\nconst existingSha = ghResponse?.sha || null;\nif (!existingSha) {\n  throw new Error(`video.json not found at content/topics/${ctx.topic_slug}/${ctx.date_key}/video.json — cannot update video reference without existing file`);\n}\n\n// Decode existing content from base64\nlet videoData;\ntry {\n  const rawContent = Buffer.from(ghResponse.content, 'base64').toString('utf8');\n  videoData = JSON.parse(rawContent);\n} catch (e) {\n  throw new Error(`Failed to parse existing video.json: ${e.message}`);\n}\n\n// Update the video reference fields\nvideoData.video_id = ctx.youtube_video_id;\nvideoData.youtube_video_id = ctx.youtube_video_id;\n\nconst updatedContent = JSON.stringify(videoData, null, 2);\n\nreturn [{\n  json: {\n    ...ctx,\n    _video_json_content: updatedContent,\n    _video_json_sha: existingSha,\n    _video_json_path: `content/topics/${ctx.topic_slug}/${ctx.date_key}/video.json`\n  }\n}];"
+      },
+      "id": "d1e2f3a4-0016-0016-0016-000000000006",
+      "name": "Build Updated video.json",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.github.com/repos/{{ $vars.GITHUB_REPO_OWNER }}/{{ $vars.GITHUB_REPO_NAME }}/contents/{{ $json._video_json_path }}",
+        "method": "PUT",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (() => {\n  return {\n    message: `daily(${$json.topic_slug}): update video reference for ${$json.date_key} (youtube_video_id: ${$json.youtube_video_id})`,\n    content: Buffer.from($json._video_json_content, 'utf8').toString('base64'),\n    sha: $json._video_json_sha,\n    branch: $vars.GITHUB_CONTENT_BRANCH || 'main'\n  };\n})() }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "d1e2f3a4-0016-0016-0016-000000000007",
+      "name": "Write Updated video.json",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1340,
+        400
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "github-api-credentials",
+          "name": "GitHubApi"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Confirm GitHub write and extract commit SHA.\nconst ctx = $('Build Updated video.json').first().json;\nconst writeResp = $input.first().json;\n\nconst commitSha = writeResp?.commit?.sha || null;\n\nreturn [{\n  json: {\n    topic_slug: ctx.topic_slug,\n    date_key: ctx.date_key,\n    youtube_video_id: ctx.youtube_video_id,\n    video_reference_updated: true,\n    video_reference_commit_sha: commitSha\n  }\n}];"
+      },
+      "id": "d1e2f3a4-0016-0016-0016-000000000008",
+      "name": "Confirm Write",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $vars.PAGES_BASE_URL }}/api/internal/workflow-logs",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Write-Key",
+              "value": "={{ $vars.WRITE_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  workflow_name: 'Daily — Orchestrator',\n  execution_id: $execution.id != null ? String($execution.id) : null,\n  topic_slug: $json.topic_slug,\n  date_key: $json.date_key,\n  event_type: $json.video_reference_updated ? 'completed' : 'info',\n  module_name: '16 Update Video Reference',\n  metadata_json: JSON.stringify({\n    youtube_video_id: $json.youtube_video_id ?? null,\n    video_reference_updated: $json.video_reference_updated,\n    video_reference_commit_sha: $json.video_reference_commit_sha ?? null,\n    skip_reason: $json.video_reference_skip_reason ?? null\n  })\n} }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "d1e2f3a4-0016-0016-0016-000000000009",
+      "name": "Write Workflow Log",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1780,
+        300
+      ],
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Check Video ID Available",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Video ID Available": {
+      "main": [
+        [
+          {
+            "node": "Skip Update?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip Update?": {
+      "main": [
+        [
+          {
+            "node": "Return Skip",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Existing video.json",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return Skip": {
+      "main": [
+        [
+          {
+            "node": "Write Workflow Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Existing video.json": {
+      "main": [
+        [
+          {
+            "node": "Build Updated video.json",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Updated video.json": {
+      "main": [
+        [
+          {
+            "node": "Write Updated video.json",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Updated video.json": {
+      "main": [
+        [
+          {
+            "node": "Confirm Write",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirm Write": {
+      "main": [
+        [
+          {
+            "node": "Write Workflow Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": true,
+    "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
+  },
+  "id": "daily-16-update-video-reference-v1",
+  "tags": [
+    "daily",
+    "editorial",
+    "youtube",
+    "github",
+    "publishing",
+    "v1"
+  ]
+}

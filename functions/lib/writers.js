@@ -504,3 +504,37 @@ export async function createSocialPublishLog(db, {
 
   return { id: row.id }
 }
+
+/**
+ * Insert a new youtube_publish_log row.
+ *
+ * Records a single YouTube video upload attempt. Used by n8n module 15
+ * (YouTube Upload) to persist each upload result for operational monitoring.
+ *
+ * @param {D1Database} db
+ * @param {{ topic_slug: string, date_key: string, status?: string, youtube_video_id?: string|null, visibility?: string|null, attempt?: number, error_message?: string|null }} params
+ * @returns {Promise<{ id: number }>}
+ */
+export async function createYoutubePublishLog(db, {
+  topic_slug, date_key,
+  status = 'pending', youtube_video_id = null,
+  visibility = null, attempt = 1, error_message = null
+}) {
+  const sql = `
+    INSERT INTO youtube_publish_log
+      (topic_slug, date_key, status, youtube_video_id,
+       visibility, attempt, error_message)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    RETURNING id`
+
+  const row = await db.prepare(sql)
+    .bind(topic_slug, date_key, status, youtube_video_id,
+      visibility, attempt, error_message)
+    .first()
+
+  if (!row || row.id == null) {
+    throw new Error('Failed to create YouTube publish log: no id returned from D1')
+  }
+
+  return { id: row.id }
+}

@@ -586,6 +586,34 @@
         600
       ],
       "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "workflowId": "={{ $vars.DAILY_YOUTUBE_UPLOAD_WORKFLOW_ID }}",
+        "options": {}
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000015",
+      "name": "15 YouTube Upload",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        5960,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": "={{ $vars.DAILY_UPDATE_VIDEO_REFERENCE_WORKFLOW_ID }}",
+        "options": {}
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000016",
+      "name": "16 Update Video Reference",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        6180,
+        600
+      ]
     }
   ],
   "connections": {
@@ -917,6 +945,28 @@
         [
           {
             "node": "12 Publish Meta Daily",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "12 Publish Meta Daily": {
+      "main": [
+        [
+          {
+            "node": "15 YouTube Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "15 YouTube Upload": {
+      "main": [
+        [
+          {
+            "node": "16 Update Video Reference",
             "type": "main",
             "index": 0
           }

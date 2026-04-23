@@ -800,3 +800,65 @@ export function validateSocialPublishPayload(body) {
     error_message: error_message ?? null
   })
 }
+
+// ── YouTube Publish Log ────────────────────────────────────────────
+
+const VALID_YOUTUBE_STATUSES     = ['pending', 'uploading', 'published', 'failed', 'skipped']
+const VALID_YOUTUBE_VISIBILITIES = ['public', 'unlisted', 'private']
+
+const YOUTUBE_PUBLISH_ALLOWED_KEYS = [
+  'topic_slug', 'date_key', 'status', 'youtube_video_id',
+  'visibility', 'attempt', 'error_message'
+]
+
+/**
+ * Validate a youtube_publish_log write payload.
+ *
+ * Required: topic_slug, date_key
+ * Optional: status, youtube_video_id, visibility, attempt, error_message
+ */
+export function validateYoutubePublishPayload(body) {
+  if (!body || typeof body !== 'object') return fail('Request body must be a JSON object')
+
+  const unknownError = checkUnknownKeys(body, YOUTUBE_PUBLISH_ALLOWED_KEYS)
+  if (unknownError) return fail(unknownError)
+
+  const {
+    topic_slug, date_key, status, youtube_video_id,
+    visibility, attempt, error_message
+  } = body
+
+  if (!isValidTopicSlug(topic_slug) || !VALID_TOPICS.includes(topic_slug)) {
+    return fail(`Invalid topic_slug: must be one of ${VALID_TOPICS.join(', ')}`)
+  }
+  if (!isValidDateKey(date_key)) {
+    return fail('Invalid date_key: expected YYYY-MM-DD format')
+  }
+  if (status !== undefined && !VALID_YOUTUBE_STATUSES.includes(status)) {
+    return fail(`Invalid status: must be one of ${VALID_YOUTUBE_STATUSES.join(', ')}`)
+  }
+  if (!isOptionalString(youtube_video_id, 200)) {
+    return fail('youtube_video_id must be a string (max 200 chars) or null')
+  }
+  if (visibility !== undefined && visibility !== null && !VALID_YOUTUBE_VISIBILITIES.includes(visibility)) {
+    return fail(`Invalid visibility: must be one of ${VALID_YOUTUBE_VISIBILITIES.join(', ')}`)
+  }
+  if (attempt !== undefined) {
+    if (!Number.isInteger(attempt) || attempt < 1 || attempt > 10) {
+      return fail('attempt must be an integer between 1 and 10')
+    }
+  }
+  if (!isOptionalString(error_message)) {
+    return fail('error_message must be a string or null')
+  }
+
+  return ok({
+    topic_slug,
+    date_key,
+    status: status ?? 'pending',
+    youtube_video_id: youtube_video_id ?? null,
+    visibility: visibility ?? null,
+    attempt: attempt ?? 1,
+    error_message: error_message ?? null
+  })
+}
