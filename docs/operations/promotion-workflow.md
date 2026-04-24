@@ -83,8 +83,9 @@ Direct merges from feature branches to `main` are not allowed.
    # Open PR: feature/my-change → staging
    ```
 
-2. CI runs automatically on the pull request:
-   - Build, lint, and test must pass (`.github/workflows/ci.yml`).
+2. CI runs automatically on the pull request and on every push to the `staging`
+   branch (`.github/workflows/ci.yml`):
+   - Build, lint, and test must pass.
 
 3. **Review the pull request.** At minimum one team member reviews:
    - Code correctness
@@ -185,7 +186,14 @@ Promotion to production requires:
 
 1. **All staging validation checks pass** (Step 3).
 2. **A pull request from `staging` → `main`** is created and reviewed.
-3. **At least one team member approves** the pull request, confirming:
+   Use the promotion PR template (`.github/PULL_REQUEST_TEMPLATE/promotion.md`)
+   when creating the PR for a structured checklist.
+3. **The promotion gate workflow** (`.github/workflows/promote.yml`) runs
+   automatically on the PR. It:
+   - Re-runs the full build and test suite against the promotion diff.
+   - Scans for staging-specific configuration leaks in source code.
+   - Posts an interactive promotion checklist as a PR comment.
+4. **At least one team member approves** the pull request, confirming:
    - Staging validation was performed
    - No staging-only configuration exists in the diff
    - Migration changes are safe and additive
@@ -376,6 +384,9 @@ Post-deployment
 - [`docs/operations/d1-provisioning.md`](d1-provisioning.md) — D1 database provisioning
 - [`docs/operations/n8n-deployment.md`](n8n-deployment.md) — n8n deployment and workflow import
 - [`docs/local-development.md`](../local-development.md) — local development environment setup
+- [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) — CI pipeline (runs on `main`, `staging`, and pull requests)
+- [`.github/workflows/promote.yml`](../../.github/workflows/promote.yml) — promotion gate (runs on `staging` → `main` pull requests)
+- [`.github/PULL_REQUEST_TEMPLATE/promotion.md`](../../.github/PULL_REQUEST_TEMPLATE/promotion.md) — PR template for production promotions
 - [`scripts/smoke-check.sh`](../../scripts/smoke-check.sh) — automated pre-promotion smoke checks
 - [`scripts/d1-migrate-remote.sh`](../../scripts/d1-migrate-remote.sh) — D1 remote migration script
 - [`scripts/d1-verify-schema.sh`](../../scripts/d1-verify-schema.sh) — D1 schema verification script

@@ -1,0 +1,157 @@
+name: Promotion Gate
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate-promotion:
+    name: Validate Promotion
+    if: github.head_ref == 'staging'
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Run unit tests
+        run: npm run test:run -- --reporter=verbose src/__tests__/components src/__tests__/utils src/__tests__/services
+
+      - name: Run source and X tests
+        run: >
+          npm run test:run -- --reporter=verbose
+          src/__tests__/utils/sourceTrust.test.js
+          src/__tests__/utils/sourceProviders.test.js
+          src/__tests__/utils/url.test.js
+          src/__tests__/components/SourceBadge.test.js
+          src/__tests__/components/SourceList.test.js
+          src/__tests__/integration/workflow.source-ingestion.test.js
+          src/__tests__/integration/source-attribution.test.js
+          src/__tests__/integration/api.sources.test.js
+          src/__tests__/integration/api.internal.sources.test.js
+
+      - name: Run integration tests
+        run: npm run test:integration -- --reporter=verbose
+
+  check-config-leak:
+    name: Check for staging config leaks
+    if: github.head_ref == 'staging'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Scan for staging-specific references in source code
+        run: |
+          echo "Scanning for staging-specific references that should not ship to production..."
+          ERRORS=0
+
+          # Check for hardcoded staging URLs in source code (excluding docs and markdown)
+          if grep -rn "staging\.modern-content-platform\.pages\.dev" \
+               --include='*.js' --include='*.vue' --include='*.ts' --include='*.json' \
+               --exclude-dir=node_modules --exclude-dir=.git \
+               app/ functions/ ; then
+            echo "::warning::Found hardcoded staging URLs in source code — verify these are not included in production builds."
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Check for staging database name in source code (wrangler.toml is expected)
+          if grep -rn "modern-content-platform-staging-db" \
+               --include='*.js' --include='*.vue' --include='*.ts' \
+               --exclude-dir=node_modules --exclude-dir=.git \
+               app/ functions/ ; then
+            echo "::warning::Found staging database references in application source code."
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          if [ "$ERRORS" -gt 0 ]; then
+            echo ""
+            echo "⚠ Found $ERRORS potential staging config leak(s). Review the warnings above."
+            echo "If these are intentional (e.g. environment detection logic), you can proceed."
+            exit 0
+          fi
+
+          echo "✓ No staging config leaks detected in source code."
+
+  post-checklist:
+    name: Post promotion checklist
+    if: github.head_ref == 'staging'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Post promotion checklist comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = '<!-- promotion-checklist -->';
+            const body = `${marker}
+            ## 🚀 Production Promotion Checklist
+
+            This PR promotes \`staging\` → \`main\`. Complete the following before merging.
+
+            ### Pre-merge validation
+            - [ ] CI passes on this pull request (build + tests)
+            - [ ] Staging smoke checks pass (\`bash scripts/smoke-check.sh staging\`)
+            - [ ] All relevant manual validation items pass ([checklist](docs/operations/promotion-workflow.md#step-3--validate-in-staging))
+            - [ ] No staging-specific configuration in the diff (URLs, database IDs, debug code)
+            - [ ] D1 migration changes are safe and additive (if any)
+            - [ ] No secrets or environment-specific values in committed code
+
+            ### Post-merge steps
+            - [ ] Cloudflare Pages production deployment succeeds
+            - [ ] D1 migrations applied to production (\`bash scripts/d1-migrate-remote.sh production\`) (if any)
+            - [ ] n8n workflows imported to production (\`bash scripts/n8n-workflow-import.sh production\`) (if any)
+            - [ ] Production smoke checks pass (\`bash scripts/smoke-check.sh production\`)
+            - [ ] Delivery channels verified (if changed)
+
+            > See [docs/operations/promotion-workflow.md](docs/operations/promotion-workflow.md) for the full process.
+            `;
+
+            // Find existing checklist comment to avoid duplicates
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.data.find(c => c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
