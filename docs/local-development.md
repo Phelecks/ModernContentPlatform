@@ -249,6 +249,7 @@ Recommended extensions are defined in `.vscode/extensions.json`:
 | Stop local n8n | `docker compose -f n8n/docker-compose.yml down` |
 | Reset local n8n state | `docker compose -f n8n/docker-compose.yml down && rm -rf n8n/local_data` |
 | Run alert write smoke test | Import `workflows/n8n/intraday/00_local_alert_smoke_test.json` in n8n and click Execute |
+| Run pre-promotion smoke checks | `bash scripts/smoke-check.sh <staging\|production\|local>` |
 
 ---
 

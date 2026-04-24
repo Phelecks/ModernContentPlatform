@@ -564,3 +564,6 @@ They may be added as the platform matures.
 These two steps unlock the entire staging environment. Once the staging D1 database
 exists and the `staging` branch triggers preview deployments, all other staging
 components (n8n, delivery channels, secrets) can be configured incrementally.
+
+For the step-by-step promotion process from staging to production, see
+[`docs/operations/promotion-workflow.md`](operations/promotion-workflow.md).
