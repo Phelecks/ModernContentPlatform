@@ -14,7 +14,7 @@
 
 - [ ] CI passes on this pull request (build + tests)
 - [ ] Staging smoke checks pass (`bash scripts/smoke-check.sh staging`)
-- [ ] All relevant manual validation items pass ([checklist](../../docs/operations/promotion-workflow.md#step-3--validate-in-staging))
+- [ ] All relevant manual validation items pass ([checklist](docs/operations/promotion-workflow.md#step-3--validate-in-staging))
 - [ ] No staging-specific configuration in the diff (URLs, database IDs, debug code)
 - [ ] D1 migration changes are safe and additive (if any)
 - [ ] No secrets or environment-specific values in committed code
@@ -31,4 +31,4 @@
 
 <!-- Describe how to roll back if something goes wrong. Default: -->
 
-Rollback via Cloudflare Pages deployment history. See [rollback procedures](../../docs/operations/promotion-workflow.md#rollback-procedures).
+Rollback via Cloudflare Pages deployment history. See [rollback procedures](docs/operations/promotion-workflow.md#rollback-procedures).

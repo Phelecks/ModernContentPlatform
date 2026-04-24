@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
   pull-requests: write
 
 jobs:
@@ -90,9 +91,8 @@ jobs:
 
           if [ "$ERRORS" -gt 0 ]; then
             echo ""
-            echo "⚠ Found $ERRORS potential staging config leak(s). Review the warnings above."
-            echo "If these are intentional (e.g. environment detection logic), you can proceed."
-            exit 0
+            echo "::error::Found $ERRORS potential staging config leak(s). Review the matches above and remove or isolate staging-only references before promotion."
+            exit 1
           fi
 
           echo "✓ No staging config leaks detected in source code."
@@ -108,37 +108,41 @@ jobs:
         with:
           script: |
             const marker = '<!-- promotion-checklist -->';
-            const body = `${marker}
-            ## 🚀 Production Promotion Checklist
-
-            This PR promotes \`staging\` → \`main\`. Complete the following before merging.
-
-            ### Pre-merge validation
-            - [ ] CI passes on this pull request (build + tests)
-            - [ ] Staging smoke checks pass (\`bash scripts/smoke-check.sh staging\`)
-            - [ ] All relevant manual validation items pass ([checklist](docs/operations/promotion-workflow.md#step-3--validate-in-staging))
-            - [ ] No staging-specific configuration in the diff (URLs, database IDs, debug code)
-            - [ ] D1 migration changes are safe and additive (if any)
-            - [ ] No secrets or environment-specific values in committed code
-
-            ### Post-merge steps
-            - [ ] Cloudflare Pages production deployment succeeds
-            - [ ] D1 migrations applied to production (\`bash scripts/d1-migrate-remote.sh production\`) (if any)
-            - [ ] n8n workflows imported to production (\`bash scripts/n8n-workflow-import.sh production\`) (if any)
-            - [ ] Production smoke checks pass (\`bash scripts/smoke-check.sh production\`)
-            - [ ] Delivery channels verified (if changed)
-
-            > See [docs/operations/promotion-workflow.md](docs/operations/promotion-workflow.md) for the full process.
-            `;
+            const body = [
+              marker,
+              '## 🚀 Production Promotion Checklist',
+              '',
+              'This PR promotes `staging` → `main`. Complete the following before merging.',
+              '',
+              '### Pre-merge validation',
+              '- [ ] CI passes on this pull request (build + tests)',
+              '- [ ] Staging smoke checks pass (`bash scripts/smoke-check.sh staging`)',
+              '- [ ] All relevant manual validation items pass ([checklist](docs/operations/promotion-workflow.md#step-3--validate-in-staging))',
+              '- [ ] No staging-specific configuration in the diff (URLs, database IDs, debug code)',
+              '- [ ] D1 migration changes are safe and additive (if any)',
+              '- [ ] No secrets or environment-specific values in committed code',
+              '',
+              '### Post-merge steps',
+              '- [ ] Cloudflare Pages production deployment succeeds',
+              '- [ ] D1 migrations applied to production (`bash scripts/d1-migrate-remote.sh production`) (if any)',
+              '- [ ] n8n workflows imported to production (`bash scripts/n8n-workflow-import.sh production`) (if any)',
+              '- [ ] Production smoke checks pass (`bash scripts/smoke-check.sh production`)',
+              '- [ ] Delivery channels verified (if changed)',
+              '',
+              '> See [docs/operations/promotion-workflow.md](docs/operations/promotion-workflow.md) for the full process.',
+            ].join('\n');
 
             // Find existing checklist comment to avoid duplicates
-            const comments = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+              }
+            );
 
-            const existing = comments.data.find(c => c.body.includes(marker));
+            const existing = comments.find(c => c.body.includes(marker));
 
             if (existing) {
               await github.rest.issues.updateComment({
