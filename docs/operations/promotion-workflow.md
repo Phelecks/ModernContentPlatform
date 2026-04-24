@@ -19,7 +19,7 @@ architecture, secret management, and first-time setup, see
 
 ### Branch-to-environment rules
 
-- **Feature branches** → local development only. Never deployed.
+- **Feature branches** → local development only. Pull requests against `staging` trigger Cloudflare Pages preview deployments (commit-hash URLs) for review, but these are ephemeral and not considered a persistent environment.
 - **`staging` branch** → Cloudflare Pages preview deployment + staging D1.
 - **`main` branch** → Cloudflare Pages production deployment + production D1.
 
@@ -123,8 +123,9 @@ bash scripts/smoke-check.sh staging
 The smoke check script verifies:
 
 - [ ] D1 schema state — all expected tables, indexes, and migrations present
-- [ ] API health — `GET /api/topics` returns a valid topic list
+- [ ] API health — `GET /api/topics` returns HTTP 200
 - [ ] Frontend availability — staging URL returns HTTP 200
+- [ ] SPA routing — deep link returns HTTP 200 (staging and production only)
 
 ### Manual validation checklist
 

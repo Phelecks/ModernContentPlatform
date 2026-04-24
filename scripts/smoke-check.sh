@@ -10,14 +10,15 @@
 #
 # Requirements:
 #   - Wrangler CLI 3.x or later (npm install -g wrangler)
+#   - python3 (used by d1-verify-schema.sh to parse Wrangler JSON output)
 #   - For remote environments: authenticated via `wrangler login` or CLOUDFLARE_API_TOKEN
 #   - For API and frontend checks: curl
 #   - Run from the repository root directory
 #
 # What this script does:
 #   1. Runs D1 schema verification (delegates to d1-verify-schema.sh).
-#   2. Tests API endpoint availability (staging and production only).
-#   3. Tests frontend URL availability (staging and production only).
+#   2. Tests API endpoint availability.
+#   3. Tests frontend URL availability.
 #   4. Prints a pass/fail summary.
 #
 # Environment variables (optional):
@@ -74,6 +75,9 @@ case "${ENV}" in
     ;;
 esac
 
+# Strip trailing slash from BASE_URL to avoid double-slash in constructed URLs
+BASE_URL="${BASE_URL%/}"
+
 echo ""
 echo "========================================"
 echo "  Smoke Check — ${ENV}"
@@ -82,6 +86,13 @@ echo ""
 
 ERRORS=0
 WARNINGS=0
+
+# ---------------------------------------------------------------------------
+# Temp file for schema verification output — cleaned up on exit
+# ---------------------------------------------------------------------------
+SCHEMA_OUTPUT=$(mktemp)
+cleanup() { rm -f "${SCHEMA_OUTPUT}"; }
+trap cleanup EXIT
 
 # ---------------------------------------------------------------------------
 # Helper: record a check result
@@ -106,13 +117,12 @@ warn() {
 echo "Check 1: D1 schema verification"
 echo "--------------------------------"
 
-if bash "${REPO_ROOT}/scripts/d1-verify-schema.sh" "${ENV}" > /tmp/smoke-check-schema-output.txt 2>&1; then
+if bash "${REPO_ROOT}/scripts/d1-verify-schema.sh" "${ENV}" > "${SCHEMA_OUTPUT}" 2>&1; then
   pass "D1 schema verification passed"
 else
   fail "D1 schema verification failed — review output below"
-  cat /tmp/smoke-check-schema-output.txt
+  cat "${SCHEMA_OUTPUT}"
 fi
-rm -f /tmp/smoke-check-schema-output.txt
 
 echo ""
 
@@ -166,10 +176,20 @@ SPA_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "${BASE_URL}/top
 
 if [[ "${SPA_CODE}" == "200" ]]; then
   pass "SPA routing (/topics/crypto) — HTTP ${SPA_CODE}"
-elif [[ "${SPA_CODE}" == "000" ]]; then
-  warn "SPA routing (/topics/crypto) — connection failed (may be expected for local without build)"
+elif [[ "${ENV}" == "local" ]]; then
+  # Local may not have a built app or _redirects; downgrade to warning
+  if [[ "${SPA_CODE}" == "000" ]]; then
+    warn "SPA routing (/topics/crypto) — connection failed (may be expected for local without build)"
+  else
+    warn "SPA routing (/topics/crypto) — HTTP ${SPA_CODE} (may be expected for local without build)"
+  fi
 else
-  warn "SPA routing (/topics/crypto) — HTTP ${SPA_CODE}"
+  # Staging and production must have working SPA routing
+  if [[ "${SPA_CODE}" == "000" ]]; then
+    fail "SPA routing (/topics/crypto) — connection failed"
+  else
+    fail "SPA routing (/topics/crypto) — HTTP ${SPA_CODE}"
+  fi
 fi
 
 echo ""
