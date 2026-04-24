@@ -44,6 +44,7 @@ Integration tests sit one level above unit tests. They verify that the full requ
 | Fixtures | `fixtures.test.js` | All fixture files — structural validation of page states, alerts, summaries |
 | Source ingestion | `workflow.source-ingestion.test.js` | normalizeItem for all 6 source types (rss, api, social, webhook, x_account, x_query), trust propagation, HTML stripping, topic candidate detection, item_id determinism |
 | Source attribution | `source-attribution.test.js` | Source attribution round-trip: alert write → timeline API → frontend rendering; placeholder→ready state transition with source data preserved |
+| E2E daily cycle | `e2e.daily-cycle.test.js` | Full 12-stage pipeline verification for Finance and Crypto: source ingestion → classification → D1 → delivery → summary → video → YouTube → GitHub → state → social → page render |
 
 ---
 
@@ -192,6 +193,7 @@ app/
         page.TopicDayPage.extended.test.js      ← video, navigation, load-more
         page.TopicPage.test.js
         source-attribution.test.js              ← source attribution end-to-end
+        e2e.daily-cycle.test.js                 ← full 12-stage Finance/Crypto verification
         workflow.source-ingestion.test.js       ← source normalization + X ingestion
       components/
         AlertTimeline.test.js

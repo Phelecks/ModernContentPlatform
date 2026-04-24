@@ -1,0 +1,54 @@
+{
+  "topic_slug": "finance",
+  "date_key": "2025-01-15",
+  "asset_type": "daily_post",
+  "source_type": "daily_summary",
+  "source_id": null,
+  "publish_job_id": 43,
+  "ai_output": {
+    "post_caption": "Fed minutes confirm no Q1 rate cuts. S&P 500 falls 1.2%, dollar hits two-month high, and bond yields rise as markets reprice rate expectations. The higher-for-longer theme is firmly back in focus.",
+    "hashtags": [
+      "#finance",
+      "#federalreserve",
+      "#FOMC",
+      "#SP500",
+      "#stockmarket",
+      "#interestrates",
+      "#USD",
+      "#bondyields",
+      "#macromarkets",
+      "#dailyfinance"
+    ],
+    "image_prompt": "Professional financial chart showing stock market decline with red downward trend line, dark background with Federal Reserve building silhouette, clean modern style",
+    "story_caption": "Fed says no Q1 rate cuts — S&P 500 drops 1.2% 📉",
+    "story_background_hint": "Dark gradient with red financial chart and Federal Reserve seal",
+    "cta": "Full daily finance briefing — link in bio."
+  },
+  "x": {
+    "enabled": true,
+    "post_text": "📊 Fed minutes confirm no Q1 rate cuts. S&P 500 falls 1.2%, dollar hits two-month high, and bond yields rise as markets reprice rate expectations.\n\n#finance #federalreserve #FOMC #SP500 #stockmarket",
+    "thread": null,
+    "alert_text": null
+  },
+  "telegram": {
+    "enabled": true,
+    "message_html": "📊 <b>Finance Daily Briefing</b> — 2025-01-15\n\nFed minutes confirm no Q1 rate cuts. S&amp;P 500 falls 1.2%, dollar hits two-month high, and bond yields rise as markets reprice rate expectations. The higher-for-longer theme is firmly back in focus.\n\nFull daily finance briefing — link in bio.\n\n#finance #federalreserve #FOMC #SP500 #stockmarket #interestrates #USD #bondyields #macromarkets #dailyfinance",
+    "alert_html": null
+  },
+  "discord": {
+    "enabled": true,
+    "embed": {
+      "title": "📊 Finance Daily Briefing — 2025-01-15",
+      "description": "Fed minutes confirm no Q1 rate cuts. S&P 500 falls 1.2%, dollar hits two-month high, and bond yields rise as markets reprice rate expectations. The higher-for-longer theme is firmly back in focus.",
+      "color": 3447003,
+      "fields": [
+        { "name": "Topic", "value": "Finance", "inline": true },
+        { "name": "CTA", "value": "Full daily finance briefing — link in bio.", "inline": false }
+      ],
+      "footer": { "text": "#finance #federalreserve #FOMC #SP500 #stockmarket #interestrates #USD #bondyields #macromarkets #dailyfinance" },
+      "timestamp": "2025-01-15T23:50:00Z"
+    },
+    "alert_embed": null
+  },
+  "generated_at": "2025-01-15T23:50:00Z"
+}

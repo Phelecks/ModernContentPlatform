@@ -1,0 +1,61 @@
+{
+  "items": [
+    {
+      "item_id": "f2b3c4d5e6a70819304b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6",
+      "alert_id": 4830,
+      "cluster_id": 320,
+      "topic_slug": "finance",
+      "headline": "Fed minutes reveal no urgency to cut rates in Q1 2025",
+      "summary_text": "Minutes from the December FOMC meeting published on January 15 showed officials broadly agreed that there was no reason to lower the federal funds rate until inflation data showed sustained progress toward the 2% target.",
+      "source_url": "https://example.com/finance/fed-minutes",
+      "source_name": "MarketWatch",
+      "severity_score": 70,
+      "importance_score": 90,
+      "confidence_score": 95,
+      "event_at": "2025-01-15T19:00:00Z",
+      "date_key": "2025-01-15",
+      "cluster_label": "Fed Rate Decision",
+      "channels": ["telegram"],
+      "secondary_topics": ["economy"],
+      "alert_reason": "FOMC minutes directly influencing rate expectations is a high-importance event for finance audiences."
+    },
+    {
+      "item_id": "a1b2c3d4e5f60718293b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6",
+      "alert_id": 4831,
+      "cluster_id": 320,
+      "topic_slug": "finance",
+      "headline": "S&P 500 falls 1.2% as rate-cut hopes fade",
+      "summary_text": "US equities declined sharply after the Fed minutes were released, with the S&P 500 closing 1.2% lower and rate-sensitive sectors such as real estate and utilities leading losses.",
+      "source_url": "https://example.com/finance/sp500-decline",
+      "source_name": "Bloomberg",
+      "severity_score": 65,
+      "importance_score": 80,
+      "confidence_score": 90,
+      "event_at": "2025-01-15T20:30:00Z",
+      "date_key": "2025-01-15",
+      "cluster_label": "Fed Rate Decision",
+      "channels": ["telegram"],
+      "secondary_topics": [],
+      "alert_reason": "Broad equity sell-off directly caused by macro catalyst warrants immediate alert."
+    },
+    {
+      "item_id": "b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6",
+      "alert_id": 4832,
+      "cluster_id": null,
+      "topic_slug": "finance",
+      "headline": "US dollar index hits two-month high on hawkish Fed signal",
+      "summary_text": "The DXY rose to its highest point in two months as the rate repricing pushed EUR/USD briefly below 1.09, strengthening the dollar against most major currencies.",
+      "source_url": "https://example.com/finance/dxy-two-month-high",
+      "source_name": "Reuters",
+      "severity_score": 50,
+      "importance_score": 72,
+      "confidence_score": 88,
+      "event_at": "2025-01-15T21:00:00Z",
+      "date_key": "2025-01-15",
+      "cluster_label": null,
+      "channels": ["telegram"],
+      "secondary_topics": ["economy"],
+      "alert_reason": "Dollar strength affects multinational earnings and emerging market debt."
+    }
+  ]
+}
