@@ -13,6 +13,7 @@ Keep scripts focused and task-specific.
 | `d1-migrate-remote.sh` | Apply D1 migrations to staging or production. See `docs/operations/d1-provisioning.md`. |
 | `d1-verify-schema.sh` | Verify D1 schema state after migrations. See `docs/operations/d1-provisioning.md`. |
 | `n8n-workflow-import.sh` | Import all platform workflow JSON files into a running n8n instance. See `docs/operations/n8n-deployment.md`. |
+| `smoke-check.sh` | Run pre-promotion smoke checks against staging, production, or local. Verifies D1 schema, API endpoints, and frontend availability. See `docs/operations/promotion-workflow.md`. |
 
 ## Usage
 
@@ -50,3 +51,18 @@ bash scripts/n8n-workflow-import.sh local
 ```
 
 See `docs/operations/n8n-deployment.md` for the full deployment and import guide.
+
+### Run smoke checks
+
+```bash
+# Check staging environment before promoting to production
+bash scripts/smoke-check.sh staging
+
+# Verify production after deployment
+bash scripts/smoke-check.sh production
+
+# Check local environment
+bash scripts/smoke-check.sh local
+```
+
+See `docs/operations/promotion-workflow.md` for the full promotion process.
