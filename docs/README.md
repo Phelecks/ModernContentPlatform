@@ -19,6 +19,7 @@ Project documentation lives here.
   - `meta-social-publishing.md` — Meta (Instagram/Facebook) social publishing: architecture, daily post and story generation, platform toggle configuration, account and token requirements, formatting rules, D1 state tracking, retry behaviour, and recommended v1 setup.
 - `data-model/` for D1 and content model references.
 - `operations/` for operational procedures.
+  - `operations/secrets-management.md` — **secrets and environment variables management**: full secret inventory, environment-specific usage (local/staging/production), rotation schedule, missing-secret behavior, secure storage locations, and troubleshooting. **Start here** when onboarding or auditing credentials.
   - `operations/promotion-workflow.md` — staging-to-production promotion: environment mapping, step-by-step release path, approval gates, smoke checks, rollback procedures, and release checklist.
   - `operations/n8n-deployment.md` — n8n production/staging deployment, workflow import, credential setup, runtime variables, updates, and troubleshooting.
 - `runbooks/` for incident and rerun guidance.
