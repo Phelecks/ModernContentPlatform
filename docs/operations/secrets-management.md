@@ -24,13 +24,35 @@ section.
 
 ### 1. Cloudflare — account and API access
 
+Two naming conventions exist depending on where the variable is consumed:
+
+- **Wrangler / `.env`** — uses `CLOUDFLARE_*` names. These are read by the
+  Wrangler CLI and passed to the n8n Docker container via `docker-compose.yml`.
+- **n8n Settings → Variables** — uses short `CF_*` names (`CF_ACCOUNT_ID`,
+  `CF_D1_DATABASE_ID`, `CF_API_TOKEN`). n8n workflow nodes reference these via
+  `$vars.CF_ACCOUNT_ID`, etc.
+
+Both sets refer to the same underlying values. When configuring a new
+environment, set both: the `CLOUDFLARE_*` variables in `.env` (or the Docker
+environment) **and** the `CF_*` variables in n8n Settings → Variables.
+
+#### Wrangler / `.env` variables
+
 | Variable | Required | Environments | Description |
 |---|---|---|---|
 | `CLOUDFLARE_ACCOUNT_ID` | Yes (deploy + n8n) | Local, Staging, Production | Cloudflare account identifier |
 | `CLOUDFLARE_API_TOKEN` | Yes (deploy + n8n) | Local, Staging, Production | Cloudflare API token for D1 and Pages operations |
-| `CLOUDFLARE_D1_DATABASE_ID` | Yes | Local, Staging, Production | Production D1 database identifier |
-| `CLOUDFLARE_D1_STAGING_DATABASE_ID` | Staging only | Local, Staging | Staging D1 database identifier |
+| `CLOUDFLARE_D1_DATABASE_ID` | Yes | Local, Staging, Production | Target D1 database ID for this environment (staging ID in staging, production ID in production) |
+| `CLOUDFLARE_D1_STAGING_DATABASE_ID` | Staging only | Local, Staging | Staging D1 database identifier (used by `wrangler.toml` `[env.staging]`) |
 | `CLOUDFLARE_PAGES_PROJECT_NAME` | Deploy only | Production | Pages project name (default: `modern-content-platform`) |
+
+#### n8n runtime variables (Settings → Variables)
+
+| Variable | Required | Environments | Description |
+|---|---|---|---|
+| `CF_ACCOUNT_ID` | Yes | Staging, Production | Same value as `CLOUDFLARE_ACCOUNT_ID` |
+| `CF_D1_DATABASE_ID` | Yes | Staging, Production | Target D1 database ID for this environment (same value as `CLOUDFLARE_D1_DATABASE_ID`) |
+| `CF_API_TOKEN` | Yes | Staging, Production | Cloudflare API token with D1:Edit permission (same value as `CLOUDFLARE_API_TOKEN`, or a more tightly scoped token) |
 
 **Local notes:**
 - When running Wrangler locally after `wrangler login`, the Cloudflare account
@@ -38,20 +60,23 @@ section.
   in `.env` for local Wrangler commands.
 - They are required in `.env` only when running n8n locally (Docker Compose
   passes them to the container for D1 REST API calls).
+- For local n8n, also set `CF_ACCOUNT_ID`, `CF_D1_DATABASE_ID`, and
+  `CF_API_TOKEN` in n8n Settings → Variables.
 
 **Rotation guidance:**
 - Cloudflare API tokens can be rotated in the Cloudflare dashboard under
-  **My Profile → API Tokens**. Create a new token, update all environments,
-  then revoke the old token.
+  **My Profile → API Tokens**. Create a new token, update all environments
+  (both `.env` / Docker env and n8n Settings → Variables), then revoke the old
+  token.
 - Use **scoped tokens** — staging should use a token scoped only to the staging
   D1 database; production should use a separate token scoped to the production
   database.
 
 **Missing-secret behavior:**
 - Missing `CLOUDFLARE_ACCOUNT_ID` or `CLOUDFLARE_API_TOKEN` causes Wrangler CLI
-  commands and n8n D1 HTTP Request nodes to fail immediately.
-- Missing `CLOUDFLARE_D1_DATABASE_ID` causes n8n workflows to fail when
-  attempting D1 reads or writes.
+  commands to fail immediately.
+- Missing `CF_ACCOUNT_ID`, `CF_D1_DATABASE_ID`, or `CF_API_TOKEN` in n8n causes
+  all workflow nodes that call the D1 REST API to fail.
 
 ---
 
@@ -113,13 +138,14 @@ openssl rand -hex 32
   editorial content is published to the `staging` branch.
 
 **Token scope:**
-- Minimum required: `repo` (full control of private repositories) or
-  `public_repo` if the repository is public.
+- Use a fine-grained personal access token scoped only to the target
+  repository (or the minimal set of repositories that n8n must publish to).
+- Minimum required repository permission: **Contents: Read and write**.
 - The token must be able to create and update files via the GitHub Contents API.
 
 **Rotation guidance:**
 - Create a new fine-grained personal access token in GitHub Settings →
-  Developer Settings → Personal access tokens.
+  Developer Settings → Personal access tokens → Fine-grained tokens.
 - Update the n8n credential or environment variable.
 - Revoke the old token.
 - Recommended rotation interval: **90 days**.
@@ -497,13 +523,20 @@ sub-workflows.
 ## Environment comparison matrix
 
 The table below summarizes which secrets are needed in each environment.
+Values in each column are environment-specific unless noted otherwise. In
+particular, `CLOUDFLARE_D1_DATABASE_ID` means the target D1 database ID for
+the current environment (staging ID in staging, production ID in production).
+
 **R** = required, **O** = optional, **—** = not applicable.
 
 | Secret | Local | Staging | Production |
 |---|---|---|---|
 | `CLOUDFLARE_ACCOUNT_ID` | O¹ | R | R |
 | `CLOUDFLARE_API_TOKEN` | O¹ | R (staging-scoped) | R (production-scoped) |
-| `CLOUDFLARE_D1_DATABASE_ID` | O¹ | R (staging ID) | R (production ID) |
+| `CLOUDFLARE_D1_DATABASE_ID` | O¹ | R (target D1 DB for staging) | R (target D1 DB for production) |
+| `CF_ACCOUNT_ID` (n8n variable) | O¹ | R | R |
+| `CF_D1_DATABASE_ID` (n8n variable) | O¹ | R (target D1 DB for staging) | R (target D1 DB for production) |
+| `CF_API_TOKEN` (n8n variable) | O¹ | R (staging-scoped) | R (production-scoped) |
 | `WRITE_API_KEY` | R² | R | R |
 | `GITHUB_TOKEN` | O | R | R |
 | `GITHUB_CONTENT_BRANCH` | — | R (`staging`) | — (`main` default) |
