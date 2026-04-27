@@ -23,6 +23,12 @@ const routes = [
         name: 'topic-day',
         component: () => import('@/pages/TopicDayPage.vue'),
         meta: { title: 'Topic Day' }
+      },
+      {
+        path: 'ops',
+        name: 'operator-dashboard',
+        component: () => import('@/pages/OperatorDashboardPage.vue'),
+        meta: { title: 'Operator Dashboard' }
       }
     ]
   },
