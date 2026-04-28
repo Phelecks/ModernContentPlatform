@@ -1,0 +1,218 @@
+{
+  "name": "Daily — Rerun Failed Social Publish",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "rerun-social-001",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "rerun-social-publish"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Validate the rerun request.\n// Expects: { topic_slug, date_key, platform?, source_id? }\nconst body = $input.first().json.body || $input.first().json;\nconst topic_slug = body.topic_slug;\nconst date_key = body.date_key;\nconst platform = body.platform || null;\nconst source_id = body.source_id || null;\n\nif (!topic_slug || !date_key) {\n  throw new Error('Missing required fields: topic_slug and date_key');\n}\n\nreturn [{ json: { topic_slug, date_key, platform, source_id, execution_id: $execution.id } }];"
+      },
+      "id": "rerun-social-002",
+      "name": "Validate Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $vars.PAGES_BASE_URL }}/api/internal/rerun-log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-Write-Key", "value": "={{ $vars.WRITE_API_KEY }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  rerun_type: 'social_publish',\n  topic_slug: $json.topic_slug,\n  date_key: $json.date_key,\n  source_table: 'social_publish_log',\n  source_id: $json.source_id,\n  status: 'running',\n  triggered_by: 'operator',\n  workflow_run_id: $json.execution_id\n} }}",
+        "options": { "timeout": 10000 }
+      },
+      "id": "rerun-social-003",
+      "name": "Log Rerun Start",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [680, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Extract the rerun_log id and build query for failed social publishes.\nconst resp = $input.first().json;\nconst rerun_id = resp?.id || null;\nconst ctx = $('Validate Request').first().json;\n\n// Build SQL to find failed social publishes for this topic/date.\n// If a specific platform is requested, filter by it.\nlet sql = \"SELECT id, platform, post_type, asset_type, source_type, source_id, attempt FROM social_publish_log WHERE topic_slug = ? AND date_key = ? AND status = 'failed'\";\nconst params = [ctx.topic_slug, ctx.date_key];\n\nif (ctx.platform) {\n  sql += ' AND platform = ?';\n  params.push(ctx.platform);\n}\n\nsql += ' ORDER BY created_at DESC LIMIT 20';\n\nreturn [{ json: { ...ctx, rerun_id, query_sql: sql, query_params: params } }];"
+      },
+      "id": "rerun-social-004",
+      "name": "Build Query",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.cloudflare.com/client/v4/accounts/{{ $vars.CF_ACCOUNT_ID }}/d1/database/{{ $vars.CF_D1_DATABASE_ID }}/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ sql: $json.query_sql, params: $json.query_params }) }}",
+        "options": { "timeout": 10000 }
+      },
+      "id": "rerun-social-005",
+      "name": "Query Failed Social Publishes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1120, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cloudflare-d1-credentials",
+          "name": "CloudflareD1Api"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Build delivery payloads for each failed social publish.\nconst resp = $input.first().json;\nconst rows = resp?.result?.[0]?.results || [];\nconst ctx = $('Build Query').first().json;\n\nif (rows.length === 0) {\n  return [{ json: { ...ctx, _skip: true, skip_reason: 'No failed social publishes found.' } }];\n}\n\nreturn [{ json: { ...ctx, _skip: false, failed_items: rows, retry_count: rows.length } }];"
+      },
+      "id": "rerun-social-006",
+      "name": "Extract Failed Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false },
+          "conditions": [
+            {
+              "leftValue": "={{ $json._skip }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "notEqual" }
+            }
+          ]
+        }
+      },
+      "id": "rerun-social-007",
+      "name": "Has Items?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $vars.DAILY_SOCIAL_PUBLISH_WORKFLOW_ID }}"
+        },
+        "options": {}
+      },
+      "id": "rerun-social-008",
+      "name": "Execute Social Publish",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [1780, 200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Determine final status.\nconst result = $input.first()?.json || {};\nconst ctx = $('Extract Failed Items').first().json;\nconst success = !result.error;\nreturn [{ json: { rerun_id: ctx.rerun_id, final_status: success ? 'success' : 'failed', error_message: success ? null : (result.error?.message || 'Social publish rerun failed') } }];"
+      },
+      "id": "rerun-social-009",
+      "name": "Evaluate Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 200]
+    },
+    {
+      "parameters": {
+        "url": "={{ $vars.PAGES_BASE_URL }}/api/internal/rerun-log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-Write-Key", "value": "={{ $vars.WRITE_API_KEY }}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { id: $json.rerun_id, status: $json.final_status, error_message: $json.error_message } }}",
+        "options": { "timeout": 10000 }
+      },
+      "id": "rerun-social-010",
+      "name": "Log Rerun Result",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [2220, 200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {},
+      "id": "rerun-social-011",
+      "name": "No Items — Skip",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1780, 400]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{ "node": "Validate Request", "type": "main", "index": 0 }]]
+    },
+    "Validate Request": {
+      "main": [[{ "node": "Log Rerun Start", "type": "main", "index": 0 }]]
+    },
+    "Log Rerun Start": {
+      "main": [[{ "node": "Build Query", "type": "main", "index": 0 }]]
+    },
+    "Build Query": {
+      "main": [[{ "node": "Query Failed Social Publishes", "type": "main", "index": 0 }]]
+    },
+    "Query Failed Social Publishes": {
+      "main": [[{ "node": "Extract Failed Items", "type": "main", "index": 0 }]]
+    },
+    "Extract Failed Items": {
+      "main": [[{ "node": "Has Items?", "type": "main", "index": 0 }]]
+    },
+    "Has Items?": {
+      "main": [
+        [{ "node": "Execute Social Publish", "type": "main", "index": 0 }],
+        [{ "node": "No Items — Skip", "type": "main", "index": 0 }]
+      ]
+    },
+    "Execute Social Publish": {
+      "main": [[{ "node": "Evaluate Result", "type": "main", "index": 0 }]]
+    },
+    "Evaluate Result": {
+      "main": [[{ "node": "Log Rerun Result", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
+  },
+  "id": "daily-rerun-social-publish-v1",
+  "tags": ["daily", "rerun", "recovery", "social", "v2"]
+}
