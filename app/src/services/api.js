@@ -58,3 +58,19 @@ export function fetchTimeline(topicSlug, dateKey, opts = {}) {
 export function fetchNavigation(topicSlug, dateKey) {
   return get(`/api/navigation/${topicSlug}/${dateKey}`)
 }
+
+/**
+ * Fetch operator dashboard data (workflow health, publish status, failures).
+ * Uses a dedicated read-only ops key separate from the write key.
+ * @param {string} opsKey - the X-Ops-Key value
+ * @returns {Promise<Object>}
+ */
+export async function fetchOperatorDashboard(opsKey) {
+  const res = await fetch(`${BASE}/api/internal/operator-dashboard`, {
+    headers: { 'X-Ops-Key': opsKey }
+  })
+  if (!res.ok) {
+    throw new Error(`API error ${res.status} for /api/internal/operator-dashboard`)
+  }
+  return res.json()
+}

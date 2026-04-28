@@ -1,18 +1,14 @@
 /**
- * Authentication helper for internal write endpoints.
+ * Authentication helpers for internal endpoints.
  *
- * Validates that the request includes a valid API key in the
- * X-Write-Key header, matched against the WRITE_API_KEY secret
- * bound in the Pages Functions environment.
+ * authenticateWrite — validates X-Write-Key against env.WRITE_API_KEY
+ *                     (used by write endpoints: alerts, publish-jobs, etc.)
+ *
+ * authenticateOpsRead — validates X-Ops-Key against env.OPS_READ_KEY
+ *                       (used by read-only operator dashboard)
  *
  * Usage:
- *   import { authenticateWrite } from '../../lib/auth.js'
- *
- *   export async function onRequestPost(ctx) {
- *     const authError = authenticateWrite(ctx)
- *     if (authError) return authError
- *     // … proceed with write logic
- *   }
+ *   import { authenticateWrite, authenticateOpsRead } from '../../lib/auth.js'
  */
 import { errorResponse } from './db.js'
 
@@ -36,6 +32,34 @@ export function authenticateWrite({ request, env }) {
 
   if (provided !== secret) {
     return errorResponse('Invalid write key', 403)
+  }
+
+  return null
+}
+
+/**
+ * Check the X-Ops-Key header against env.OPS_READ_KEY.
+ * This is a dedicated read-only key for the operator dashboard,
+ * separate from the write key to limit blast radius if compromised.
+ *
+ * Returns an error Response if authentication fails, or null if valid.
+ *
+ * @param {{ request: Request, env: Record<string, unknown> }} ctx
+ * @returns {Response|null} error response or null when authenticated
+ */
+export function authenticateOpsRead({ request, env }) {
+  const secret = env.OPS_READ_KEY
+  if (!secret) {
+    return errorResponse('Ops read key not configured', 503)
+  }
+
+  const provided = request.headers.get('X-Ops-Key')
+  if (!provided) {
+    return errorResponse('Missing X-Ops-Key header', 401)
+  }
+
+  if (provided !== secret) {
+    return errorResponse('Invalid ops key', 403)
   }
 
   return null

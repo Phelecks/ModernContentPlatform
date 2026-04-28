@@ -244,3 +244,119 @@
 -- )
 -- WHERE rn = 1
 -- ORDER BY platform ASC, post_type ASC;
+
+
+-- ============================================================
+-- OPERATOR DASHBOARD: Recent workflow runs (most recent events)
+-- Used by: GET /api/internal/operator-dashboard
+-- ============================================================
+-- SELECT
+--   id, workflow_name, execution_id, topic_slug, date_key,
+--   event_type, module_name, error_message, created_at
+-- FROM workflow_logs
+-- ORDER BY created_at DESC
+-- LIMIT 20;
+
+
+-- ============================================================
+-- OPERATOR DASHBOARD: Failed workflow events (error events only)
+-- Used by: GET /api/internal/operator-dashboard
+-- ============================================================
+-- SELECT
+--   id, workflow_name, execution_id, topic_slug, date_key,
+--   event_type, module_name, error_message, created_at
+-- FROM workflow_logs
+-- WHERE event_type = 'error'
+-- ORDER BY created_at DESC
+-- LIMIT 20;
+
+
+-- ============================================================
+-- OPERATOR DASHBOARD: Pending publish jobs
+-- Used by: GET /api/internal/operator-dashboard
+-- ============================================================
+-- SELECT
+--   id, topic_slug, date_key, status, attempt,
+--   triggered_by, error_message, created_at
+-- FROM publish_jobs
+-- WHERE status = 'pending'
+-- ORDER BY created_at DESC
+-- LIMIT 20;
+
+
+-- ============================================================
+-- OPERATOR DASHBOARD: Failed publish jobs
+-- Used by: GET /api/internal/operator-dashboard
+-- ============================================================
+-- SELECT
+--   id, topic_slug, date_key, status, attempt,
+--   triggered_by, error_message, created_at
+-- FROM publish_jobs
+-- WHERE status = 'failed'
+-- ORDER BY created_at DESC
+-- LIMIT 20;
+
+
+-- ============================================================
+-- OPERATOR DASHBOARD: Last published day per topic
+-- Used by: GET /api/internal/operator-dashboard
+-- Note: deduplication to one row per topic is done in JS
+-- ============================================================
+-- SELECT
+--   topic_slug, date_key, page_state, published_at
+-- FROM daily_status
+-- WHERE page_state = 'published'
+-- ORDER BY date_key DESC
+-- LIMIT 50;
+
+
+-- ============================================================
+-- OPERATOR DASHBOARD: Social publish failures (meta)
+-- Used by: GET /api/internal/operator-dashboard
+-- ============================================================
+-- SELECT
+--   id, topic_slug, date_key, platform, post_type,
+--   status, attempt, error_message, created_at
+-- FROM meta_social_publish_log
+-- WHERE status = 'failed'
+-- ORDER BY created_at DESC
+-- LIMIT 20;
+
+
+-- ============================================================
+-- OPERATOR DASHBOARD: Social publish failures (X/Telegram/Discord)
+-- Used by: GET /api/internal/operator-dashboard
+-- ============================================================
+-- SELECT
+--   id, topic_slug, date_key, platform, post_type,
+--   status, attempt, error_message, created_at
+-- FROM social_publish_log
+-- WHERE status = 'failed'
+-- ORDER BY created_at DESC
+-- LIMIT 20;
+
+
+-- ============================================================
+-- OPERATOR DASHBOARD: YouTube publish failures
+-- Used by: GET /api/internal/operator-dashboard
+-- ============================================================
+-- SELECT
+--   id, topic_slug, date_key, status, attempt,
+--   error_message, created_at
+-- FROM youtube_publish_log
+-- WHERE status = 'failed'
+-- ORDER BY created_at DESC
+-- LIMIT 20;
+
+
+-- ============================================================
+-- OPERATOR DASHBOARD: Recent AI usage (for summary)
+-- Used by: GET /api/internal/operator-dashboard
+-- Note: total_tokens and error_count are aggregated in JS
+-- ============================================================
+-- SELECT
+--   id, task, model, topic_slug, date_key,
+--   total_tokens, status, created_at
+-- FROM openai_usage_log
+-- ORDER BY created_at DESC
+-- LIMIT 50;
