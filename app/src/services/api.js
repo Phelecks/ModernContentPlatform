@@ -61,13 +61,13 @@ export function fetchNavigation(topicSlug, dateKey) {
 
 /**
  * Fetch operator dashboard data (workflow health, publish status, failures).
- * Requires write key authentication.
- * @param {string} writeKey - the X-Write-Key value
+ * Uses a dedicated read-only ops key separate from the write key.
+ * @param {string} opsKey - the X-Ops-Key value
  * @returns {Promise<Object>}
  */
-export async function fetchOperatorDashboard(writeKey) {
+export async function fetchOperatorDashboard(opsKey) {
   const res = await fetch(`${BASE}/api/internal/operator-dashboard`, {
-    headers: { 'X-Write-Key': writeKey }
+    headers: { 'X-Ops-Key': opsKey }
   })
   if (!res.ok) {
     throw new Error(`API error ${res.status} for /api/internal/operator-dashboard`)

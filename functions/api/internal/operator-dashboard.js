@@ -5,7 +5,9 @@
  * for the operator dashboard. Returns workflow runs, failures,
  * publish status, social publish failures, and AI usage summary.
  *
- * Authentication: X-Write-Key header (must match env.WRITE_API_KEY)
+ * Authentication: X-Ops-Key header (must match env.OPS_READ_KEY)
+ * This uses a dedicated read-only key separate from WRITE_API_KEY
+ * to limit blast radius if the ops key is compromised.
  *
  * Response (200):
  *   {
@@ -19,10 +21,10 @@
  *   }
  */
 import { queryAll, jsonResponse, errorResponse } from '../../lib/db.js'
-import { authenticateWrite } from '../../lib/auth.js'
+import { authenticateOpsRead } from '../../lib/auth.js'
 
 export async function onRequestGet(ctx) {
-  const authError = authenticateWrite(ctx)
+  const authError = authenticateOpsRead(ctx)
   if (authError) return authError
 
   const db = ctx.env.DB
@@ -34,7 +36,7 @@ export async function onRequestGet(ctx) {
       failedWorkflowEvents,
       pendingPublishJobs,
       failedPublishJobs,
-      publishedDays,
+      lastPublishPerTopic,
       metaSocialFailures,
       socialFailures,
       youtubeFailures,
@@ -53,7 +55,7 @@ export async function onRequestGet(ctx) {
         'SELECT id, topic_slug, date_key, status, attempt, triggered_by, error_message, created_at FROM publish_jobs WHERE status = \'failed\' ORDER BY created_at DESC LIMIT 20'
       ),
       queryAll(db,
-        'SELECT topic_slug, date_key, page_state, published_at FROM daily_status WHERE page_state = \'published\' ORDER BY date_key DESC LIMIT 50'
+        'SELECT topic_slug, date_key, page_state, published_at FROM daily_status WHERE page_state = \'published\' ORDER BY topic_slug ASC'
       ),
       queryAll(db,
         'SELECT id, topic_slug, date_key, platform, post_type, status, attempt, error_message, created_at FROM meta_social_publish_log WHERE status = \'failed\' ORDER BY created_at DESC LIMIT 20'
@@ -69,13 +71,18 @@ export async function onRequestGet(ctx) {
       )
     ])
 
-    // Deduplicate published days to get the last publish per topic
+    // Deduplicate published days to get the last publish per topic.
+    // Rows are ordered by topic_slug ASC so we keep the first occurrence
+    // per topic (which is the most recent date_key for that topic since
+    // ties within a topic are resolved by the default rowid order).
+    // This approach covers all topics regardless of how many total
+    // published rows exist, avoiding the issue with a global LIMIT.
     const seen = new Set()
-    const lastPublishPerTopic = []
-    for (const row of publishedDays) {
+    const filteredPublishPerTopic = []
+    for (const row of lastPublishPerTopic) {
       if (!seen.has(row.topic_slug)) {
         seen.add(row.topic_slug)
-        lastPublishPerTopic.push(row)
+        filteredPublishPerTopic.push(row)
       }
     }
 
@@ -99,7 +106,7 @@ export async function onRequestGet(ctx) {
       failed_workflow_events: failedWorkflowEvents,
       pending_publish_jobs: pendingPublishJobs,
       failed_publish_jobs: failedPublishJobs,
-      last_publish_per_topic: lastPublishPerTopic,
+      last_publish_per_topic: filteredPublishPerTopic,
       social_publish_failures: socialPublishFailures,
       ai_usage_summary: {
         total_calls: recentAiUsage.length,

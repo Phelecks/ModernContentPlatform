@@ -9,19 +9,24 @@
       v-if="!authenticated"
       class="ops-auth"
     >
-      <p class="ops-auth__label">
-        Enter your write key to view operational data.
-      </p>
+      <label
+        for="ops-key-input"
+        class="ops-auth__label"
+      >
+        Enter your ops read key to view operational data.
+      </label>
       <form
         class="ops-auth__form"
         @submit.prevent="authenticate"
       >
         <input
-          v-model="writeKey"
+          id="ops-key-input"
+          v-model="opsKey"
           type="password"
           class="ops-auth__input"
-          placeholder="X-Write-Key"
+          placeholder="X-Ops-Key"
           autocomplete="off"
+          aria-label="Operator dashboard read key"
         >
         <button
           type="submit"
@@ -52,6 +57,12 @@
         class="ops-dashboard__error"
       >
         {{ error }}
+        <button
+          class="ops-auth__btn ops-retry-btn"
+          @click="resetAuth"
+        >
+          Retry
+        </button>
       </div>
 
       <div
@@ -304,8 +315,8 @@
             </thead>
             <tbody>
               <tr
-                v-for="(row, idx) in data.social_publish_failures"
-                :key="idx"
+                v-for="row in data.social_publish_failures"
+                :key="`${row.source}:${row.id}`"
                 class="ops-row--error"
               >
                 <td>{{ row.source }}</td>
@@ -394,7 +405,7 @@
 import { ref } from 'vue'
 import { fetchOperatorDashboard } from '@/services/api.js'
 
-const writeKey = ref('')
+const opsKey = ref('')
 const authenticated = ref(false)
 const loading = ref(false)
 const error = ref(null)
@@ -402,27 +413,33 @@ const authError = ref(null)
 const data = ref(null)
 
 async function authenticate() {
-  if (!writeKey.value.trim()) {
-    authError.value = 'Please enter a write key.'
+  if (!opsKey.value.trim()) {
+    authError.value = 'Please enter an ops key.'
     return
   }
   authError.value = null
   loading.value = true
-  authenticated.value = true
   error.value = null
 
   try {
-    data.value = await fetchOperatorDashboard(writeKey.value)
+    data.value = await fetchOperatorDashboard(opsKey.value)
+    authenticated.value = true
   } catch (err) {
     if (err.message.includes('401') || err.message.includes('403')) {
-      authenticated.value = false
-      authError.value = 'Authentication failed. Check your write key.'
+      authError.value = 'Authentication failed. Check your ops key.'
     } else {
+      authenticated.value = true
       error.value = 'Failed to load dashboard data. Please try again.'
     }
   } finally {
     loading.value = false
   }
+}
+
+function resetAuth() {
+  authenticated.value = false
+  error.value = null
+  data.value = null
 }
 
 function eventRowClass(eventType) {
@@ -497,6 +514,14 @@ function eventRowClass(eventType) {
   color: var(--color-danger);
   font-size: 0.9rem;
   padding: var(--space-6) 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.ops-retry-btn {
+  font-size: 0.85rem;
+  padding: var(--space-1) var(--space-3);
 }
 
 /* Sections */

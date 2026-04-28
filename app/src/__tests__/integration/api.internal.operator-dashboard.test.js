@@ -8,7 +8,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { onRequestGet } from '@functions/api/internal/operator-dashboard.js'
 import { createSeededDb } from './helpers/mockD1.js'
 
-const WRITE_KEY = 'test-write-key-secret'
+const OPS_KEY = 'test-ops-read-key-secret'
 
 function makeRequest(headers = {}) {
   return new Request('http://localhost/api/internal/operator-dashboard', {
@@ -20,7 +20,7 @@ function makeRequest(headers = {}) {
 function makeCtx(db, headers = {}) {
   return {
     request: makeRequest(headers),
-    env: { DB: db, WRITE_API_KEY: WRITE_KEY }
+    env: { DB: db, OPS_READ_KEY: OPS_KEY }
   }
 }
 
@@ -33,21 +33,21 @@ describe('GET /api/internal/operator-dashboard', () => {
 
   // --- Authentication ---
 
-  it('returns 401 when X-Write-Key header is missing', async () => {
+  it('returns 401 when X-Ops-Key header is missing', async () => {
     const ctx = makeCtx(db)
     const res = await onRequestGet(ctx)
     expect(res.status).toBe(401)
   })
 
-  it('returns 403 when X-Write-Key header is wrong', async () => {
-    const ctx = makeCtx(db, { 'X-Write-Key': 'wrong-key' })
+  it('returns 403 when X-Ops-Key header is wrong', async () => {
+    const ctx = makeCtx(db, { 'X-Ops-Key': 'wrong-key' })
     const res = await onRequestGet(ctx)
     expect(res.status).toBe(403)
   })
 
-  it('returns 503 when WRITE_API_KEY is not configured', async () => {
+  it('returns 503 when OPS_READ_KEY is not configured', async () => {
     const ctx = {
-      request: makeRequest({ 'X-Write-Key': WRITE_KEY }),
+      request: makeRequest({ 'X-Ops-Key': OPS_KEY }),
       env: { DB: db }
     }
     const res = await onRequestGet(ctx)
@@ -56,17 +56,26 @@ describe('GET /api/internal/operator-dashboard', () => {
 
   it('returns 503 when DB is not configured', async () => {
     const ctx = {
-      request: makeRequest({ 'X-Write-Key': WRITE_KEY }),
-      env: { WRITE_API_KEY: WRITE_KEY }
+      request: makeRequest({ 'X-Ops-Key': OPS_KEY }),
+      env: { OPS_READ_KEY: OPS_KEY }
     }
     const res = await onRequestGet(ctx)
     expect(res.status).toBe(503)
   })
 
+  it('does not accept X-Write-Key (requires dedicated X-Ops-Key)', async () => {
+    const ctx = {
+      request: makeRequest({ 'X-Write-Key': OPS_KEY }),
+      env: { DB: db, OPS_READ_KEY: OPS_KEY }
+    }
+    const res = await onRequestGet(ctx)
+    expect(res.status).toBe(401)
+  })
+
   // --- Response structure ---
 
   it('returns 200 with correct response shape', async () => {
-    const ctx = makeCtx(db, { 'X-Write-Key': WRITE_KEY })
+    const ctx = makeCtx(db, { 'X-Ops-Key': OPS_KEY })
     const res = await onRequestGet(ctx)
     expect(res.status).toBe(200)
     const body = await res.json()
@@ -80,13 +89,13 @@ describe('GET /api/internal/operator-dashboard', () => {
   })
 
   it('returns JSON Content-Type header', async () => {
-    const ctx = makeCtx(db, { 'X-Write-Key': WRITE_KEY })
+    const ctx = makeCtx(db, { 'X-Ops-Key': OPS_KEY })
     const res = await onRequestGet(ctx)
     expect(res.headers.get('Content-Type')).toContain('application/json')
   })
 
   it('returns no-store cache header', async () => {
-    const ctx = makeCtx(db, { 'X-Write-Key': WRITE_KEY })
+    const ctx = makeCtx(db, { 'X-Ops-Key': OPS_KEY })
     const res = await onRequestGet(ctx)
     expect(res.headers.get('Cache-Control')).toBe('no-store')
   })
@@ -94,7 +103,7 @@ describe('GET /api/internal/operator-dashboard', () => {
   // --- Empty state ---
 
   it('returns empty arrays when no workflow logs exist', async () => {
-    const ctx = makeCtx(db, { 'X-Write-Key': WRITE_KEY })
+    const ctx = makeCtx(db, { 'X-Ops-Key': OPS_KEY })
     const res = await onRequestGet(ctx)
     const body = await res.json()
     expect(body.recent_workflow_runs).toEqual([])
@@ -102,14 +111,14 @@ describe('GET /api/internal/operator-dashboard', () => {
   })
 
   it('returns empty arrays for social failures when none exist', async () => {
-    const ctx = makeCtx(db, { 'X-Write-Key': WRITE_KEY })
+    const ctx = makeCtx(db, { 'X-Ops-Key': OPS_KEY })
     const res = await onRequestGet(ctx)
     const body = await res.json()
     expect(body.social_publish_failures).toEqual([])
   })
 
   it('returns empty arrays for publish jobs when none exist', async () => {
-    const ctx = makeCtx(db, { 'X-Write-Key': WRITE_KEY })
+    const ctx = makeCtx(db, { 'X-Ops-Key': OPS_KEY })
     const res = await onRequestGet(ctx)
     const body = await res.json()
     expect(body.pending_publish_jobs).toEqual([])
@@ -119,7 +128,7 @@ describe('GET /api/internal/operator-dashboard', () => {
   // --- AI usage summary structure ---
 
   it('returns ai_usage_summary with correct shape', async () => {
-    const ctx = makeCtx(db, { 'X-Write-Key': WRITE_KEY })
+    const ctx = makeCtx(db, { 'X-Ops-Key': OPS_KEY })
     const res = await onRequestGet(ctx)
     const body = await res.json()
     expect(body.ai_usage_summary).toHaveProperty('total_calls')
@@ -133,7 +142,7 @@ describe('GET /api/internal/operator-dashboard', () => {
   })
 
   it('returns zero AI usage when no records exist', async () => {
-    const ctx = makeCtx(db, { 'X-Write-Key': WRITE_KEY })
+    const ctx = makeCtx(db, { 'X-Ops-Key': OPS_KEY })
     const res = await onRequestGet(ctx)
     const body = await res.json()
     expect(body.ai_usage_summary.total_calls).toBe(0)
@@ -145,7 +154,7 @@ describe('GET /api/internal/operator-dashboard', () => {
   // --- Last publish per topic ---
 
   it('returns published topics from seeded daily_status', async () => {
-    const ctx = makeCtx(db, { 'X-Write-Key': WRITE_KEY })
+    const ctx = makeCtx(db, { 'X-Ops-Key': OPS_KEY })
     const res = await onRequestGet(ctx)
     const body = await res.json()
     // Seeded daily_status has crypto and finance as published
@@ -155,7 +164,7 @@ describe('GET /api/internal/operator-dashboard', () => {
   })
 
   it('excludes non-published topics from last_publish_per_topic', async () => {
-    const ctx = makeCtx(db, { 'X-Write-Key': WRITE_KEY })
+    const ctx = makeCtx(db, { 'X-Ops-Key': OPS_KEY })
     const res = await onRequestGet(ctx)
     const body = await res.json()
     // AI topic is 'ready' not 'published' in seeded data
@@ -164,7 +173,7 @@ describe('GET /api/internal/operator-dashboard', () => {
   })
 
   it('deduplicates to one entry per topic in last_publish_per_topic', async () => {
-    const ctx = makeCtx(db, { 'X-Write-Key': WRITE_KEY })
+    const ctx = makeCtx(db, { 'X-Ops-Key': OPS_KEY })
     const res = await onRequestGet(ctx)
     const body = await res.json()
     const slugs = body.last_publish_per_topic.map((r) => r.topic_slug)
@@ -199,7 +208,7 @@ describe('GET /api/internal/operator-dashboard', () => {
       }
     ])
 
-    const ctx = makeCtx(db, { 'X-Write-Key': WRITE_KEY })
+    const ctx = makeCtx(db, { 'X-Ops-Key': OPS_KEY })
     const res = await onRequestGet(ctx)
     const body = await res.json()
     expect(body.recent_workflow_runs.length).toBe(2)
@@ -231,7 +240,7 @@ describe('GET /api/internal/operator-dashboard', () => {
       }
     ])
 
-    const ctx = makeCtx(db, { 'X-Write-Key': WRITE_KEY })
+    const ctx = makeCtx(db, { 'X-Ops-Key': OPS_KEY })
     const res = await onRequestGet(ctx)
     const body = await res.json()
     expect(body.failed_publish_jobs.length).toBe(1)
@@ -264,7 +273,7 @@ describe('GET /api/internal/operator-dashboard', () => {
       }
     ])
 
-    const ctx = makeCtx(db, { 'X-Write-Key': WRITE_KEY })
+    const ctx = makeCtx(db, { 'X-Ops-Key': OPS_KEY })
     const res = await onRequestGet(ctx)
     const body = await res.json()
     expect(body.ai_usage_summary.total_calls).toBe(2)
@@ -300,7 +309,7 @@ describe('GET /api/internal/operator-dashboard', () => {
       }
     ])
 
-    const ctx = makeCtx(db, { 'X-Write-Key': WRITE_KEY })
+    const ctx = makeCtx(db, { 'X-Ops-Key': OPS_KEY })
     const res = await onRequestGet(ctx)
     const body = await res.json()
     expect(body.social_publish_failures.length).toBe(2)
@@ -312,7 +321,7 @@ describe('GET /api/internal/operator-dashboard', () => {
   // --- All arrays are arrays ---
 
   it('returns all top-level fields as arrays', async () => {
-    const ctx = makeCtx(db, { 'X-Write-Key': WRITE_KEY })
+    const ctx = makeCtx(db, { 'X-Ops-Key': OPS_KEY })
     const res = await onRequestGet(ctx)
     const body = await res.json()
     expect(Array.isArray(body.recent_workflow_runs)).toBe(true)

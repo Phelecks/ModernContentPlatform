@@ -96,7 +96,7 @@ describe('OperatorDashboardPage — rendering integration', () => {
     const wrapper = mount(OperatorDashboardPage, { global: { plugins: [router] } })
     await wrapper.find('.ops-auth__form').trigger('submit')
     await flushPromises()
-    expect(wrapper.find('.ops-auth__error').text()).toContain('enter a write key')
+    expect(wrapper.find('.ops-auth__error').text()).toContain('enter an ops key')
   })
 
   it('shows auth error on 403 response', async () => {
@@ -107,6 +107,8 @@ describe('OperatorDashboardPage — rendering integration', () => {
     await wrapper.find('.ops-auth__form').trigger('submit')
     await flushPromises()
     expect(wrapper.find('.ops-auth__error').text()).toContain('Authentication failed')
+    // Should stay on auth gate (not switch to dashboard)
+    expect(wrapper.find('.ops-auth').exists()).toBe(true)
   })
 
   it('shows dashboard data after successful authentication', async () => {
@@ -235,7 +237,7 @@ describe('OperatorDashboardPage — rendering integration', () => {
     expect(wrapper.text()).toContain('Intraday — Orchestrator')
   })
 
-  it('shows error message on network failure', async () => {
+  it('shows error message on network failure with retry button', async () => {
     vi.stubGlobal('fetch', buildFetch(null, { failApi: true }))
     const router = await createTestRouter()
     const wrapper = mount(OperatorDashboardPage, { global: { plugins: [router] } })
@@ -244,6 +246,32 @@ describe('OperatorDashboardPage — rendering integration', () => {
     await flushPromises()
     expect(wrapper.find('.ops-dashboard__error').exists()).toBe(true)
     expect(wrapper.text()).toContain('Failed to load dashboard data')
+    // Retry button should be visible
+    expect(wrapper.find('.ops-retry-btn').exists()).toBe(true)
+  })
+
+  it('retry button returns to auth gate', async () => {
+    vi.stubGlobal('fetch', buildFetch(null, { failApi: true }))
+    const router = await createTestRouter()
+    const wrapper = mount(OperatorDashboardPage, { global: { plugins: [router] } })
+    await wrapper.find('.ops-auth__input').setValue('valid-key')
+    await wrapper.find('.ops-auth__form').trigger('submit')
+    await flushPromises()
+    await wrapper.find('.ops-retry-btn').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.ops-auth').exists()).toBe(true)
+    expect(wrapper.find('.ops-dashboard__error').exists()).toBe(false)
+  })
+
+  it('has an accessible label on the password input', async () => {
+    const router = await createTestRouter()
+    const wrapper = mount(OperatorDashboardPage, { global: { plugins: [router] } })
+    const input = wrapper.find('.ops-auth__input')
+    expect(input.attributes('aria-label')).toBe('Operator dashboard read key')
+    expect(input.attributes('id')).toBe('ops-key-input')
+    // The label element should reference the input
+    const label = wrapper.find('label[for="ops-key-input"]')
+    expect(label.exists()).toBe(true)
   })
 
   it('renders all section headings', async () => {
