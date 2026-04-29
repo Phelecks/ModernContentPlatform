@@ -14,7 +14,7 @@ const VALID_TOPICS = ['crypto', 'finance', 'economy', 'health', 'ai', 'energy', 
 const VALID_PAGE_STATES = ['pending', 'ready', 'published', 'error']
 const VALID_JOB_STATUSES = ['pending', 'running', 'success', 'failed', 'retrying']
 const VALID_TRIGGERS = ['schedule', 'manual', 'retry']
-const VALID_SOURCE_TYPES = ['rss', 'api', 'social', 'webhook', 'x_account', 'x_query']
+const VALID_SOURCE_TYPES = ['rss', 'api', 'social', 'webhook', 'x_account', 'x_query', 'newsapi']
 const VALID_TRUST_TIERS = ['T1', 'T2', 'T3', 'T4']
 const VALID_INGESTION_METHODS = ['poll', 'push', 'manual']
 

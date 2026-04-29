@@ -1,36 +1,59 @@
 [
   {
-    "name": "Reuters Business RSS",
-    "type": "rss",
-    "url": "https://feeds.reuters.com/reuters/businessNews",
-    "topic_slug": "finance",
-    "trust_tier": "T2"
-  },
-  {
     "name": "SEC EDGAR RSS",
     "type": "rss",
     "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&dateb=&owner=include&count=20&search_text=&output=atom",
     "topic_slug": "finance",
-    "trust_tier": "T1"
+    "trust_tier": "T1",
+    "poll_interval_minutes": 30,
+    "notes": "SEC EDGAR returns Atom XML (<entry> elements). The module 01 RSS parser currently only handles <item> elements. Items will not be ingested until the parser is extended to support Atom <entry>. Source is included in config for completeness but ingestion will produce zero items until parser support is added."
   },
   {
     "name": "Federal Reserve News RSS",
     "type": "rss",
     "url": "https://www.federalreserve.gov/feeds/press_all.xml",
     "topic_slug": "finance",
-    "trust_tier": "T1"
+    "trust_tier": "T1",
+    "poll_interval_minutes": 30
   },
   {
-    "name": "X Search: Fed Decision",
-    "type": "x_query",
-    "url": "https://api.twitter.com/2/tweets/search/recent",
+    "name": "U.S. Treasury Press Releases RSS",
+    "type": "rss",
+    "url": "https://home.treasury.gov/system/files/136/press-releases.xml",
     "topic_slug": "finance",
-    "trust_tier": "T4",
-    "notes": "X keyword search — watch-only; severity capped at 30 per finance T4 rules. Must be confirmed by T1–T3 before escalation. See docs/x-source-rules.md.",
-    "search_query": "(Federal Reserve OR #FOMC) (rate OR decision OR cut OR hike) -is:retweet lang:en",
-    "poll_interval_minutes": 15,
-    "severity_cap": 30,
-    "confirmation_required": true,
-    "can_trigger_alert": false
+    "trust_tier": "T1",
+    "poll_interval_minutes": 30
+  },
+  {
+    "name": "Reuters Business RSS",
+    "type": "rss",
+    "url": "https://feeds.reuters.com/reuters/businessNews",
+    "topic_slug": "finance",
+    "trust_tier": "T2",
+    "poll_interval_minutes": 15
+  },
+  {
+    "name": "CNBC Finance RSS",
+    "type": "rss",
+    "url": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664",
+    "topic_slug": "finance",
+    "trust_tier": "T2",
+    "poll_interval_minutes": 15
+  },
+  {
+    "name": "Yahoo Finance RSS",
+    "type": "rss",
+    "url": "https://finance.yahoo.com/news/rssindex",
+    "topic_slug": "finance",
+    "trust_tier": "T3",
+    "poll_interval_minutes": 15
+  },
+  {
+    "name": "MarketWatch RSS",
+    "type": "rss",
+    "url": "https://feeds.content.dowjones.io/public/rss/mw_topstories",
+    "topic_slug": "finance",
+    "trust_tier": "T3",
+    "poll_interval_minutes": 15
   }
 ]
