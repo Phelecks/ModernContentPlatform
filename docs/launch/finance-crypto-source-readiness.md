@@ -10,25 +10,25 @@ and prioritized based on the trust model in `docs/source-strategy.md`.
 
 ## Finance — Production Source List
 
-### Active Sources (7)
+### Active Sources (6)
 
 | # | Source | Type | Trust Tier | Poll Interval | Priority | Notes |
 |---|--------|------|-----------|---------------|----------|-------|
-| 1 | SEC EDGAR RSS | rss | T1 | 30 min | 90 | Official regulatory filings. **Note:** feed uses Atom format (`<entry>` elements); module 01 RSS parser must be extended to handle Atom before items are ingested. |
-| 2 | Federal Reserve News RSS | rss | T1 | 30 min | 90 | Official central bank statements |
-| 3 | U.S. Treasury Press Releases RSS | rss | T1 | 30 min | 85 | Official government fiscal policy |
-| 4 | Reuters Business RSS | rss | T2 | 15 min | 80 | Wire service — fast, reliable |
-| 5 | CNBC Finance RSS | rss | T2 | 15 min | 75 | Major financial news network |
-| 6 | Yahoo Finance RSS | rss | T3 | 15 min | 60 | Broad market coverage |
-| 7 | MarketWatch RSS | rss | T3 | 15 min | 55 | Market commentary and news |
+| 1 | Federal Reserve News RSS | rss | T1 | 30 min | 90 | Official central bank statements |
+| 2 | U.S. Treasury Press Releases RSS | rss | T1 | 30 min | 85 | Official government fiscal policy |
+| 3 | Reuters Business RSS | rss | T2 | 15 min | 80 | Wire service — fast, reliable |
+| 4 | CNBC Finance RSS | rss | T2 | 15 min | 75 | Major financial news network |
+| 5 | Yahoo Finance RSS | rss | T3 | 15 min | 60 | Broad market coverage |
+| 6 | MarketWatch RSS | rss | T3 | 15 min | 55 | Market commentary and news |
 
-### Inactive / Pending Sources (3)
+### Inactive / Pending Sources (4)
 
 | # | Source | Type | Trust Tier | Reason Inactive |
 |---|--------|------|-----------|-----------------|
-| 1 | Financial Times RSS | rss | T2 | May require authentication; validate access |
-| 2 | X Search: Fed Decision | x_query | T4 | Pending X API credentials |
-| 3 | X Search: Earnings Season | x_query | T4 | Pending X API credentials |
+| 1 | SEC EDGAR RSS | rss | T1 | Atom feed format; module 01 parser only handles `<item>`, not `<entry>` — enable after parser is extended |
+| 2 | Financial Times RSS | rss | T2 | May require authentication; validate access |
+| 3 | X Search: Fed Decision | x_query | T4 | Pending X API credentials |
+| 4 | X Search: Earnings Season | x_query | T4 | Pending X API credentials |
 
 ### Excluded (noisy / low-value for v1)
 
@@ -127,7 +127,7 @@ and prioritized based on the trust model in `docs/source-strategy.md`.
 
 ## Readiness Checklist
 
-- [x] Finance active source list defined (7 sources across T1–T3)
+- [x] Finance active source list defined (6 sources across T1–T3)
 - [x] Crypto active source list defined (6 active RSS sources)
 - [x] Trust tier assignments reviewed and documented
 - [x] Poll intervals set per source category (intended cadence; actual depends on workflow schedule)
