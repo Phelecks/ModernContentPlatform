@@ -1,14 +1,5 @@
 [
   {
-    "name": "CoinGecko API",
-    "type": "api",
-    "url": "https://api.coingecko.com/api/v3/news",
-    "topic_slug": "crypto",
-    "trust_tier": "T1",
-    "poll_interval_minutes": 15,
-    "notes": "Market data API — treated as T1 equivalent for price and volume signals. Parser mapping required before enabling."
-  },
-  {
     "name": "CoinDesk RSS",
     "type": "rss",
     "url": "https://www.coindesk.com/arc/outboundfeeds/rss/",
@@ -55,79 +46,5 @@
     "topic_slug": "crypto",
     "trust_tier": "T2",
     "poll_interval_minutes": 15
-  },
-  {
-    "name": "NewsAPI Crypto",
-    "type": "newsapi",
-    "url": "https://newsapi.org/v2/everything?q=cryptocurrency+OR+bitcoin+OR+ethereum&sortBy=publishedAt&language=en",
-    "topic_slug": "crypto",
-    "trust_tier": "T3",
-    "poll_interval_minutes": 15,
-    "notes": "Requires NEWS_API_KEY. Provides broad coverage aggregation. Enable via ENABLE_NEWSAPI=true."
-  },
-  {
-    "name": "Whale Alert (X)",
-    "type": "x_account",
-    "url": "https://x.com/whale_alert",
-    "topic_slug": "crypto",
-    "trust_tier": "T4",
-    "notes": "X account monitoring — disabled by default; enable after X API credentials are configured. Severity capped at 60 per crypto T4 rules. See docs/x-source-rules.md.",
-    "x_user_id": "whale_alert",
-    "poll_interval_minutes": 5,
-    "severity_cap": 60,
-    "confirmation_required": false,
-    "can_trigger_alert": true
-  },
-  {
-    "name": "CZ Binance (X)",
-    "type": "x_account",
-    "url": "https://x.com/caborea",
-    "topic_slug": "crypto",
-    "trust_tier": "T4",
-    "notes": "X account monitoring — disabled by default; enable after X API credentials are configured. Severity capped at 60 per crypto T4 rules. See docs/x-source-rules.md.",
-    "x_user_id": "caborea",
-    "poll_interval_minutes": 10,
-    "severity_cap": 60,
-    "confirmation_required": false,
-    "can_trigger_alert": true
-  },
-  {
-    "name": "Vitalik Buterin (X)",
-    "type": "x_account",
-    "url": "https://x.com/VitalikButerin",
-    "topic_slug": "crypto",
-    "trust_tier": "T4",
-    "notes": "X account monitoring — disabled by default; enable after X API credentials are configured. Severity capped at 60 per crypto T4 rules. See docs/x-source-rules.md.",
-    "x_user_id": "VitalikButerin",
-    "poll_interval_minutes": 10,
-    "severity_cap": 60,
-    "confirmation_required": false,
-    "can_trigger_alert": true
-  },
-  {
-    "name": "X Search: BTC Breakout",
-    "type": "x_query",
-    "url": "https://api.twitter.com/2/tweets/search/recent",
-    "topic_slug": "crypto",
-    "trust_tier": "T4",
-    "notes": "X keyword search — disabled by default; enable after X API credentials are configured. Severity capped at 60 per crypto T4 rules. See docs/x-source-rules.md.",
-    "search_query": "(#Bitcoin OR #BTC) (breakout OR ATH OR crash) -is:retweet lang:en",
-    "poll_interval_minutes": 10,
-    "severity_cap": 60,
-    "confirmation_required": false,
-    "can_trigger_alert": true
-  },
-  {
-    "name": "X Search: ETH DeFi",
-    "type": "x_query",
-    "url": "https://api.twitter.com/2/tweets/search/recent",
-    "topic_slug": "crypto",
-    "trust_tier": "T4",
-    "notes": "X keyword search — disabled by default; enable after X API credentials are configured. Severity capped at 60 per crypto T4 rules. See docs/x-source-rules.md.",
-    "search_query": "(#Ethereum OR #ETH OR #DeFi) (exploit OR hack OR launch OR upgrade) -is:retweet lang:en",
-    "poll_interval_minutes": 10,
-    "severity_cap": 60,
-    "confirmation_required": false,
-    "can_trigger_alert": true
   }
 ]

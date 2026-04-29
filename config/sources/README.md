@@ -17,10 +17,10 @@ source strategy, trust model, and per-topic usage rules.
 | File | Topic | Sources |
 |------|-------|---------|
 | `ai.json` | AI | Ars Technica, Hacker News API, OpenAI blog, MIT Technology Review, OpenAI X account, Anthropic X account, AI launch X query |
-| `crypto.json` | Crypto | CoinGecko API, CoinDesk RSS, Decrypt RSS, The Block RSS, CoinTelegraph RSS, Bitcoin Magazine RSS, Reuters crypto RSS, NewsAPI Crypto, Whale Alert X account, CZ Binance X account, Vitalik Buterin X account, BTC breakout X query, ETH DeFi X query |
+| `crypto.json` | Crypto | CoinDesk RSS, Decrypt RSS, The Block RSS, CoinTelegraph RSS, Bitcoin Magazine RSS, Reuters crypto RSS |
 | `economy.json` | Economy | BLS RSS, Federal Reserve FRED API, Reuters general news RSS |
 | `energy.json` | Energy | IEA RSS, EIA RSS, Reuters general news RSS, IEA X account |
-| `finance.json` | Finance | SEC EDGAR RSS, Federal Reserve RSS, U.S. Treasury RSS, Reuters business RSS, CNBC Finance RSS, Financial Times RSS, Yahoo Finance RSS, MarketWatch RSS, Fed decision X query, Earnings season X query |
+| `finance.json` | Finance | SEC EDGAR RSS, Federal Reserve RSS, U.S. Treasury RSS, Reuters business RSS, CNBC Finance RSS, Yahoo Finance RSS, MarketWatch RSS |
 | `health.json` | Health | WHO RSS, CDC RSS, Reuters health RSS |
 
 ---
@@ -33,7 +33,7 @@ module 01:
 ```json
 {
   "name":       "Human-readable source label",
-  "type":       "rss | api | social | webhook | x_account | x_query | placeholder",
+  "type":       "rss | api | social | webhook | x_account | x_query | newsapi",
   "url":        "https://...",
   "topic_slug": "crypto | ai | finance | economy | health | energy",
   "trust_tier": "T1 | T2 | T3 | T4",

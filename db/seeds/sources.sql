@@ -42,7 +42,7 @@ VALUES
 INSERT OR IGNORE INTO sources
   (source_slug, source_name, topic_slug, source_type, trust_tier, trust_score, priority_weight, url, is_active, poll_interval_minutes, ingestion_method, metadata_json)
 VALUES
-  ('sec-edgar-rss', 'SEC EDGAR RSS', 'finance', 'rss', 'T1', 90, 90, 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&dateb=&owner=include&count=20&search_text=&output=atom', 1, 30, 'poll', NULL),
+  ('sec-edgar-rss', 'SEC EDGAR RSS', 'finance', 'rss', 'T1', 90, 90, 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&dateb=&owner=include&count=20&search_text=&output=atom', 1, 30, 'poll', '{"notes":"Atom feed — module 01 RSS parser must support <entry> elements for items to be ingested."}'),
   ('federal-reserve-news-rss', 'Federal Reserve News RSS', 'finance', 'rss', 'T1', 90, 90, 'https://www.federalreserve.gov/feeds/press_all.xml', 1, 30, 'poll', NULL),
   ('us-treasury-rss', 'U.S. Treasury Press Releases RSS', 'finance', 'rss', 'T1', 90, 85, 'https://home.treasury.gov/system/files/136/press-releases.xml', 1, 30, 'poll', NULL),
   ('reuters-business-rss', 'Reuters Business RSS', 'finance', 'rss', 'T2', 75, 80, 'https://feeds.reuters.com/reuters/businessNews', 1, 15, 'poll', NULL),

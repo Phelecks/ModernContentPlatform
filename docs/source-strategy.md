@@ -320,7 +320,11 @@ validated.
 | health  | WHO RSS, CDC RSS, Reuters health RSS |
 | energy  | IEA RSS, EIA news RSS, Reuters energy RSS, IEA X account (disabled) |
 
-Machine-readable source configs for these starter sets are in `config/sources/`.
+Machine-readable source configs for the active starter sets are in `config/sources/`.
+Pending/disabled sources (marked above) are registered in `db/seeds/sources.sql`
+with `is_active: 0` but are excluded from the `config/sources/*.json` files to
+prevent production workflow failures. Add them to the config JSONs only after
+their prerequisites are met (parser support, API credentials, access validation).
 
 For the detailed X source lists, trust rules, severity caps, confirmation
 requirements, and operational polling guidance, see
