@@ -17,10 +17,10 @@ source strategy, trust model, and per-topic usage rules.
 | File | Topic | Sources |
 |------|-------|---------|
 | `ai.json` | AI | Ars Technica, Hacker News API, OpenAI blog, MIT Technology Review, OpenAI X account, Anthropic X account, AI launch X query |
-| `crypto.json` | Crypto | CoinGecko API (placeholder), CoinDesk RSS, Reuters crypto RSS, Whale Alert X account, CZ Binance X account, BTC breakout X query |
+| `crypto.json` | Crypto | CoinGecko API, CoinDesk RSS, Decrypt RSS, The Block RSS, CoinTelegraph RSS, Bitcoin Magazine RSS, Reuters crypto RSS, NewsAPI Crypto, Whale Alert X account, CZ Binance X account, Vitalik Buterin X account, BTC breakout X query, ETH DeFi X query |
 | `economy.json` | Economy | BLS RSS, Federal Reserve FRED API, Reuters general news RSS |
 | `energy.json` | Energy | IEA RSS, EIA RSS, Reuters general news RSS, IEA X account |
-| `finance.json` | Finance | Reuters business RSS, SEC EDGAR RSS, Federal Reserve RSS, Fed decision X query |
+| `finance.json` | Finance | SEC EDGAR RSS, Federal Reserve RSS, U.S. Treasury RSS, Reuters business RSS, CNBC Finance RSS, Financial Times RSS, Yahoo Finance RSS, MarketWatch RSS, Fed decision X query, Earnings season X query |
 | `health.json` | Health | WHO RSS, CDC RSS, Reuters health RSS |
 
 ---

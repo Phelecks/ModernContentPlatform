@@ -313,9 +313,9 @@ validated.
 
 | Topic   | v1 starter sources |
 |---------|--------------------|
-| crypto  | CoinGecko API, CoinDesk RSS, Reuters crypto RSS, Whale Alert X account (disabled), CZ Binance X account (disabled), BTC breakout X query (disabled) |
+| crypto  | CoinGecko API (pending parser), CoinDesk RSS, Decrypt RSS, The Block RSS, CoinTelegraph RSS, Bitcoin Magazine RSS, Reuters crypto RSS, NewsAPI Crypto (pending key), Whale Alert X account (disabled), CZ Binance X account (disabled), Vitalik Buterin X account (disabled), BTC breakout X query (disabled), ETH DeFi X query (disabled) |
 | ai      | Ars Technica RSS, Hacker News API, OpenAI blog RSS, OpenAI X account (disabled), Anthropic X account (disabled), AI launch X query (disabled) |
-| finance | Reuters business RSS, SEC EDGAR RSS, Federal Reserve RSS, Fed decision X query (disabled) |
+| finance | SEC EDGAR RSS, Federal Reserve RSS, U.S. Treasury RSS, Reuters business RSS, CNBC Finance RSS, Financial Times RSS (pending access validation), Yahoo Finance RSS, MarketWatch RSS, Fed decision X query (disabled), Earnings season X query (disabled) |
 | economy | BLS RSS, Federal Reserve FRED API, Reuters economy RSS |
 | health  | WHO RSS, CDC RSS, Reuters health RSS |
 | energy  | IEA RSS, EIA news RSS, Reuters energy RSS, IEA X account (disabled) |

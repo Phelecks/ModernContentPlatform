@@ -16,9 +16,14 @@
 INSERT OR IGNORE INTO sources
   (source_slug, source_name, topic_slug, source_type, trust_tier, trust_score, priority_weight, url, is_active, poll_interval_minutes, ingestion_method, metadata_json)
 VALUES
-  ('coingecko-api', 'CoinGecko API', 'crypto', 'api', 'T1', 90, 90, 'https://api.coingecko.com/api/v3/news', 0, 15, 'poll', '{"notes":"Placeholder pending module 01 Parse API Items support for the CoinGecko response shape"}'),
-  ('coindesk-rss', 'CoinDesk RSS', 'crypto', 'rss', 'T3', 50, 70, 'https://www.coindesk.com/arc/outboundfeeds/rss/', 1, 15, 'poll', NULL),
-  ('reuters-crypto-rss', 'Reuters Crypto RSS', 'crypto', 'rss', 'T2', 75, 80, 'https://feeds.reuters.com/reuters/technologyNews', 1, 15, 'poll', NULL);
+  ('coingecko-api', 'CoinGecko API', 'crypto', 'api', 'T1', 90, 90, 'https://api.coingecko.com/api/v3/news', 0, 15, 'poll', '{"notes":"Market data API — treated as T1 equivalent for price and volume signals. Parser mapping required before enabling."}'),
+  ('coindesk-rss', 'CoinDesk RSS', 'crypto', 'rss', 'T3', 50, 70, 'https://www.coindesk.com/arc/outboundfeeds/rss/', 1, 10, 'poll', NULL),
+  ('decrypt-rss', 'Decrypt RSS', 'crypto', 'rss', 'T3', 50, 65, 'https://decrypt.co/feed', 1, 10, 'poll', NULL),
+  ('theblock-rss', 'The Block RSS', 'crypto', 'rss', 'T3', 50, 65, 'https://www.theblock.co/rss.xml', 1, 10, 'poll', NULL),
+  ('cointelegraph-rss', 'CoinTelegraph RSS', 'crypto', 'rss', 'T3', 50, 60, 'https://cointelegraph.com/rss', 1, 10, 'poll', NULL),
+  ('bitcoin-magazine-rss', 'Bitcoin Magazine RSS', 'crypto', 'rss', 'T3', 50, 55, 'https://bitcoinmagazine.com/.rss/full/', 1, 15, 'poll', NULL),
+  ('reuters-crypto-rss', 'Reuters Crypto RSS', 'crypto', 'rss', 'T2', 75, 80, 'https://feeds.reuters.com/reuters/technologyNews', 1, 15, 'poll', NULL),
+  ('newsapi-crypto', 'NewsAPI Crypto', 'crypto', 'newsapi', 'T3', 50, 50, 'https://newsapi.org/v2/everything?q=cryptocurrency+OR+bitcoin+OR+ethereum&sortBy=publishedAt&language=en', 0, 15, 'poll', '{"notes":"Requires NEWS_API_KEY. Enable via ENABLE_NEWSAPI=true."}');
 
 -- ============================================================
 -- AI sources
@@ -37,9 +42,14 @@ VALUES
 INSERT OR IGNORE INTO sources
   (source_slug, source_name, topic_slug, source_type, trust_tier, trust_score, priority_weight, url, is_active, poll_interval_minutes, ingestion_method, metadata_json)
 VALUES
-  ('reuters-business-rss', 'Reuters Business RSS', 'finance', 'rss', 'T2', 75, 80, 'https://feeds.reuters.com/reuters/businessNews', 1, 15, 'poll', NULL),
   ('sec-edgar-rss', 'SEC EDGAR RSS', 'finance', 'rss', 'T1', 90, 90, 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&dateb=&owner=include&count=20&search_text=&output=atom', 1, 30, 'poll', NULL),
-  ('federal-reserve-news-rss', 'Federal Reserve News RSS', 'finance', 'rss', 'T1', 90, 90, 'https://www.federalreserve.gov/feeds/press_all.xml', 1, 30, 'poll', NULL);
+  ('federal-reserve-news-rss', 'Federal Reserve News RSS', 'finance', 'rss', 'T1', 90, 90, 'https://www.federalreserve.gov/feeds/press_all.xml', 1, 30, 'poll', NULL),
+  ('us-treasury-rss', 'U.S. Treasury Press Releases RSS', 'finance', 'rss', 'T1', 90, 85, 'https://home.treasury.gov/system/files/136/press-releases.xml', 1, 30, 'poll', NULL),
+  ('reuters-business-rss', 'Reuters Business RSS', 'finance', 'rss', 'T2', 75, 80, 'https://feeds.reuters.com/reuters/businessNews', 1, 15, 'poll', NULL),
+  ('cnbc-finance-rss', 'CNBC Finance RSS', 'finance', 'rss', 'T2', 75, 75, 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664', 1, 15, 'poll', NULL),
+  ('ft-rss', 'Financial Times RSS', 'finance', 'rss', 'T2', 75, 70, 'https://www.ft.com/?format=rss', 0, 15, 'poll', '{"notes":"FT RSS may require authentication or return partial content; validate access before enabling."}'),
+  ('yahoo-finance-rss', 'Yahoo Finance RSS', 'finance', 'rss', 'T3', 50, 60, 'https://finance.yahoo.com/news/rssindex', 1, 15, 'poll', NULL),
+  ('marketwatch-rss', 'MarketWatch RSS', 'finance', 'rss', 'T3', 50, 55, 'https://feeds.content.dowjones.io/public/rss/mw_topstories', 1, 15, 'poll', NULL);
 
 -- ============================================================
 -- Economy sources
@@ -83,7 +93,8 @@ INSERT OR IGNORE INTO sources
   (source_slug, source_name, topic_slug, source_type, trust_tier, trust_score, priority_weight, url, is_active, poll_interval_minutes, ingestion_method, metadata_json)
 VALUES
   ('x-account-whale-alert', 'Whale Alert (X)', 'crypto', 'x_account', 'T4', 25, 40, 'https://x.com/whale_alert', 0, 5, 'poll', '{"x_user_id":"whale_alert","monitor_type":"account"}'),
-  ('x-account-cz-binance', 'CZ Binance (X)', 'crypto', 'x_account', 'T4', 25, 35, 'https://x.com/caborea', 0, 10, 'poll', '{"x_user_id":"caborea","monitor_type":"account"}');
+  ('x-account-cz-binance', 'CZ Binance (X)', 'crypto', 'x_account', 'T4', 25, 35, 'https://x.com/caborea', 0, 10, 'poll', '{"x_user_id":"caborea","monitor_type":"account"}'),
+  ('x-account-vitalik', 'Vitalik Buterin (X)', 'crypto', 'x_account', 'T4', 25, 35, 'https://x.com/VitalikButerin', 0, 10, 'poll', '{"x_user_id":"VitalikButerin","monitor_type":"account"}');
 
 -- AI X accounts
 INSERT OR IGNORE INTO sources
@@ -108,7 +119,8 @@ VALUES
 INSERT OR IGNORE INTO sources
   (source_slug, source_name, topic_slug, source_type, trust_tier, trust_score, priority_weight, url, is_active, poll_interval_minutes, ingestion_method, metadata_json)
 VALUES
-  ('x-query-btc-breakout', 'X Search: BTC Breakout', 'crypto', 'x_query', 'T4', 25, 30, 'https://api.twitter.com/2/tweets/search/recent', 0, 10, 'poll', '{"search_query":"(#Bitcoin OR #BTC) (breakout OR ATH OR crash) -is:retweet lang:en","monitor_type":"query","max_results":20}');
+  ('x-query-btc-breakout', 'X Search: BTC Breakout', 'crypto', 'x_query', 'T4', 25, 30, 'https://api.twitter.com/2/tweets/search/recent', 0, 10, 'poll', '{"search_query":"(#Bitcoin OR #BTC) (breakout OR ATH OR crash) -is:retweet lang:en","monitor_type":"query","max_results":20}'),
+  ('x-query-eth-defi', 'X Search: ETH DeFi', 'crypto', 'x_query', 'T4', 25, 30, 'https://api.twitter.com/2/tweets/search/recent', 0, 10, 'poll', '{"search_query":"(#Ethereum OR #ETH OR #DeFi) (exploit OR hack OR launch OR upgrade) -is:retweet lang:en","monitor_type":"query","max_results":20}');
 
 -- AI X queries
 INSERT OR IGNORE INTO sources
@@ -120,4 +132,5 @@ VALUES
 INSERT OR IGNORE INTO sources
   (source_slug, source_name, topic_slug, source_type, trust_tier, trust_score, priority_weight, url, is_active, poll_interval_minutes, ingestion_method, metadata_json)
 VALUES
-  ('x-query-fed-decision', 'X Search: Fed Decision', 'finance', 'x_query', 'T4', 25, 20, 'https://api.twitter.com/2/tweets/search/recent', 0, 15, 'poll', '{"search_query":"(Federal Reserve OR #FOMC) (rate OR decision OR cut OR hike) -is:retweet lang:en","monitor_type":"query","max_results":10}');
+  ('x-query-fed-decision', 'X Search: Fed Decision', 'finance', 'x_query', 'T4', 25, 20, 'https://api.twitter.com/2/tweets/search/recent', 0, 15, 'poll', '{"search_query":"(Federal Reserve OR #FOMC) (rate OR decision OR cut OR hike) -is:retweet lang:en","monitor_type":"query","max_results":10}'),
+  ('x-query-earnings-season', 'X Search: Earnings Season', 'finance', 'x_query', 'T4', 25, 20, 'https://api.twitter.com/2/tweets/search/recent', 0, 15, 'poll', '{"search_query":"(earnings OR revenue OR guidance) (beat OR miss OR surprise) -is:retweet lang:en","monitor_type":"query","max_results":10}');
