@@ -1,0 +1,417 @@
+{
+  "name": "Intraday \u2014 Rerun Failed Alerts",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "rerun-alert-001",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "rerun-failed-alerts"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Validate the rerun request.\n// Expects: { topic_slug, date_key, alert_ids? }\n// alert_ids is optional \u2014 if omitted, retries all undelivered alerts for the topic/date.\nconst body = $input.first().json.body || $input.first().json;\nconst topic_slug = body.topic_slug;\nconst date_key = body.date_key;\nconst alert_ids = body.alert_ids || null;\n\nif (!topic_slug || !date_key) {\n  throw new Error('Missing required fields: topic_slug and date_key');\n}\n\nreturn [{ json: { topic_slug, date_key, alert_ids, execution_id: $execution.id } }];"
+      },
+      "id": "rerun-alert-002",
+      "name": "Validate Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $vars.PAGES_BASE_URL }}/api/internal/rerun-log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Write-Key",
+              "value": "={{ $vars.WRITE_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  rerun_type: 'alert_delivery',\n  topic_slug: $json.topic_slug,\n  date_key: $json.date_key,\n  source_table: 'alerts',\n  status: 'running',\n  triggered_by: 'operator',\n  workflow_run_id: $json.execution_id\n} }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "rerun-alert-003",
+      "name": "Log Rerun Start",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        680,
+        300
+      ],
+      "continueOnFail": false
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const resp = $input.first().json;\nconst rerun_id = resp?.id || null;\nconst ctx = $('Validate Request').first().json;\nreturn [{ json: { ...ctx, rerun_id } }];"
+      },
+      "id": "rerun-alert-004",
+      "name": "Extract Rerun ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.cloudflare.com/client/v4/accounts/{{ $vars.CF_ACCOUNT_ID }}/d1/database/{{ $vars.CF_D1_DATABASE_ID }}/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify((() => {\n  const ctx = $json;\n  const alertIds = ctx.alert_ids;\n  if (alertIds && Array.isArray(alertIds) && alertIds.length > 0) {\n    const placeholders = alertIds.map(() => '?').join(', ');\n    return {\n      sql: \"SELECT id, topic_slug, date_key, headline, summary_text, source_url, source_name, severity_score, importance_score, event_at, delivered_telegram, delivered_discord, metadata_json FROM alerts WHERE topic_slug = ? AND date_key = ? AND status = 'active' AND (delivered_telegram = 0 OR delivered_discord = 0) AND id IN (\" + placeholders + \") ORDER BY event_at ASC\",\n      params: [ctx.topic_slug, ctx.date_key, ...alertIds]\n    };\n  }\n  return {\n    sql: \"SELECT id, topic_slug, date_key, headline, summary_text, source_url, source_name, severity_score, importance_score, event_at, delivered_telegram, delivered_discord, metadata_json FROM alerts WHERE topic_slug = ? AND date_key = ? AND status = 'active' AND (delivered_telegram = 0 OR delivered_discord = 0) ORDER BY event_at ASC LIMIT 50\",\n    params: [ctx.topic_slug, ctx.date_key]\n  };\n})()) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "rerun-alert-005",
+      "name": "Query Undelivered Alerts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1120,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "cloudflare-d1-credentials",
+          "name": "CloudflareD1Api"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const resp = $input.first().json;\nconst rows = resp?.result?.[0]?.results || [];\nconst ctx = $('Extract Rerun ID').first().json;\n\n// If specific alert_ids were requested but not all were in the query result\n// (due to LIMIT), we already used an ID-targeted query so all matches are here.\nlet filtered = rows;\n\nif (filtered.length === 0) {\n  return [{ json: { ...ctx, _skip: true, skip_reason: 'No undelivered alerts found.' } }];\n}\n\nconst items = filtered.map(row => {\n  let meta = {};\n  try { meta = typeof row.metadata_json === 'string' ? JSON.parse(row.metadata_json) : (row.metadata_json || {}); } catch(e) {}\n  const channels = [];\n  if (!row.delivered_telegram) channels.push('telegram');\n  if (!row.delivered_discord) channels.push('discord');\n  return {\n    alert_id: row.id,\n    item_id: meta.item_id || null,\n    topic_slug: row.topic_slug,\n    date_key: row.date_key,\n    headline: row.headline,\n    summary_text: row.summary_text,\n    source_url: row.source_url,\n    source_name: row.source_name,\n    severity_score: row.severity_score,\n    importance_score: row.importance_score,\n    event_at: row.event_at,\n    channels\n  };\n});\n\nreturn [{ json: { ...ctx, _skip: false, items, retry_count: items.length } }];"
+      },
+      "id": "rerun-alert-006",
+      "name": "Build Retry Payloads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json._skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEqual"
+              }
+            }
+          ]
+        }
+      },
+      "id": "rerun-alert-007",
+      "name": "Has Items?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $vars.INTRADAY_TELEGRAM_WORKFLOW_ID }}"
+        },
+        "options": {}
+      },
+      "id": "rerun-alert-008",
+      "name": "Retry Telegram Delivery",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        1780,
+        100
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $vars.INTRADAY_DISCORD_WORKFLOW_ID }}"
+        },
+        "options": {}
+      },
+      "id": "rerun-alert-009",
+      "name": "Retry Discord Delivery",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        1780,
+        300
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const tgResult = $('Retry Telegram Delivery').first()?.json || {};\nconst dcResult = $('Retry Discord Delivery').first()?.json || {};\nconst ctx = $('Build Retry Payloads').first().json;\nconst allOk = !tgResult.error && !dcResult.error;\nconst errors = [];\nif (tgResult.error) errors.push('Telegram: ' + (tgResult.error.message || 'failed'));\nif (dcResult.error) errors.push('Discord: ' + (dcResult.error.message || 'failed'));\n\nreturn [{ json: {\n  rerun_id: ctx.rerun_id,\n  final_status: allOk ? 'success' : 'failed',\n  error_message: allOk ? null : errors.join('; ')\n} }];"
+      },
+      "id": "rerun-alert-010",
+      "name": "Evaluate Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $vars.PAGES_BASE_URL }}/api/internal/rerun-log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Write-Key",
+              "value": "={{ $vars.WRITE_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { id: $json.rerun_id, status: $json.final_status, error_message: $json.error_message } }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "rerun-alert-011",
+      "name": "Log Rerun Result",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        2220,
+        200
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "={{ $vars.PAGES_BASE_URL }}/api/internal/rerun-log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Write-Key",
+              "value": "={{ $vars.WRITE_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  id: $('Extract Rerun ID').first().json.rerun_id,\n  status: 'skipped',\n  error_message: $json.skip_reason || 'No undelivered alerts found'\n} }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "rerun-alert-012",
+      "name": "Log Rerun Skipped",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1780,
+        500
+      ],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Validate Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Request": {
+      "main": [
+        [
+          {
+            "node": "Log Rerun Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Rerun Start": {
+      "main": [
+        [
+          {
+            "node": "Extract Rerun ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Rerun ID": {
+      "main": [
+        [
+          {
+            "node": "Query Undelivered Alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Undelivered Alerts": {
+      "main": [
+        [
+          {
+            "node": "Build Retry Payloads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Retry Payloads": {
+      "main": [
+        [
+          {
+            "node": "Has Items?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Items?": {
+      "main": [
+        [
+          {
+            "node": "Retry Telegram Delivery",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Retry Discord Delivery",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Rerun Skipped",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Telegram Delivery": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Discord Delivery": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Result": {
+      "main": [
+        [
+          {
+            "node": "Log Rerun Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
+  },
+  "id": "intraday-rerun-failed-alerts-v1",
+  "tags": [
+    "intraday",
+    "rerun",
+    "recovery",
+    "alerts",
+    "delivery",
+    "v2"
+  ]
+}

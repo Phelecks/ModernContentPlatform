@@ -538,3 +538,86 @@ export async function createYoutubePublishLog(db, {
 
   return { id: row.id }
 }
+
+/**
+ * Insert a new rerun_log row.
+ *
+ * Records a single operator-initiated rerun or recovery attempt.
+ * Used by rerun workflows to persist each attempt for observability
+ * and idempotency tracking.
+ *
+ * @param {D1Database} db
+ * @param {{ rerun_type: string, topic_slug: string, date_key: string, source_table: string, source_id?: number|null, status?: string, attempt?: number, triggered_by?: string, workflow_run_id?: string|null, error_message?: string|null }} params
+ * @returns {Promise<{ id: number }>}
+ */
+export async function createRerunLog(db, {
+  rerun_type, topic_slug, date_key, source_table,
+  source_id = null, status = 'pending', attempt = 1,
+  triggered_by = 'operator', workflow_run_id = null,
+  error_message = null
+}) {
+  const sql = `
+    INSERT INTO rerun_log
+      (rerun_type, topic_slug, date_key, source_table, source_id,
+       status, attempt, triggered_by, workflow_run_id, error_message)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    RETURNING id`
+
+  const row = await db.prepare(sql)
+    .bind(rerun_type, topic_slug, date_key, source_table, source_id,
+      status, attempt, triggered_by, workflow_run_id, error_message)
+    .first()
+
+  if (!row || row.id == null) {
+    throw new Error('Failed to create rerun log: no id returned from D1')
+  }
+
+  return { id: row.id }
+}
+
+/**
+ * Update an existing rerun_log row.
+ *
+ * Optional fields are only updated when explicitly provided. Omitting
+ * workflow_run_id or error_message preserves the existing stored value,
+ * while passing null clears that field.
+ *
+ * @param {D1Database} db
+ * @param {{ id: number, status: string, workflow_run_id?: string|null, error_message?: string|null }} params
+ * @returns {Promise<{ success: boolean }>}
+ */
+export async function updateRerunLog(db, params) {
+  const { id, status } = params
+  const hasWorkflowRunId = Object.prototype.hasOwnProperty.call(params, 'workflow_run_id')
+  const hasErrorMessage = Object.prototype.hasOwnProperty.call(params, 'error_message')
+
+  const setClauses = [
+    'status          = ?'
+  ]
+  const bindings = [status]
+
+  if (hasWorkflowRunId) {
+    setClauses.push('workflow_run_id = ?')
+    bindings.push(params.workflow_run_id)
+  }
+
+  if (hasErrorMessage) {
+    setClauses.push('error_message   = ?')
+    bindings.push(params.error_message)
+  }
+
+  setClauses.push(`updated_at      = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')`)
+
+  const sql = `
+    UPDATE rerun_log SET
+      ${setClauses.join(',\n      ')}
+    WHERE id = ?`
+
+  bindings.push(id)
+
+  const result = await db.prepare(sql)
+    .bind(...bindings)
+    .run()
+
+  return { success: result.success ?? true }
+}

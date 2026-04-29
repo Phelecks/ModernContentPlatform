@@ -40,7 +40,8 @@ export async function onRequestGet(ctx) {
       metaSocialFailures,
       socialFailures,
       youtubeFailures,
-      recentAiUsage
+      recentAiUsage,
+      recentReruns
     ] = await Promise.all([
       queryAll(db,
         'SELECT id, workflow_name, execution_id, topic_slug, date_key, event_type, module_name, error_message, created_at FROM workflow_logs ORDER BY created_at DESC LIMIT 20'
@@ -68,7 +69,16 @@ export async function onRequestGet(ctx) {
       ),
       queryAll(db,
         'SELECT id, task, model, topic_slug, date_key, total_tokens, status, created_at FROM openai_usage_log ORDER BY created_at DESC LIMIT 50'
-      )
+      ),
+      queryAll(db,
+        'SELECT id, rerun_type, topic_slug, date_key, source_table, source_id, status, attempt, triggered_by, workflow_run_id, error_message, created_at FROM rerun_log ORDER BY created_at DESC LIMIT 20'
+      ).catch((err) => {
+        const message = err && typeof err.message === 'string' ? err.message : String(err)
+        if (message.includes('no such table: rerun_log')) {
+          return []
+        }
+        throw err
+      })
     ])
 
     // Deduplicate published days to get the last publish per topic.
@@ -113,7 +123,8 @@ export async function onRequestGet(ctx) {
         total_tokens: totalTokens,
         error_count: errorCount,
         recent: recentAiUsage.slice(0, 10)
-      }
+      },
+      recent_reruns: recentReruns
     })
   } catch (err) {
     console.error('[GET /api/internal/operator-dashboard] Query failed:', err)

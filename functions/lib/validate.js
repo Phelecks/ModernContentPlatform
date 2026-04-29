@@ -862,3 +862,131 @@ export function validateYoutubePublishPayload(body) {
     error_message: error_message ?? null
   })
 }
+
+// ── Rerun Log ──────────────────────────────────────────────────────
+
+const VALID_RERUN_TYPES = [
+  'daily_publish', 'social_publish', 'youtube_upload',
+  'alert_delivery', 'intraday_workflow'
+]
+const VALID_RERUN_SOURCE_TABLES = [
+  'publish_jobs', 'social_publish_log', 'meta_social_publish_log',
+  'youtube_publish_log', 'alerts', 'workflow_logs'
+]
+const VALID_RERUN_STATUSES   = ['pending', 'running', 'success', 'failed', 'skipped']
+const VALID_RERUN_TRIGGERS   = ['operator', 'schedule', 'auto']
+
+const RERUN_LOG_ALLOWED_KEYS = [
+  'rerun_type', 'topic_slug', 'date_key', 'source_table', 'source_id',
+  'status', 'attempt', 'triggered_by', 'workflow_run_id', 'error_message'
+]
+
+/**
+ * Validate a rerun_log write payload.
+ *
+ * Required: rerun_type, topic_slug, date_key, source_table
+ * Optional: source_id, status, attempt, triggered_by, workflow_run_id, error_message
+ */
+export function validateRerunLogPayload(body) {
+  if (!body || typeof body !== 'object') return fail('Request body must be a JSON object')
+
+  const unknownError = checkUnknownKeys(body, RERUN_LOG_ALLOWED_KEYS)
+  if (unknownError) return fail(unknownError)
+
+  const {
+    rerun_type, topic_slug, date_key, source_table, source_id,
+    status, attempt, triggered_by, workflow_run_id, error_message
+  } = body
+
+  if (!VALID_RERUN_TYPES.includes(rerun_type)) {
+    return fail(`Invalid rerun_type: must be one of ${VALID_RERUN_TYPES.join(', ')}`)
+  }
+  if (!isValidTopicSlug(topic_slug) || !VALID_TOPICS.includes(topic_slug)) {
+    return fail(`Invalid topic_slug: must be one of ${VALID_TOPICS.join(', ')}`)
+  }
+  if (!isValidDateKey(date_key)) {
+    return fail('Invalid date_key: expected YYYY-MM-DD format')
+  }
+  if (!VALID_RERUN_SOURCE_TABLES.includes(source_table)) {
+    return fail(`Invalid source_table: must be one of ${VALID_RERUN_SOURCE_TABLES.join(', ')}`)
+  }
+  if (source_id !== undefined && source_id !== null) {
+    if (!Number.isInteger(source_id) || source_id < 1) {
+      return fail('source_id must be a positive integer or null')
+    }
+  }
+  if (status !== undefined && !VALID_RERUN_STATUSES.includes(status)) {
+    return fail(`Invalid status: must be one of ${VALID_RERUN_STATUSES.join(', ')}`)
+  }
+  if (attempt !== undefined) {
+    if (!Number.isInteger(attempt) || attempt < 1 || attempt > 20) {
+      return fail('attempt must be an integer between 1 and 20')
+    }
+  }
+  if (triggered_by !== undefined && !VALID_RERUN_TRIGGERS.includes(triggered_by)) {
+    return fail(`Invalid triggered_by: must be one of ${VALID_RERUN_TRIGGERS.join(', ')}`)
+  }
+  if (!isOptionalString(workflow_run_id, 200)) {
+    return fail('workflow_run_id must be a string (max 200 chars) or null')
+  }
+  if (!isOptionalString(error_message)) {
+    return fail('error_message must be a string or null')
+  }
+
+  return ok({
+    rerun_type,
+    topic_slug,
+    date_key,
+    source_table,
+    source_id: source_id ?? null,
+    status: status ?? 'pending',
+    attempt: attempt ?? 1,
+    triggered_by: triggered_by ?? 'operator',
+    workflow_run_id: workflow_run_id ?? null,
+    error_message: error_message ?? null
+  })
+}
+
+// ── Rerun Log Update ───────────────────────────────────────────────
+
+const RERUN_LOG_UPDATE_ALLOWED_KEYS = [
+  'id', 'status', 'workflow_run_id', 'error_message'
+]
+
+/**
+ * Validate a rerun_log update payload.
+ *
+ * Required: id, status
+ * Optional: workflow_run_id, error_message
+ */
+export function validateRerunLogUpdatePayload(body) {
+  if (!body || typeof body !== 'object') return fail('Request body must be a JSON object')
+
+  const unknownError = checkUnknownKeys(body, RERUN_LOG_UPDATE_ALLOWED_KEYS)
+  if (unknownError) return fail(unknownError)
+
+  const { id, status, workflow_run_id, error_message } = body
+
+  if (!Number.isInteger(id) || id < 1) {
+    return fail('id must be a positive integer')
+  }
+  if (status === undefined) {
+    return fail('status is required when updating a rerun log')
+  }
+  if (!VALID_RERUN_STATUSES.includes(status)) {
+    return fail(`Invalid status: must be one of ${VALID_RERUN_STATUSES.join(', ')}`)
+  }
+  if (!isOptionalString(workflow_run_id, 200)) {
+    return fail('workflow_run_id must be a string (max 200 chars) or null')
+  }
+  if (!isOptionalString(error_message)) {
+    return fail('error_message must be a string or null')
+  }
+
+  return ok({
+    id,
+    status,
+    workflow_run_id: workflow_run_id ?? null,
+    error_message: error_message ?? null
+  })
+}
