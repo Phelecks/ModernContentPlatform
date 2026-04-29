@@ -576,28 +576,47 @@ export async function createRerunLog(db, {
 }
 
 /**
- * Update an existing rerun_log row status.
+ * Update an existing rerun_log row.
  *
- * Used by rerun workflows to mark a rerun as running, success, or failed
- * after the rerun workflow completes.
+ * Optional fields are only updated when explicitly provided. Omitting
+ * workflow_run_id or error_message preserves the existing stored value,
+ * while passing null clears that field.
  *
  * @param {D1Database} db
  * @param {{ id: number, status: string, workflow_run_id?: string|null, error_message?: string|null }} params
  * @returns {Promise<{ success: boolean }>}
  */
-export async function updateRerunLog(db, {
-  id, status, workflow_run_id = null, error_message = null
-}) {
+export async function updateRerunLog(db, params) {
+  const { id, status } = params
+  const hasWorkflowRunId = Object.prototype.hasOwnProperty.call(params, 'workflow_run_id')
+  const hasErrorMessage = Object.prototype.hasOwnProperty.call(params, 'error_message')
+
+  const setClauses = [
+    'status          = ?'
+  ]
+  const bindings = [status]
+
+  if (hasWorkflowRunId) {
+    setClauses.push('workflow_run_id = ?')
+    bindings.push(params.workflow_run_id)
+  }
+
+  if (hasErrorMessage) {
+    setClauses.push('error_message   = ?')
+    bindings.push(params.error_message)
+  }
+
+  setClauses.push(`updated_at      = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')`)
+
   const sql = `
     UPDATE rerun_log SET
-      status          = ?,
-      workflow_run_id = COALESCE(?, workflow_run_id),
-      error_message   = ?,
-      updated_at      = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+      ${setClauses.join(',\n      ')}
     WHERE id = ?`
 
+  bindings.push(id)
+
   const result = await db.prepare(sql)
-    .bind(status, workflow_run_id, error_message, id)
+    .bind(...bindings)
     .run()
 
   return { success: result.success ?? true }

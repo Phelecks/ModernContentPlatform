@@ -1,5 +1,5 @@
 {
-  "name": "Daily — Rerun Failed YouTube Upload",
+  "name": "Daily \u2014 Rerun Failed YouTube Upload",
   "nodes": [
     {
       "parameters": {},
@@ -7,7 +7,10 @@
       "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [240, 300],
+      "position": [
+        240,
+        300
+      ],
       "webhookId": "rerun-youtube-upload"
     },
     {
@@ -19,7 +22,10 @@
       "name": "Validate Request",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
@@ -27,21 +33,32 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            { "name": "X-Write-Key", "value": "={{ $vars.WRITE_API_KEY }}" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Write-Key",
+              "value": "={{ $vars.WRITE_API_KEY }}"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ {\n  rerun_type: 'youtube_upload',\n  topic_slug: $json.topic_slug,\n  date_key: $json.date_key,\n  source_table: 'youtube_publish_log',\n  source_id: $json.source_id,\n  status: 'running',\n  triggered_by: 'operator',\n  workflow_run_id: $json.execution_id\n} }}",
-        "options": { "timeout": 10000 }
+        "options": {
+          "timeout": 10000
+        }
       },
       "id": "rerun-yt-003",
       "name": "Log Rerun Start",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [680, 300],
-      "continueOnFail": true
+      "position": [
+        680,
+        300
+      ],
+      "continueOnFail": false
     },
     {
       "parameters": {
@@ -52,7 +69,10 @@
       "name": "Extract Rerun ID",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 300]
+      "position": [
+        900,
+        300
+      ]
     },
     {
       "parameters": {
@@ -62,19 +82,27 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({\n  sql: \"SELECT id, status, attempt FROM youtube_publish_log WHERE topic_slug = ? AND date_key = ? AND status = 'failed' ORDER BY created_at DESC LIMIT 1\",\n  params: [$json.topic_slug, $json.date_key]\n}) }}",
-        "options": { "timeout": 10000 }
+        "options": {
+          "timeout": 10000
+        }
       },
       "id": "rerun-yt-005",
       "name": "Check Failed Upload",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1120, 300],
+      "position": [
+        1120,
+        300
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "cloudflare-d1-credentials",
@@ -94,17 +122,25 @@
       "name": "Validate Failed Upload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1340, 300]
+      "position": [
+        1340,
+        300
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": false },
+          "options": {
+            "caseSensitive": false
+          },
           "conditions": [
             {
               "leftValue": "={{ $json._skip }}",
               "rightValue": true,
-              "operator": { "type": "boolean", "operation": "notEqual" }
+              "operator": {
+                "type": "boolean",
+                "operation": "notEqual"
+              }
             }
           ]
         }
@@ -113,7 +149,10 @@
       "name": "Should Proceed?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1560, 300]
+      "position": [
+        1560,
+        300
+      ]
     },
     {
       "parameters": {
@@ -128,7 +167,10 @@
       "name": "Execute YouTube Upload",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [1780, 200],
+      "position": [
+        1780,
+        200
+      ],
       "continueOnFail": true
     },
     {
@@ -140,7 +182,10 @@
       "name": "Evaluate Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2000, 200]
+      "position": [
+        2000,
+        200
+      ]
     },
     {
       "parameters": {
@@ -148,61 +193,173 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            { "name": "X-Write-Key", "value": "={{ $vars.WRITE_API_KEY }}" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Write-Key",
+              "value": "={{ $vars.WRITE_API_KEY }}"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ { id: $json.rerun_id, status: $json.final_status, error_message: $json.error_message } }}",
-        "options": { "timeout": 10000 }
+        "options": {
+          "timeout": 10000
+        }
       },
       "id": "rerun-yt-010",
       "name": "Log Rerun Result",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [2220, 200],
+      "position": [
+        2220,
+        200
+      ],
       "continueOnFail": true
     },
     {
-      "parameters": {},
+      "parameters": {
+        "url": "={{ $vars.PAGES_BASE_URL }}/api/internal/rerun-log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Write-Key",
+              "value": "={{ $vars.WRITE_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  id: $('Extract Rerun ID').first().json.rerun_id,\n  status: 'skipped',\n  error_message: $json.skip_reason || 'No failed YouTube upload found'\n} }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
       "id": "rerun-yt-011",
-      "name": "No Items — Skip",
-      "type": "n8n-nodes-base.noOp",
-      "typeVersion": 1,
-      "position": [1780, 400]
+      "name": "Log Rerun Skipped",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1780,
+        400
+      ],
+      "continueOnFail": true
     }
   ],
   "connections": {
     "Webhook Trigger": {
-      "main": [[{ "node": "Validate Request", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Validate Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Validate Request": {
-      "main": [[{ "node": "Log Rerun Start", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Log Rerun Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Log Rerun Start": {
-      "main": [[{ "node": "Extract Rerun ID", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Extract Rerun ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Extract Rerun ID": {
-      "main": [[{ "node": "Check Failed Upload", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Check Failed Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Check Failed Upload": {
-      "main": [[{ "node": "Validate Failed Upload", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Validate Failed Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Validate Failed Upload": {
-      "main": [[{ "node": "Should Proceed?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Should Proceed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Should Proceed?": {
       "main": [
-        [{ "node": "Execute YouTube Upload", "type": "main", "index": 0 }],
-        [{ "node": "No Items — Skip", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Execute YouTube Upload",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Rerun Skipped",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Execute YouTube Upload": {
-      "main": [[{ "node": "Evaluate Result", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Evaluate Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Evaluate Result": {
-      "main": [[{ "node": "Log Rerun Result", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Log Rerun Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
@@ -214,5 +371,11 @@
     "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
   },
   "id": "daily-rerun-youtube-upload-v1",
-  "tags": ["daily", "rerun", "recovery", "youtube", "v2"]
+  "tags": [
+    "daily",
+    "rerun",
+    "recovery",
+    "youtube",
+    "v2"
+  ]
 }

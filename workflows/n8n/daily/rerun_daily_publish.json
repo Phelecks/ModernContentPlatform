@@ -1,5 +1,5 @@
 {
-  "name": "Daily — Rerun Failed Publish",
+  "name": "Daily \u2014 Rerun Failed Publish",
   "nodes": [
     {
       "parameters": {},
@@ -7,7 +7,10 @@
       "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [240, 300],
+      "position": [
+        240,
+        300
+      ],
       "webhookId": "rerun-daily-publish"
     },
     {
@@ -19,7 +22,10 @@
       "name": "Validate Request",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
@@ -27,21 +33,32 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            { "name": "X-Write-Key", "value": "={{ $vars.WRITE_API_KEY }}" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Write-Key",
+              "value": "={{ $vars.WRITE_API_KEY }}"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ {\n  rerun_type: 'daily_publish',\n  topic_slug: $json.topic_slug,\n  date_key: $json.date_key,\n  source_table: 'publish_jobs',\n  source_id: $json.source_id,\n  status: 'running',\n  triggered_by: 'operator',\n  workflow_run_id: $json.execution_id\n} }}",
-        "options": { "timeout": 10000 }
+        "options": {
+          "timeout": 10000
+        }
       },
       "id": "rerun-daily-003",
       "name": "Log Rerun Start",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [680, 300],
-      "continueOnFail": true,
+      "position": [
+        680,
+        300
+      ],
+      "continueOnFail": false,
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 3000
@@ -55,7 +72,10 @@
       "name": "Extract Rerun ID",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [900, 300]
+      "position": [
+        900,
+        300
+      ]
     },
     {
       "parameters": {
@@ -65,19 +85,27 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({\n  sql: \"SELECT id, status, attempt FROM publish_jobs WHERE topic_slug = ? AND date_key = ? AND status = 'failed' ORDER BY created_at DESC LIMIT 1\",\n  params: [$json.topic_slug, $json.date_key]\n}) }}",
-        "options": { "timeout": 10000 }
+        "options": {
+          "timeout": 10000
+        }
       },
       "id": "rerun-daily-005",
       "name": "Check Failed Job Exists",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1120, 300],
+      "position": [
+        1120,
+        300
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "cloudflare-d1-credentials",
@@ -97,17 +125,25 @@
       "name": "Validate Failed Job",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1340, 300]
+      "position": [
+        1340,
+        300
+      ]
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": false },
+          "options": {
+            "caseSensitive": false
+          },
           "conditions": [
             {
               "leftValue": "={{ $json._skip }}",
               "rightValue": true,
-              "operator": { "type": "boolean", "operation": "notEqual" }
+              "operator": {
+                "type": "boolean",
+                "operation": "notEqual"
+              }
             }
           ]
         }
@@ -116,7 +152,10 @@
       "name": "Should Proceed?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1560, 300]
+      "position": [
+        1560,
+        300
+      ]
     },
     {
       "parameters": {
@@ -124,20 +163,31 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            { "name": "X-Write-Key", "value": "={{ $vars.WRITE_API_KEY }}" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Write-Key",
+              "value": "={{ $vars.WRITE_API_KEY }}"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ {\n  topic_slug: $json.topic_slug,\n  date_key: $json.date_key,\n  status: 'running',\n  attempt: $json.new_attempt,\n  triggered_by: 'retry',\n  workflow_run_id: $json.execution_id\n} }}",
-        "options": { "timeout": 10000 }
+        "options": {
+          "timeout": 10000
+        }
       },
       "id": "rerun-daily-008",
       "name": "Create Retry Publish Job",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1780, 200],
+      "position": [
+        1780,
+        200
+      ],
       "retryOnFail": true,
       "maxTries": 2,
       "waitBetweenTries": 3000
@@ -155,7 +205,10 @@
       "name": "Execute Daily Orchestrator",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,
-      "position": [2000, 200],
+      "position": [
+        2000,
+        200
+      ],
       "continueOnFail": true
     },
     {
@@ -167,7 +220,10 @@
       "name": "Evaluate Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2220, 200]
+      "position": [
+        2220,
+        200
+      ]
     },
     {
       "parameters": {
@@ -175,20 +231,31 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            { "name": "X-Write-Key", "value": "={{ $vars.WRITE_API_KEY }}" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Write-Key",
+              "value": "={{ $vars.WRITE_API_KEY }}"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ {\n  id: $json.rerun_id,\n  status: $json.final_status,\n  error_message: $json.error_message\n} }}",
-        "options": { "timeout": 10000 }
+        "options": {
+          "timeout": 10000
+        }
       },
       "id": "rerun-daily-011",
       "name": "Log Rerun Result",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [2440, 200],
+      "position": [
+        2440,
+        200
+      ],
       "continueOnFail": true
     },
     {
@@ -197,56 +264,151 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            { "name": "X-Write-Key", "value": "={{ $vars.WRITE_API_KEY }}" }
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Write-Key",
+              "value": "={{ $vars.WRITE_API_KEY }}"
+            }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ {\n  id: $('Extract Rerun ID').first().json.rerun_id,\n  status: 'skipped',\n  error_message: $json.skip_reason || 'No failed job found'\n} }}",
-        "options": { "timeout": 10000 }
+        "options": {
+          "timeout": 10000
+        }
       },
       "id": "rerun-daily-012",
       "name": "Log Rerun Skipped",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1780, 400],
+      "position": [
+        1780,
+        400
+      ],
       "continueOnFail": true
     }
   ],
   "connections": {
     "Webhook Trigger": {
-      "main": [[{ "node": "Validate Request", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Validate Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Validate Request": {
-      "main": [[{ "node": "Log Rerun Start", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Log Rerun Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Log Rerun Start": {
-      "main": [[{ "node": "Extract Rerun ID", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Extract Rerun ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Extract Rerun ID": {
-      "main": [[{ "node": "Check Failed Job Exists", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Check Failed Job Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Check Failed Job Exists": {
-      "main": [[{ "node": "Validate Failed Job", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Validate Failed Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Validate Failed Job": {
-      "main": [[{ "node": "Should Proceed?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Should Proceed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Should Proceed?": {
       "main": [
-        [{ "node": "Create Retry Publish Job", "type": "main", "index": 0 }],
-        [{ "node": "Log Rerun Skipped", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Create Retry Publish Job",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Rerun Skipped",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Create Retry Publish Job": {
-      "main": [[{ "node": "Execute Daily Orchestrator", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Execute Daily Orchestrator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Execute Daily Orchestrator": {
-      "main": [[{ "node": "Evaluate Result", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Evaluate Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Evaluate Result": {
-      "main": [[{ "node": "Log Rerun Result", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Log Rerun Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
@@ -258,5 +420,11 @@
     "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
   },
   "id": "daily-rerun-publish-v1",
-  "tags": ["daily", "rerun", "recovery", "publish", "v2"]
+  "tags": [
+    "daily",
+    "rerun",
+    "recovery",
+    "publish",
+    "v2"
+  ]
 }

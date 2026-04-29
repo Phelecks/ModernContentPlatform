@@ -9,7 +9,8 @@
  *
  * Request body: see schemas/workflow/write_rerun_log.json
  *
- * When `id` is present in the body, updates the existing row (status only).
+ * When `id` is present in the body, updates the existing row.
+ * Supported update fields: status (required), workflow_run_id, error_message.
  * When `id` is absent, creates a new rerun log entry.
  *
  * Response (201 for create, 200 for update):
@@ -18,7 +19,7 @@
  */
 import { jsonResponse, errorResponse } from '../../lib/db.js'
 import { authenticateWrite } from '../../lib/auth.js'
-import { validateRerunLogPayload } from '../../lib/validate.js'
+import { validateRerunLogPayload, validateRerunLogUpdatePayload } from '../../lib/validate.js'
 import { createRerunLog, updateRerunLog } from '../../lib/writers.js'
 
 export async function onRequestPost(ctx) {
@@ -37,39 +38,38 @@ export async function onRequestPost(ctx) {
     return errorResponse('Invalid JSON body', 400)
   }
 
-  // Update path: when `id` is present, update status of existing rerun
+  // Update path: when `id` is present, update existing rerun
   if (body.id !== undefined) {
-    if (!Number.isInteger(body.id) || body.id < 1) {
-      return errorResponse('id must be a positive integer', 400)
-    }
-    if (body.status === undefined) {
-      return errorResponse('status is required when updating a rerun log', 400)
-    }
-    const validStatuses = ['pending', 'running', 'success', 'failed', 'skipped']
-    if (!validStatuses.includes(body.status)) {
-      return errorResponse(`Invalid status: must be one of ${validStatuses.join(', ')}`, 400)
+    const validation = validateRerunLogUpdatePayload(body)
+    if (!validation.valid) {
+      return errorResponse(validation.error, 400)
     }
 
     try {
       const existing = await db
         .prepare('SELECT id FROM rerun_log WHERE id = ?')
-        .bind(body.id)
+        .bind(validation.data.id)
         .first()
 
       if (!existing) {
         return errorResponse('Rerun log entry not found', 404)
       }
 
-      const result = await updateRerunLog(db, {
-        id: body.id,
-        status: body.status,
-        workflow_run_id: body.workflow_run_id || null,
-        error_message: body.error_message || null
-      })
+      const updateData = { id: validation.data.id, status: validation.data.status }
+
+      if ('workflow_run_id' in body) {
+        updateData.workflow_run_id = validation.data.workflow_run_id
+      }
+
+      if ('error_message' in body) {
+        updateData.error_message = validation.data.error_message
+      }
+
+      const result = await updateRerunLog(db, updateData)
 
       return jsonResponse({
-        id: body.id,
-        status: body.status,
+        id: validation.data.id,
+        status: validation.data.status,
         success: result.success
       })
     } catch (err) {

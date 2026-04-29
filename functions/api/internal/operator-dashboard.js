@@ -72,7 +72,13 @@ export async function onRequestGet(ctx) {
       ),
       queryAll(db,
         'SELECT id, rerun_type, topic_slug, date_key, source_table, source_id, status, attempt, triggered_by, workflow_run_id, error_message, created_at FROM rerun_log ORDER BY created_at DESC LIMIT 20'
-      ).catch(() => [])
+      ).catch((err) => {
+        const message = err && typeof err.message === 'string' ? err.message : String(err)
+        if (message.includes('no such table: rerun_log')) {
+          return []
+        }
+        throw err
+      })
     ])
 
     // Deduplicate published days to get the last publish per topic.

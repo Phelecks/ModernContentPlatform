@@ -946,3 +946,47 @@ export function validateRerunLogPayload(body) {
     error_message: error_message ?? null
   })
 }
+
+// ── Rerun Log Update ───────────────────────────────────────────────
+
+const RERUN_LOG_UPDATE_ALLOWED_KEYS = [
+  'id', 'status', 'workflow_run_id', 'error_message'
+]
+
+/**
+ * Validate a rerun_log update payload.
+ *
+ * Required: id, status
+ * Optional: workflow_run_id, error_message
+ */
+export function validateRerunLogUpdatePayload(body) {
+  if (!body || typeof body !== 'object') return fail('Request body must be a JSON object')
+
+  const unknownError = checkUnknownKeys(body, RERUN_LOG_UPDATE_ALLOWED_KEYS)
+  if (unknownError) return fail(unknownError)
+
+  const { id, status, workflow_run_id, error_message } = body
+
+  if (!Number.isInteger(id) || id < 1) {
+    return fail('id must be a positive integer')
+  }
+  if (status === undefined) {
+    return fail('status is required when updating a rerun log')
+  }
+  if (!VALID_RERUN_STATUSES.includes(status)) {
+    return fail(`Invalid status: must be one of ${VALID_RERUN_STATUSES.join(', ')}`)
+  }
+  if (!isOptionalString(workflow_run_id, 200)) {
+    return fail('workflow_run_id must be a string (max 200 chars) or null')
+  }
+  if (!isOptionalString(error_message)) {
+    return fail('error_message must be a string or null')
+  }
+
+  return ok({
+    id,
+    status,
+    workflow_run_id: workflow_run_id ?? null,
+    error_message: error_message ?? null
+  })
+}

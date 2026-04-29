@@ -278,6 +278,12 @@ describe('POST /api/internal/rerun-log', () => {
     expect(res.status).toBe(400)
   })
 
+  it('returns 400 when unknown fields are present in update', async () => {
+    const ctx = makeCtx(db, { id: 1, status: 'success', extra_field: 'foo' }, { 'X-Write-Key': WRITE_KEY })
+    const res = await onRequestPost(ctx)
+    expect(res.status).toBe(400)
+  })
+
   it('returns 404 when updating a non-existent entry', async () => {
     const ctx = makeCtx(db, { id: 9999, status: 'success' }, { 'X-Write-Key': WRITE_KEY })
     const res = await onRequestPost(ctx)
