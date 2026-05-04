@@ -40,7 +40,7 @@ export async function onRequestGet({ request, env }) {
     sql += ` ORDER BY topic_slug ASC, priority_weight DESC`
 
     const sources = await queryAll(db, sql, params)
-    return jsonResponse(sources)
+    return jsonResponse(sources, 200, { cacheTtl: 300, staleWhileRevalidate: true })
   } catch (err) {
     console.error('[/api/sources] Failed to fetch sources:', err)
     return errorResponse('Failed to fetch sources')

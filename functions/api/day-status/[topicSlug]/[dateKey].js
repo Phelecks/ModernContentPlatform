@@ -58,7 +58,7 @@ export async function onRequestGet({ params, env }) {
       return errorResponse(`Unknown topic: ${topicSlug}`, 404)
     }
 
-    return jsonResponse(row)
+    return jsonResponse(row, 200, { cacheTtl: 60, staleWhileRevalidate: true })
   } catch (err) {
     return errorResponse(`Failed to fetch day status: ${err.message}`)
   }
