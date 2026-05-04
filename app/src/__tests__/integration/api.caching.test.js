@@ -78,4 +78,11 @@ describe('Cache-Control headers on read APIs', () => {
     const body = await res.json()
     expect(body.total).toBeNull()
   })
+
+  it('timeline returns numeric total on first page (no cursor)', async () => {
+    const res = await getTimeline(makeTimelineCtx(db, 'crypto', '2025-01-15'))
+    const body = await res.json()
+    expect(typeof body.total).toBe('number')
+    expect(body.total).toBeGreaterThanOrEqual(0)
+  })
 })

@@ -1,5 +1,5 @@
 -- Migration: 0013_read_api_indexes.sql
--- Description: Replace timeline index to include status column for read API optimization
+-- Description: Replace idx_alerts_topic_date_event with status-aware composite index for timeline read optimization
 -- Applied to: Cloudflare D1
 -- Depends on: 0001_init.sql
 
