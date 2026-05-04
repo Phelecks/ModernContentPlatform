@@ -33,45 +33,35 @@ describe('Cache-Control headers on read APIs', () => {
     db = createSeededDb()
   })
 
-  it('GET /api/topics returns public caching headers', async () => {
+  it('GET /api/topics returns Cache-Control with 300s TTL', async () => {
     const res = await getTopics({ env: { DB: db } })
     const cc = res.headers.get('Cache-Control')
-    expect(cc).toContain('public')
-    expect(cc).toContain('max-age=')
-    expect(cc).toContain('stale-while-revalidate')
+    expect(cc).toBe('public, max-age=300, stale-while-revalidate=300')
   })
 
-  it('GET /api/sources returns public caching headers', async () => {
+  it('GET /api/sources returns Cache-Control with 300s TTL', async () => {
     const url = new URL(`${BASE_URL}/api/sources`)
     const res = await getSources({ request: { url: url.toString() }, env: { DB: db } })
     const cc = res.headers.get('Cache-Control')
-    expect(cc).toContain('public')
-    expect(cc).toContain('max-age=')
-    expect(cc).toContain('stale-while-revalidate')
+    expect(cc).toBe('public, max-age=300, stale-while-revalidate=300')
   })
 
-  it('GET /api/timeline/:topic/:date returns public caching headers', async () => {
+  it('GET /api/timeline/:topic/:date returns Cache-Control with 30s TTL', async () => {
     const res = await getTimeline(makeTimelineCtx(db, 'crypto', '2025-01-15'))
     const cc = res.headers.get('Cache-Control')
-    expect(cc).toContain('public')
-    expect(cc).toContain('max-age=')
-    expect(cc).toContain('stale-while-revalidate')
+    expect(cc).toBe('public, max-age=30, stale-while-revalidate=30')
   })
 
-  it('GET /api/navigation/:topic/:date returns public caching headers', async () => {
+  it('GET /api/navigation/:topic/:date returns Cache-Control with 60s TTL', async () => {
     const res = await getNavigation({ params: { topicSlug: 'crypto', dateKey: '2025-01-15' }, env: { DB: db } })
     const cc = res.headers.get('Cache-Control')
-    expect(cc).toContain('public')
-    expect(cc).toContain('max-age=')
-    expect(cc).toContain('stale-while-revalidate')
+    expect(cc).toBe('public, max-age=60, stale-while-revalidate=60')
   })
 
-  it('GET /api/day-status/:topic/:date returns public caching headers', async () => {
+  it('GET /api/day-status/:topic/:date returns Cache-Control with 60s TTL', async () => {
     const res = await getDayStatus({ params: { topicSlug: 'crypto', dateKey: '2025-01-15' }, env: { DB: db } })
     const cc = res.headers.get('Cache-Control')
-    expect(cc).toContain('public')
-    expect(cc).toContain('max-age=')
-    expect(cc).toContain('stale-while-revalidate')
+    expect(cc).toBe('public, max-age=60, stale-while-revalidate=60')
   })
 
   it('error responses still use no-store', async () => {
@@ -81,12 +71,11 @@ describe('Cache-Control headers on read APIs', () => {
     expect(cc).toBe('no-store')
   })
 
-  it('timeline skips COUNT query on paginated (cursor) requests', async () => {
+  it('timeline returns total as null on paginated (cursor) requests', async () => {
     const res = await getTimeline(
       makeTimelineCtx(db, 'crypto', '2025-01-15', { before: '2025-01-15T12:00:00Z' })
     )
     const body = await res.json()
-    // total is -1 when cursor-paginated to indicate it was not re-fetched
-    expect(body.total).toBe(-1)
+    expect(body.total).toBeNull()
   })
 })

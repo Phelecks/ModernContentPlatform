@@ -32,7 +32,7 @@ export async function queryAll(db, sql, params = []) {
 }
 
 /**
- * Return a JSON response with CORS headers.
+ * Return a JSON response with cache headers.
  * @param {*} data
  * @param {number} [status=200]
  * @param {object} [options]

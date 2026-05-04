@@ -80,7 +80,7 @@ export async function onRequestGet({ params, request, env }) {
     const alerts = hasMore ? rows.slice(0, limit) : rows
 
     // Only fetch total count on the first page (no cursor) to avoid extra query on paginated reads
-    let total = 0
+    let total = null
     if (!before) {
       const countRow = await queryOne(
         db,
@@ -88,9 +88,6 @@ export async function onRequestGet({ params, request, env }) {
         [topicSlug, dateKey]
       )
       total = countRow?.total ?? 0
-    } else {
-      // For cursor-based pages, total is not re-fetched to save a query
-      total = -1
     }
 
     return jsonResponse({
