@@ -230,3 +230,4 @@ Adding a new provider requires:
 | `workflows/n8n/daily/06d_render_video.json` | Render & caption export module |
 | `workflows/n8n/daily/orchestrator.json` | Daily orchestrator (wires the pipeline together) |
 | `docs/architecture/full-video-mode.md` | Full-video mode design, provider requirements, and implementation plan |
+| `docs/operations/media-asset-lifecycle.md` | Media asset storage, naming, versioning, cleanup, and rerender rules |

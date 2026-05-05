@@ -22,4 +22,5 @@ Project documentation lives here.
   - `operations/secrets-management.md` — **secrets and environment variables management**: full secret inventory, environment-specific usage (local/staging/production), rotation schedule, missing-secret behavior, secure storage locations, and troubleshooting. **Start here** when onboarding or auditing credentials.
   - `operations/promotion-workflow.md` — staging-to-production promotion: environment mapping, step-by-step release path, approval gates, smoke checks, rollback procedures, and release checklist.
   - `operations/n8n-deployment.md` — n8n production/staging deployment, workflow import, credential setup, runtime variables, updates, and troubleshooting.
+  - `operations/media-asset-lifecycle.md` — **media asset lifecycle**: storage by environment, naming conventions, temporary vs final asset handling, cleanup policy, versioning rules, rerender behavior, and the GitHub vs non-GitHub asset boundary for images, narration, rendered video, captions, and social derivatives.
 - `runbooks/` for incident and rerun guidance.
