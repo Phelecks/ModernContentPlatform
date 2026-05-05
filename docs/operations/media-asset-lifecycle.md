@@ -137,7 +137,7 @@ The platform uses **immutable date-keyed paths** plus **mutable file content**:
 - Path is keyed by `(topic_slug, date_key)`. The combination is the version key.
 - File content is replaced in place by reruns. Each rerun produces a Git commit on the editorial branch (e.g. `daily(crypto): summary for 2025-01-15`), so prior content is recoverable from Git history.
 - There is **no** `summary.v2.json`, no `_rev` suffix, no date-time-stamped variants. This keeps frontend routes (`/{topic}/{date}`) deterministic and avoids stale-file accumulation.
-- The `youtube_video_id` in `video.json` is **append-only** in practice: once a successful YouTube upload has occurred for a day, the orchestrator does not re-upload; reruns of the publish step preserve the existing id (see [`16_update_video_reference.json`](../../workflows/n8n/daily/16_update_video_reference.json)).
+- The `youtube_video_id` in `video.json` is updated by [`16_update_video_reference.json`](../../workflows/n8n/daily/16_update_video_reference.json) after each successful YouTube upload. **Note:** in v1, `15_youtube_upload.json` does **not** read the existing `youtube_video_id` from `video.json`, so a rerun of the YouTube upload step will produce a new upload and overwrite the stored id rather than skip. Operators who need to avoid duplicate uploads must gate reruns externally (see §7).
 - D1 rows (`publish_jobs`, `rerun_log`, `social_publish_log`, `meta_social_publish_log`, `openai_usage_log`) are append-only with `attempt` numbers and timestamps; they form the audit trail for asset versions.
 
 ---
@@ -150,7 +150,7 @@ The platform uses **immutable date-keyed paths** plus **mutable file content**:
 | Render provider (Shotstack / Creatomate) | Provider-managed retention (24h–30d). The platform does **not** rely on it beyond the same-day YouTube upload window. | Provider TTL |
 | GitHub | No deletion in v1. Daily manifests accumulate with Git history. | Never (v1) |
 | YouTube | Manual via channel admin for takedowns or compliance. | Ad hoc |
-| D1 logs (`openai_usage_log`, `social_publish_log`, `meta_social_publish_log`, `rerun_log`) | Retained per [`docs/operations/secrets-management.md`](./secrets-management.md) and observability rollups. v1: keep ≥90 days. | TBD via separate cleanup job |
+| D1 logs (`openai_usage_log`, `social_publish_log`, `meta_social_publish_log`, `rerun_log`) | Retained for observability and audit. v1 target: keep ≥90 days. No automated cleanup job exists yet — see §10. | TBD via separate cleanup job |
 | Local dev | `scripts/local-reset.sh` resets D1; n8n local runs hold no media after completion. | On demand |
 
 In v1 there is **no scheduled deletion** of GitHub manifests. If GitHub volume becomes a concern (≫1 year of daily output across many topics), a future archival job can move old `content/topics/**` paths into a separate archive branch or repo. Until then, the simplicity of "everything ever published is in `main`" is preferred.
@@ -163,7 +163,11 @@ Reruns are governed by `publish_jobs` state and the rerun workflows documented i
 
 1. **Idempotent path.** A rerun for `(topic_slug, date_key)` writes to the same paths under `content/topics/{topic_slug}/{date_key}/`. Existing files are overwritten; missing files are created.
 2. **Non-blocking media steps.** If `06b`, `06c`, or `06d` failed previously, a rerun re-attempts them. If a rerun re-succeeds where a previous run failed, the manifest appears for the first time; this is treated as a normal additive change.
-3. **YouTube guardrail.** Once `youtube_video_id` is set in `video.json`, the orchestrator skips re-uploading the rendered MP4. To force a new upload, an operator must clear `youtube_video_id` (manual edit + commit) before triggering the rerun. This protects against duplicate YouTube uploads on retry.
+3. **YouTube re-upload is not automatically guarded in v1.** The `15_youtube_upload.json` module checks `ENABLE_YOUTUBE_UPLOAD`, `render_video_asset.status`, and `youtube_metadata`, but does **not** read the existing `youtube_video_id` from `video.json`. Triggering a full daily rerun (or `rerun_youtube_upload`) when YouTube upload is enabled will produce a duplicate upload. Operators who need to prevent this must either:
+   - Set `ENABLE_YOUTUBE_UPLOAD=false` for the rerun, or
+   - Use the targeted rerun workflows (e.g. `rerun_daily_publish` for content-only fixes that don't require a fresh render), or
+   - Manually unpublish the duplicate from the YouTube channel after the fact.
+   A workflow-level guardrail (skip upload when `video.json:youtube_video_id` is already populated) is tracked as future work in §10.
 4. **Render provider guardrail.** A rerun submits a new render job; the previous `render_job_id` is overwritten in `render.json`. The previous provider-hosted MP4 will expire on its own provider TTL — no explicit cleanup is required.
 5. **Captions are deterministic.** Captions SRT is regenerated from the script every time `06d` runs, so reruns always produce a consistent caption file regardless of the previous run state.
 6. **Partial success preserved.** A rerun cannot delete a manifest that was already committed by a previous run unless that run wrote a new value. Operators wanting to remove an asset (e.g. an image manifest) must do so via a manual Git revert on the content branch.
@@ -193,7 +197,8 @@ Consequence for the frontend:
 | Inspect what was published for a day | Open `content/topics/{topic}/{date}/` on `main` |
 | See why an image was generated | Read `images.json` → `images[].prompt` |
 | Re-run media for a failed day | Trigger `rerun_daily_publish` (see [rerun-recovery.md](./rerun-recovery.md)) |
-| Force a new YouTube upload | Manually clear `youtube_video_id` in `video.json`, commit, then trigger rerun |
+| Force a new YouTube upload | Trigger a rerun with `ENABLE_YOUTUBE_UPLOAD=true`. **Note:** in v1 there is no skip-if-already-uploaded guard, so this will produce a duplicate if a video already exists for the day — manually unpublish the previous YouTube video first. |
+| Avoid a duplicate YouTube upload during rerun | Set `ENABLE_YOUTUBE_UPLOAD=false` before triggering `rerun_daily_publish` |
 | Find a render job's MP4 | Open `render.json` → `video_url` (may have expired; YouTube is canonical) |
 | Audit narration provider/voice for a day | Open `narration.json` → `provider`, `model`, `voice` |
 | Remove a published asset | Manual `git revert` on the editorial branch — there is no automated deletion |
@@ -207,5 +212,6 @@ The following are intentionally not addressed in this version and are tracked as
 - Long-term archival of `content/topics/**` to a separate repo or branch.
 - Hosting binary image/audio derivatives on Cloudflare Images / R2 with frontend-served URLs.
 - Per-asset retention policies in D1 logs (currently a single global ≥90 day window).
+- Workflow-level YouTube re-upload guardrail in `15_youtube_upload.json` that skips when `video.json:youtube_video_id` is already populated.
 - Cross-version diffing of manifests beyond what Git already provides.
 - Full-video mode lifecycle (covered separately in [`full-video-mode.md`](../architecture/full-video-mode.md) once a provider is selected).
