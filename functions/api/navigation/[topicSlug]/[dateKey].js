@@ -41,7 +41,7 @@ export async function onRequestGet({ params, env }) {
     return jsonResponse({
       prev_date_key: row?.prev_date_key ?? null,
       next_date_key: row?.next_date_key ?? null
-    })
+    }, 200, { cacheTtl: 60, staleWhileRevalidate: true })
   } catch (err) {
     return errorResponse(`Failed to fetch navigation: ${err.message}`)
   }

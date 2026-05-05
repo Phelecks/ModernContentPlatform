@@ -32,17 +32,29 @@ export async function queryAll(db, sql, params = []) {
 }
 
 /**
- * Return a JSON response with CORS headers.
+ * Return a JSON response with cache headers.
  * @param {*} data
  * @param {number} [status=200]
+ * @param {object} [options]
+ * @param {number} [options.cacheTtl] - Cache-Control max-age in seconds (0 or omit for no-store)
+ * @param {boolean} [options.staleWhileRevalidate] - Add stale-while-revalidate directive
  * @returns {Response}
  */
-export function jsonResponse(data, status = 200) {
+export function jsonResponse(data, status = 200, options = {}) {
+  const { cacheTtl = 0, staleWhileRevalidate = false } = options
+  let cacheControl = 'no-store'
+  if (cacheTtl > 0) {
+    cacheControl = `public, max-age=${cacheTtl}`
+    if (staleWhileRevalidate) {
+      cacheControl += `, stale-while-revalidate=${cacheTtl}`
+    }
+  }
+
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       'Content-Type': 'application/json',
-      'Cache-Control': 'no-store'
+      'Cache-Control': cacheControl
     }
   })
 }

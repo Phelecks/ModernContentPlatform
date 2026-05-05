@@ -79,17 +79,22 @@ export async function onRequestGet({ params, request, env }) {
     const hasMore = rows.length > limit
     const alerts = hasMore ? rows.slice(0, limit) : rows
 
-    const countRow = await queryOne(
-      db,
-      `SELECT COUNT(*) as total FROM alerts WHERE topic_slug = ? AND date_key = ? AND status = 'active'`,
-      [topicSlug, dateKey]
-    )
+    // Only fetch total count on the first page (no cursor) to avoid extra query on paginated reads
+    let total = null
+    if (!before) {
+      const countRow = await queryOne(
+        db,
+        `SELECT COUNT(*) as total FROM alerts WHERE topic_slug = ? AND date_key = ? AND status = 'active'`,
+        [topicSlug, dateKey]
+      )
+      total = countRow?.total ?? 0
+    }
 
     return jsonResponse({
       alerts,
-      total: countRow?.total ?? 0,
+      total,
       has_more: hasMore
-    })
+    }, 200, { cacheTtl: 30, staleWhileRevalidate: true })
   } catch (err) {
     return errorResponse(`Failed to fetch timeline: ${err.message}`)
   }

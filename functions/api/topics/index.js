@@ -20,7 +20,7 @@ export async function onRequestGet({ env }) {
        WHERE is_active = 1
        ORDER BY sort_order ASC, display_name ASC`
     )
-    return jsonResponse(topics)
+    return jsonResponse(topics, 200, { cacheTtl: 300, staleWhileRevalidate: true })
   } catch (err) {
     console.error('[/api/topics] Failed to fetch topics:', err)
     return errorResponse('Failed to fetch topics')
