@@ -31,18 +31,21 @@ The integration is modular:
 
 ## Provider/task support matrix (v1)
 
-| Internal task | OpenAI | Google | Fallback behavior |
+| Internal task | OpenAI | Google | Failover behavior |
 |---|---|---|---|
-| alertClassification | ✅ | ✅ | none |
-| timelineFormatting | ✅ | ✅ | none |
-| dailySummary | ✅ | ✅ | none |
-| articleGeneration | ✅ | ✅ | none |
-| expectationCheck | ✅ | ✅ | none |
-| tomorrowOutlook | ✅ | ✅ | none |
-| videoScript | ✅ | ✅ | none |
-| youtubeMetadata | ✅ | ✅ | none |
-| imageGeneration | ✅ | ⚠️ not wired | fallback to OpenAI |
-| tts | ✅ | ⚠️ not wired | fallback to OpenAI |
+| alertClassification | ✅ | ✅ | cross-provider failover (2.0× cost limit) |
+| timelineFormatting | ✅ | ✅ | cross-provider failover (2.0× cost limit) |
+| dailySummary | ✅ | ✅ | cross-provider failover (2.0× cost limit) |
+| articleGeneration | ✅ | ✅ | cross-provider failover (2.0× cost limit) |
+| expectationCheck | ✅ | ✅ | cross-provider failover (2.0× cost limit) |
+| tomorrowOutlook | ✅ | ✅ | cross-provider failover (2.0× cost limit) |
+| videoScript | ✅ | ✅ | cross-provider failover (2.0× cost limit) |
+| youtubeMetadata | ✅ | ✅ | cross-provider failover (2.0× cost limit) |
+| imageGeneration | ✅ | ✅ | cross-provider failover (3.0× cost limit) |
+| tts | ✅ | ✅ | cross-provider failover (3.0× cost limit) |
+
+> For the full failover design, runtime behavior, and observability guidance,
+> see [AI Provider Failover Strategy](./ai-provider-failover.md).
 
 ### Structured-output capability handling
 
