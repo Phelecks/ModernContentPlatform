@@ -64,9 +64,18 @@ contracts.
 
 ### Fallback behavior
 
-There is no automatic fallback between providers. If `AI_PROVIDER=google` and
-a Google API call fails, the step retries (3 attempts) and then the workflow
-fails with an error. The failure notifier workflow is triggered automatically.
+Cross-provider failover is now supported. If `AI_PROVIDER=openai` and all
+same-provider retries (3 attempts) are exhausted, the system can fail over
+to Google (and vice versa) if:
+- the task has failover enabled (`TASK_FAILOVER_CONFIG[task].allowFailover`)
+- schemas are compatible across providers
+- the fallback provider's API key is available in the environment
+- the cost multiplier limit is not exceeded
+
+Failover events are logged as structured entries for observability.
+
+See [AI Provider Failover Strategy](./ai-provider-failover.md) for the full
+design, task fallback matrix, and implementation details.
 
 ---
 

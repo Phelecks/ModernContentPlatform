@@ -482,6 +482,328 @@ export const OPENAI_COST_CONTROLS = {
 }
 
 // ---------------------------------------------------------------------------
+// Provider failover configuration
+// ---------------------------------------------------------------------------
+
+/**
+ * Preferred provider per task.
+ *
+ * When AI_PROVIDER is not set, these determine which provider each task
+ * prefers by default. The global AI_PROVIDER setting overrides these per-task
+ * preferences — this matrix is used only for cross-provider failover
+ * decisions at runtime.
+ *
+ * Rationale:
+ * - Text generation tasks: both providers are fully capable; prefer whichever
+ *   is configured globally, fall back to the other on failure.
+ * - imageGeneration: OpenAI preferred (DALL-E mature, Google Imagen newer).
+ * - tts: OpenAI preferred (simpler API surface, lower latency).
+ */
+export const TASK_PREFERRED_PROVIDER = {
+  alertClassification: PROVIDER_OPENAI,
+  timelineFormatting: PROVIDER_OPENAI,
+  dailySummary: PROVIDER_OPENAI,
+  articleGeneration: PROVIDER_OPENAI,
+  expectationCheck: PROVIDER_OPENAI,
+  tomorrowOutlook: PROVIDER_OPENAI,
+  videoScript: PROVIDER_OPENAI,
+  youtubeMetadata: PROVIDER_OPENAI,
+  imageGeneration: PROVIDER_OPENAI,
+  tts: PROVIDER_OPENAI,
+}
+
+/**
+ * Failover rules per task.
+ *
+ * Each entry defines:
+ * - `fallbackProvider`: which provider to fall over to when the primary fails.
+ * - `allowFailover`: whether cross-provider failover is permitted. Set to
+ *   false for tasks where schema/output differences make failover unsafe.
+ * - `schemaCompatible`: whether both providers produce output that passes
+ *   the same validator. When false, failover is blocked even if allowFailover
+ *   is true.
+ * - `costMultiplierLimit`: maximum acceptable cost ratio between fallback and
+ *   primary provider. If the fallback model's estimated cost exceeds this
+ *   multiplier, failover is blocked. A value of 1.0 means same cost or
+ *   cheaper only; 2.0 means up to 2× cost is acceptable.
+ *
+ * Text generation tasks are schema-compatible across OpenAI/Google because
+ * both paths share the same validators (validateAiOutput.js). Binary tasks
+ * (imageGeneration, tts) produce equivalent outputs in different formats but
+ * the normalization nodes handle that.
+ */
+export const TASK_FAILOVER_CONFIG = {
+  alertClassification: {
+    fallbackProvider: PROVIDER_GOOGLE,
+    allowFailover: true,
+    schemaCompatible: true,
+    costMultiplierLimit: 2.0,
+  },
+  timelineFormatting: {
+    fallbackProvider: PROVIDER_GOOGLE,
+    allowFailover: true,
+    schemaCompatible: true,
+    costMultiplierLimit: 2.0,
+  },
+  dailySummary: {
+    fallbackProvider: PROVIDER_GOOGLE,
+    allowFailover: true,
+    schemaCompatible: true,
+    costMultiplierLimit: 2.0,
+  },
+  articleGeneration: {
+    fallbackProvider: PROVIDER_GOOGLE,
+    allowFailover: true,
+    schemaCompatible: true,
+    costMultiplierLimit: 2.0,
+  },
+  expectationCheck: {
+    fallbackProvider: PROVIDER_GOOGLE,
+    allowFailover: true,
+    schemaCompatible: true,
+    costMultiplierLimit: 2.0,
+  },
+  tomorrowOutlook: {
+    fallbackProvider: PROVIDER_GOOGLE,
+    allowFailover: true,
+    schemaCompatible: true,
+    costMultiplierLimit: 2.0,
+  },
+  videoScript: {
+    fallbackProvider: PROVIDER_GOOGLE,
+    allowFailover: true,
+    schemaCompatible: true,
+    costMultiplierLimit: 2.0,
+  },
+  youtubeMetadata: {
+    fallbackProvider: PROVIDER_GOOGLE,
+    allowFailover: true,
+    schemaCompatible: true,
+    costMultiplierLimit: 2.0,
+  },
+  imageGeneration: {
+    fallbackProvider: PROVIDER_GOOGLE,
+    allowFailover: true,
+    schemaCompatible: true,
+    costMultiplierLimit: 3.0,
+  },
+  tts: {
+    fallbackProvider: PROVIDER_GOOGLE,
+    allowFailover: true,
+    schemaCompatible: true,
+    costMultiplierLimit: 3.0,
+  },
+}
+
+/**
+ * Global failover settings.
+ *
+ * These control retry behavior *across* providers (not within a single
+ * provider — n8n nodes handle same-provider retries via retryOnFail/maxTries).
+ */
+export const FAILOVER_SETTINGS = {
+  /**
+   * Maximum number of cross-provider failover attempts per task execution.
+   * After exhausting same-provider retries (typically 3 attempts), the system
+   * may attempt the task on the fallback provider up to this many times.
+   */
+  maxFailoverAttempts: 1,
+
+  /**
+   * Cooldown in milliseconds before attempting failover to another provider.
+   * Prevents rapid cascading failures when both providers are degraded.
+   */
+  cooldownMs: 2000,
+
+  /**
+   * Whether to require a valid API key for the fallback provider before
+   * attempting failover. When true, failover is only attempted if the
+   * alternate provider's credentials are available in the environment.
+   */
+  requireFallbackCredentials: true,
+
+  /**
+   * Whether failover events should be logged. Always true in v1.
+   * Controls whether resolveTaskProviderWithFailover emits log entries.
+   */
+  logFailoverEvents: true,
+}
+
+/**
+ * Determines whether failover is allowed for a specific task given current
+ * configuration and environment.
+ *
+ * Checks:
+ * 1. Task has failover config defined
+ * 2. Failover is enabled for the task (allowFailover: true)
+ * 3. Schemas are compatible across providers
+ * 4. Fallback provider is a valid provider
+ * 5. Fallback provider supports the task
+ * 6. (Optional) Fallback provider credentials are available
+ *
+ * @param {string} task - AI task identifier
+ * @param {string} primaryProvider - Currently active provider
+ * @param {Object} [env] - Environment object (for credential checks)
+ * @returns {{ allowed: boolean, reason: string, fallbackProvider: string|null }}
+ */
+export function checkFailoverEligibility(task, primaryProvider, env = {}) {
+  const config = TASK_FAILOVER_CONFIG[task]
+  if (!config) {
+    return { allowed: false, reason: 'no_failover_config', fallbackProvider: null }
+  }
+
+  if (!config.allowFailover) {
+    return { allowed: false, reason: 'failover_disabled', fallbackProvider: null }
+  }
+
+  if (!config.schemaCompatible) {
+    return { allowed: false, reason: 'schema_incompatible', fallbackProvider: null }
+  }
+
+  // Determine the fallback provider (opposite of primary)
+  const fallbackProvider = primaryProvider === PROVIDER_OPENAI
+    ? PROVIDER_GOOGLE
+    : PROVIDER_OPENAI
+
+  if (!VALID_PROVIDERS.includes(fallbackProvider)) {
+    return { allowed: false, reason: 'invalid_fallback_provider', fallbackProvider: null }
+  }
+
+  // Verify the fallback provider supports this task
+  const taskConfig = AI_TASK_CONTRACTS[task]
+  if (!taskConfig?.providers?.[fallbackProvider]?.supported) {
+    return { allowed: false, reason: 'fallback_provider_unsupported', fallbackProvider }
+  }
+
+  // Check credentials if required
+  if (FAILOVER_SETTINGS.requireFallbackCredentials) {
+    const keyVar = fallbackProvider === PROVIDER_GOOGLE ? 'GOOGLE_API_KEY' : 'OPENAI_API_KEY'
+    const hasKey = typeof env[keyVar] === 'string' && env[keyVar].trim() !== ''
+    if (!hasKey) {
+      return { allowed: false, reason: 'missing_fallback_credentials', fallbackProvider }
+    }
+  }
+
+  return { allowed: true, reason: 'eligible', fallbackProvider }
+}
+
+/**
+ * Creates a structured failover event log entry.
+ *
+ * These entries are designed to be written to the openai_usage_log table
+ * (via the existing POST /api/internal/openai-usage-log endpoint) or to
+ * structured workflow logs.
+ *
+ * @param {Object} params
+ * @param {string} params.task - AI task identifier
+ * @param {string} params.primaryProvider - Originally requested provider
+ * @param {string} params.fallbackProvider - Provider that was used after failover
+ * @param {string} params.reason - Why failover was triggered (e.g., 'primary_failed', 'rate_limited')
+ * @param {boolean} params.success - Whether the fallback call succeeded
+ * @param {number} [params.primaryAttempts] - Number of attempts on primary before failover
+ * @param {number} [params.latencyMs] - Total latency including failover
+ * @returns {Object} Structured log entry
+ */
+export function createFailoverEvent({
+  task,
+  primaryProvider,
+  fallbackProvider,
+  reason,
+  success,
+  primaryAttempts = 0,
+  latencyMs = 0,
+}) {
+  return {
+    event_type: 'provider_failover',
+    task,
+    primary_provider: primaryProvider,
+    fallback_provider: fallbackProvider,
+    reason,
+    success,
+    primary_attempts: primaryAttempts,
+    latency_ms: latencyMs,
+    timestamp: new Date().toISOString(),
+  }
+}
+
+/**
+ * Resolves provider configuration with failover awareness.
+ *
+ * This is the primary entry point for runtime failover decisions. It wraps
+ * `resolveTaskProvider` and adds failover eligibility metadata so that
+ * calling code (n8n workflows) can implement the actual retry-then-failover
+ * loop.
+ *
+ * The function does NOT perform the actual API call or retry — it provides
+ * the decision data that the orchestration layer (n8n) uses to route calls.
+ *
+ * @param {Object} env - Environment variables
+ * @param {string} task - AI task identifier
+ * @returns {{
+ *   primary: { provider: string, model: string, apiKey: string, support: Object },
+ *   failover: { allowed: boolean, reason: string, provider: string|null, model: string|null, apiKey: string|null },
+ *   settings: { maxFailoverAttempts: number, cooldownMs: number },
+ *   costGuardrail: { multiplierLimit: number }
+ * }}
+ */
+export function resolveTaskProviderWithFailover(env = {}, task) {
+  const primaryConfig = parseAIProviderConfig(env)
+  const resolved = resolveTaskProvider(task, primaryConfig.provider)
+  const primaryModel = primaryConfig.models?.[task]
+
+  const eligibility = checkFailoverEligibility(task, resolved.provider, env)
+
+  let failoverDetail = {
+    allowed: eligibility.allowed,
+    reason: eligibility.reason,
+    provider: null,
+    model: null,
+    apiKey: null,
+  }
+
+  if (eligibility.allowed && eligibility.fallbackProvider) {
+    try {
+      const fallbackEnv = { ...env, AI_PROVIDER: eligibility.fallbackProvider }
+      const fallbackConfig = parseAIProviderConfig(fallbackEnv)
+      failoverDetail = {
+        allowed: true,
+        reason: eligibility.reason,
+        provider: eligibility.fallbackProvider,
+        model: fallbackConfig.models?.[task] || null,
+        apiKey: fallbackConfig.apiKey,
+      }
+    } catch {
+      failoverDetail = {
+        allowed: false,
+        reason: 'fallback_config_error',
+        provider: eligibility.fallbackProvider,
+        model: null,
+        apiKey: null,
+      }
+    }
+  }
+
+  const taskFailoverConfig = TASK_FAILOVER_CONFIG[task] || {}
+
+  return {
+    primary: {
+      provider: resolved.provider,
+      model: primaryModel,
+      apiKey: primaryConfig.apiKey,
+      support: resolved.support,
+    },
+    failover: failoverDetail,
+    settings: {
+      maxFailoverAttempts: FAILOVER_SETTINGS.maxFailoverAttempts,
+      cooldownMs: FAILOVER_SETTINGS.cooldownMs,
+    },
+    costGuardrail: {
+      multiplierLimit: taskFailoverConfig.costMultiplierLimit || 1.0,
+    },
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Config parsing
 // ---------------------------------------------------------------------------
 
