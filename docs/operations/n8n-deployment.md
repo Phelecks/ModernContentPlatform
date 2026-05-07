@@ -376,6 +376,7 @@ and set these variables:
 | `DAILY_VIDEO_SCRIPT_WORKFLOW_ID` | `06_generate_video_script.json` |
 | `DAILY_YOUTUBE_METADATA_WORKFLOW_ID` | `07_generate_youtube_metadata.json` |
 | `DAILY_VALIDATE_OUTPUTS_WORKFLOW_ID` | `08_validate_outputs.json` |
+| `DAILY_EDITORIAL_QUALITY_CHECK_WORKFLOW_ID` | `08b_editorial_quality_check.json` |
 | `DAILY_PUBLISH_GITHUB_WORKFLOW_ID` | `09_publish_to_github.json` |
 | `DAILY_UPDATE_D1_WORKFLOW_ID` | `10_update_d1_state.json` |
 
