@@ -64,9 +64,23 @@ contracts.
 
 ### Fallback behavior
 
-There is no automatic fallback between providers. If `AI_PROVIDER=google` and
-a Google API call fails, the step retries (3 attempts) and then the workflow
-fails with an error. The failure notifier workflow is triggered automatically.
+Cross-provider failover configuration is defined in Phase 1. When the
+orchestration wiring is enabled (Phase 2), if `AI_PROVIDER=openai` and all
+same-provider retries (3 attempts) are exhausted, the system will fail over
+to Google (and vice versa) if:
+- the task has failover enabled (`TASK_FAILOVER_CONFIG[task].allowFailover`)
+- schemas are compatible across providers
+- the fallback provider's API key is available in the environment
+
+Cost enforcement (blocking failover when the estimated cost ratio exceeds
+`costMultiplierLimit`) and failover event logging are implemented in the
+orchestration layer (n8n) using the metadata returned by
+`resolveTaskProviderWithFailover()`. The config module itself provides
+`createFailoverEvent()` as an event builder utility but does not perform
+logging side-effects.
+
+See [AI Provider Failover Strategy](./ai-provider-failover.md) for the full
+design, task fallback matrix, and implementation details.
 
 ---
 
