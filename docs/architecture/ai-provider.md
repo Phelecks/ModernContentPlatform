@@ -33,19 +33,21 @@ The integration is modular:
 
 | Internal task | OpenAI | Google | Failover behavior |
 |---|---|---|---|
-| alertClassification | ✅ | ✅ | cross-provider failover (2.0× cost limit) |
-| timelineFormatting | ✅ | ✅ | cross-provider failover (2.0× cost limit) |
-| dailySummary | ✅ | ✅ | cross-provider failover (2.0× cost limit) |
-| articleGeneration | ✅ | ✅ | cross-provider failover (2.0× cost limit) |
-| expectationCheck | ✅ | ✅ | cross-provider failover (2.0× cost limit) |
-| tomorrowOutlook | ✅ | ✅ | cross-provider failover (2.0× cost limit) |
-| videoScript | ✅ | ✅ | cross-provider failover (2.0× cost limit) |
-| youtubeMetadata | ✅ | ✅ | cross-provider failover (2.0× cost limit) |
-| imageGeneration | ✅ | ✅ | cross-provider failover (3.0× cost limit) |
-| tts | ✅ | ✅ | cross-provider failover (3.0× cost limit) |
+| alertClassification | ✅ | ✅ | eligible for cross-provider failover (2.0× cost limit) |
+| timelineFormatting | ✅ | ✅ | eligible for cross-provider failover (2.0× cost limit) |
+| dailySummary | ✅ | ✅ | eligible for cross-provider failover (2.0× cost limit) |
+| articleGeneration | ✅ | ✅ | eligible for cross-provider failover (2.0× cost limit) |
+| expectationCheck | ✅ | ✅ | eligible for cross-provider failover (2.0× cost limit) |
+| tomorrowOutlook | ✅ | ✅ | eligible for cross-provider failover (2.0× cost limit) |
+| videoScript | ✅ | ✅ | eligible for cross-provider failover (2.0× cost limit) |
+| youtubeMetadata | ✅ | ✅ | eligible for cross-provider failover (2.0× cost limit) |
+| imageGeneration | ✅ | ✅ | eligible for cross-provider failover (3.0× cost limit) |
+| tts | ✅ | ✅ | eligible for cross-provider failover (3.0× cost limit) |
 
-> For the full failover design, runtime behavior, and observability guidance,
-> see [AI Provider Failover Strategy](./ai-provider-failover.md).
+> Failover configuration and resolution metadata are implemented in Phase 1.
+> Orchestration wiring (n8n workflow routing to the fallback provider at
+> runtime) is a Phase 2 follow-up. For the full failover design, see
+> [AI Provider Failover Strategy](./ai-provider-failover.md).
 
 ### Structured-output capability handling
 

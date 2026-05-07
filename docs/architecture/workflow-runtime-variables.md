@@ -64,15 +64,20 @@ contracts.
 
 ### Fallback behavior
 
-Cross-provider failover is now supported. If `AI_PROVIDER=openai` and all
-same-provider retries (3 attempts) are exhausted, the system can fail over
+Cross-provider failover configuration is defined in Phase 1. When the
+orchestration wiring is enabled (Phase 2), if `AI_PROVIDER=openai` and all
+same-provider retries (3 attempts) are exhausted, the system will fail over
 to Google (and vice versa) if:
 - the task has failover enabled (`TASK_FAILOVER_CONFIG[task].allowFailover`)
 - schemas are compatible across providers
 - the fallback provider's API key is available in the environment
-- the cost multiplier limit is not exceeded
 
-Failover events are logged as structured entries for observability.
+Cost enforcement (blocking failover when the estimated cost ratio exceeds
+`costMultiplierLimit`) and failover event logging are implemented in the
+orchestration layer (n8n) using the metadata returned by
+`resolveTaskProviderWithFailover()`. The config module itself provides
+`createFailoverEvent()` as an event builder utility but does not perform
+logging side-effects.
 
 See [AI Provider Failover Strategy](./ai-provider-failover.md) for the full
 design, task fallback matrix, and implementation details.

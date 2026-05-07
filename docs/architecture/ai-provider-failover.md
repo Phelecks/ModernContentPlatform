@@ -57,8 +57,10 @@ The failover system builds on the existing provider abstraction layer
   Google becomes the primary and OpenAI becomes the fallback.
 - Binary tasks (imageGeneration, tts) have a higher cost multiplier limit
   because pricing models differ significantly between providers.
-- All text-generation tasks share the same validators (validateAiOutput.js),
-  making schema compatibility guaranteed across providers.
+- All JSON-output tasks share the same validators (validateAiOutput.js),
+  making schema compatibility guaranteed across providers for structured output.
+  articleGeneration (Markdown output) uses Markdown-specific validation rules
+  that are also provider-agnostic.
 
 ---
 

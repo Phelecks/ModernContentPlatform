@@ -128,7 +128,7 @@ describe('checkFailoverEligibility', () => {
     expect(result.fallbackProvider).toBe(PROVIDER_GOOGLE)
   })
 
-  it('returns google as fallback when primary is openai', () => {
+  it('returns google as fallback when primary is openai (using config.fallbackProvider)', () => {
     const result = checkFailoverEligibility('dailySummary', PROVIDER_OPENAI, BOTH_KEYS_ENV)
     expect(result.fallbackProvider).toBe(PROVIDER_GOOGLE)
   })
@@ -136,6 +136,13 @@ describe('checkFailoverEligibility', () => {
   it('returns openai as fallback when primary is google', () => {
     const result = checkFailoverEligibility('dailySummary', PROVIDER_GOOGLE, GOOGLE_PRIMARY_ENV)
     expect(result.fallbackProvider).toBe(PROVIDER_OPENAI)
+  })
+
+  it('rejects invalid primaryProvider with reason invalid_primary_provider', () => {
+    const result = checkFailoverEligibility('dailySummary', 'anthropic', BOTH_KEYS_ENV)
+    expect(result.allowed).toBe(false)
+    expect(result.reason).toBe('invalid_primary_provider')
+    expect(result.fallbackProvider).toBe(null)
   })
 
   it('blocks failover when fallback credentials are missing', () => {
