@@ -77,15 +77,16 @@ Key characteristics:
                          ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │  n8n (self-hosted)                                              │
-│  Intraday (11 modules):                                         │
+│  Intraday (12 modules):                                         │
 │    ingest → normalize → deduplicate → cluster → classify        │
 │    → decide → D1 persist → Telegram → Discord                   │
-│    → Meta story → social story                                  │
-│  Daily (14 modules):                                            │
+│    → Meta story → social story → delivery retry                 │
+│  Daily (modules 01–16):                                         │
 │    aggregate → summarize → article → expectation check          │
 │    → tomorrow outlook → video script → images → narration       │
-│    → render → YouTube metadata → validate → GitHub publish      │
-│    → D1 update → Meta social → social channels                  │
+│    → render → YouTube metadata → validate → quality gate        │
+│    → GitHub publish → D1 update → Meta social → social channels │
+│    → YouTube upload → video reference update                    │
 └────────┬──────────────────────────────────────┬────────────────┘
          │                                      │
          ▼                                      ▼
@@ -100,6 +101,8 @@ Key characteristics:
 │  - openai_usage_log          │                   │
 │  - meta_social_publish_log   │                   │
 │  - social_publish_log        │                   │
+│  - youtube_publish_log       │                   │
+│  - rerun_log                 │                   │
 └────────┬─────────┘                                │
          │                                          │
          ▼                                          ▼
@@ -108,8 +111,9 @@ Key characteristics:
 │  Read APIs:  topics, timeline, day-status, navigation, sources  │
 │  Write APIs: alerts, daily-status, publish-jobs, sources,       │
 │              workflow-logs, openai-usage-log,                   │
-│              meta-social-publish-log, social-publish-log        │
-│  Vue frontend: topic pages, homepage, timeline, placeholders     │
+│              meta-social-publish-log, social-publish-log,       │
+│              youtube-publish-log, rerun-log, operator-dashboard │
+│  Vue frontend: topic pages, homepage, timeline, operator dashboard, placeholders │
 └────────┬────────────────────────────────────────────────────────┘
          │
          ▼
@@ -133,7 +137,7 @@ Key characteristics:
 | **Vue.js** | Frontend rendering — topic pages, homepage, timeline UI, placeholder states, source attribution display |
 | **Cloudflare Pages** | Static hosting and auto-deploy on GitHub push |
 | **Cloudflare Pages Functions** | Thin read APIs over D1 (timeline, day status, navigation, topics, sources) and authenticated write APIs for n8n workflow outputs |
-| **Cloudflare D1** | Live operational data — alerts, clusters, daily status, publish jobs, workflow logs, source registry, `openai_usage_log`, `meta_social_publish_log`, and `social_publish_log` |
+| **Cloudflare D1** | Live operational data — alerts, clusters, daily status, publish jobs, workflow logs, source registry, `openai_usage_log`, `meta_social_publish_log`, `social_publish_log`, `youtube_publish_log`, and `rerun_log` |
 | **GitHub** | Canonical store for final editorial content — summaries, articles, video metadata |
 | **n8n** | Orchestration — ingestion, normalization, clustering, classification, summarization, publishing, social delivery |
 | **AI** | Classification, summarization, timeline phrasing, video scripts, image generation, narration (TTS), YouTube metadata, tomorrow outlooks |
@@ -167,6 +171,7 @@ Key characteristics:
 │   │   ├── pages/        # Route-level page views
 │   │   │   ├── HomePage.vue            # Topic grid homepage
 │   │   │   ├── NotFoundPage.vue        # 404 page
+│   │   │   ├── OperatorDashboardPage.vue # Authenticated read-only operational dashboard
 │   │   │   ├── TopicDayPage.vue        # Topic + date editorial page
 │   │   │   └── TopicPage.vue           # Topic redirect to latest day
 │   │   ├── router/       # Vue Router route definitions
@@ -174,6 +179,7 @@ Key characteristics:
 │   │   ├── styles/       # Global styles
 │   │   └── utils/        # Frontend utilities
 │   │       ├── date.js              # Date formatting and helpers
+│   │       ├── editorialQualityCheck.js # Editorial quality rules (publishability gate)
 │   │       ├── mediaMode.js         # Media mode validation (image_video / full_video)
 │   │       ├── metaSocialFormat.js  # Meta (Instagram/Facebook) caption formatting
 │   │       ├── normalizeItem.js     # Source item normalization for ingestion
@@ -201,7 +207,10 @@ Key characteristics:
 │   │       ├── workflow-logs.js                  # Write workflow execution events
 │   │       ├── openai-usage-log.js               # Record per-task OpenAI usage
 │   │       ├── meta-social-publish-log.js        # Log Meta publishing attempts
-│   │       └── social-publish-log.js             # Log X/Telegram/Discord publish attempts
+│   │       ├── operator-dashboard.js             # Authenticated read view for ops data (publish jobs, workflow logs)
+│   │       ├── rerun-log.js                      # Track rerun and recovery operations
+│   │       ├── social-publish-log.js             # Log X/Telegram/Discord publish attempts
+│   │       └── youtube-publish-log.js            # Log YouTube upload attempts
 │   └── lib/
 │       ├── auth.js       # X-Write-Key authentication for internal endpoints
 │       ├── db.js         # D1 query helpers and response builders
@@ -228,7 +237,10 @@ Key characteristics:
 │   │   ├── 0007_openai_usage_log.sql          # Per-task AI call monitoring
 │   │   ├── 0008_openai_usage_observability.sql # Retry/cost/diagnostic fields on openai_usage_log
 │   │   ├── 0009_meta_social_publish_log.sql   # Meta (Instagram/Facebook) publish tracking
-│   │   └── 0010_social_publish_log.sql        # X/Telegram/Discord publish tracking
+│   │   ├── 0010_social_publish_log.sql        # X/Telegram/Discord publish tracking
+│   │   ├── 0011_youtube_publish_log.sql       # YouTube upload tracking
+│   │   ├── 0012_rerun_log.sql                 # Rerun and recovery operation tracking
+│   │   └── 0013_read_api_indexes.sql          # Read-path performance indexes
 │   ├── schema/           # Canonical schema reference documentation
 │   ├── queries/          # Reusable read query examples
 │   └── seeds/            # Local and test seed data (topics, sources, sample alerts)
@@ -244,8 +256,8 @@ Key characteristics:
 │   │   ├── meta_social_asset.json
 │   │   ├── social_content_asset.json
 │   │   └── workflow_runtime_config.json
-│   ├── n8n/intraday/     # Intraday alert modules (01–11 + orchestrator)
-│   ├── n8n/daily/        # Daily editorial modules (01–14 + orchestrator)
+│   ├── n8n/intraday/     # Intraday alert modules (01–12 + orchestrator)
+│   ├── n8n/daily/        # Daily editorial modules (01–16 + orchestrator + rerun workflows)
 │   └── n8n/shared/       # Shared modules (failure_notifier)
 │
 ├── schemas/          # Shared JSON schemas across systems
@@ -270,7 +282,8 @@ Key characteristics:
 │   ├── meta-publishing.json    # Meta (Instagram/Facebook) platform config and limits
 │   ├── openai-cost-controls.json  # Per-task token caps and batch size limits
 │   ├── social-publishing.json  # X/Telegram/Discord platform config and formatting
-│   └── trust-rules.json        # Source trust tier definitions and scoring rules
+│   ├── trust-rules.json        # Source trust tier definitions and scoring rules
+│   └── youtube-publishing.json # YouTube upload settings, visibility, retry config
 │
 ├── fixtures/         # Test fixtures used by the integration test suite
 │   ├── classified-alerts/     # Sample classified alert outputs per topic
@@ -299,9 +312,12 @@ Key characteristics:
 │   │   ├── observability.md
 │   │   ├── openai-cost-controls.md
 │   │   ├── ai-provider.md
+│   │   ├── ai-provider-failover.md
+│   │   ├── editorial-quality-checks.md
 │   │   ├── video-script-generation.md
 │   │   ├── full-video-mode.md
 │   │   ├── youtube-metadata-generation.md
+│   │   ├── youtube-publishing.md
 │   │   ├── expectation-check-outlook.md
 │   │   ├── meta-social-publishing.md
 │   │   ├── social-content-publishing.md
@@ -311,8 +327,16 @@ Key characteristics:
 │   ├── data-model/       # D1 and content model references
 │   │   ├── normalized-source-item.md
 │   │   └── source-registry.md
-│   ├── operations/       # Operational procedures (placeholder)
-│   ├── runbooks/         # Incident and rerun guidance (placeholder)
+│   ├── operations/       # Operational procedures
+│   │   ├── cloudflare-pages-deployment.md  # Build config, preview/production deploy guide
+│   │   ├── d1-provisioning.md              # D1 setup, migration steps, schema verification
+│   │   ├── n8n-deployment.md               # n8n install, credential setup, workflow import
+│   │   ├── media-asset-lifecycle.md        # Media asset storage and CDN lifecycle
+│   │   ├── promotion-workflow.md           # Local → staging → production promotion steps
+│   │   ├── rerun-recovery.md               # Rerun and recovery operations guide
+│   │   └── secrets-management.md          # Environment variables and secrets reference
+│   ├── runbooks/         # Incident and recovery guidance
+│   │   └── delivery-verification.md
 │   ├── local-development.md       # Full local setup guide
 │   ├── local-summary-generation.md # Local editorial pipeline walkthrough
 │   ├── staging-environment.md     # Staging environment strategy
@@ -329,9 +353,13 @@ Key characteristics:
 │   ├── x-source-rules.md
 │   └── roadmap.md
 │
-├── scripts/          # Utility scripts for local development
+├── scripts/          # Utility scripts for local development and deployment
 │   ├── local-reset.sh              # Reset local D1, apply all migrations, reseed data
-│   └── generate-daily-summary.js  # Generate a local editorial summary for a topic/date
+│   ├── generate-daily-summary.js  # Generate a local editorial summary for a topic/date
+│   ├── d1-migrate-remote.sh       # Apply D1 migrations to staging or production
+│   ├── d1-verify-schema.sh        # Verify D1 schema against expected state
+│   ├── n8n-workflow-import.sh     # Guided n8n workflow import and variable setup
+│   └── smoke-check.sh             # Post-deploy API smoke check for all endpoints
 │
 └── .github/          # Copilot prompts, agents, skills, and GitHub automation
     ├── copilot-instructions.md
@@ -361,7 +389,7 @@ Key characteristics:
 
 ## D1 Schema Overview
 
-Ten migrations are applied in order to build the full schema:
+Thirteen migrations are applied in order to build the full schema:
 
 | Migration | Tables / Changes |
 |---|---|
@@ -375,12 +403,15 @@ Ten migrations are applied in order to build the full schema:
 | `0008_openai_usage_observability.sql` | Retry/cost/diagnostic fields on `openai_usage_log` |
 | `0009_meta_social_publish_log.sql` | `meta_social_publish_log` — Meta publish attempt tracking |
 | `0010_social_publish_log.sql` | `social_publish_log` — X/Telegram/Discord publish tracking |
+| `0011_youtube_publish_log.sql` | `youtube_publish_log` — YouTube upload attempt tracking |
+| `0012_rerun_log.sql` | `rerun_log` — rerun and recovery operation tracking |
+| `0013_read_api_indexes.sql` | Read-path performance indexes across core tables |
 
 ---
 
 ## n8n Workflow Modules
 
-### Intraday pipeline (11 modules + orchestrator)
+### Intraday pipeline (12 modules + orchestrator)
 
 | Module | Purpose |
 |---|---|
@@ -395,8 +426,9 @@ Ten migrations are applied in order to build the full schema:
 | `09_discord_delivery` | Deliver alerts to Discord |
 | `10_meta_story_delivery` | Deliver high-importance alerts as Meta stories |
 | `11_social_story_delivery` | Deliver high-importance alerts to X/Telegram/Discord |
+| `12_delivery_retry` | Scheduled retry for undelivered Telegram/Discord alerts (runs every 30 min) |
 
-### Daily pipeline (14 modules + orchestrator)
+### Daily pipeline (modules 01–16 + orchestrator)
 
 | Module | Purpose |
 |---|---|
@@ -412,12 +444,15 @@ Ten migrations are applied in order to build the full schema:
 | `06_full_video_generation` | Full AI-generated video (reserved for future use) |
 | `07_generate_youtube_metadata` | AI generates YouTube title, description, tags |
 | `08_validate_outputs` | Validates all AI outputs against JSON schemas |
+| `08b_editorial_quality_check` | Editorial quality gate — blocks unfit content before GitHub publish |
 | `09_publish_to_github` | Writes content files to GitHub (article.md, summary.json, metadata.json, video.json) |
 | `10_update_d1_state` | Updates daily_status and publish_jobs in D1; writes workflow_log |
 | `11_generate_meta_social` | AI generates Meta (Instagram/Facebook) social post content |
 | `12_publish_meta_daily` | Publishes to Instagram and Facebook (non-blocking) |
 | `13_generate_social_content` | Formats social content for X, Telegram, and Discord |
 | `14_publish_social_channels` | Publishes to X, Telegram, and Discord (non-blocking) |
+| `15_youtube_upload` | Uploads rendered video to YouTube via Data API v3 |
+| `16_update_video_reference` | Writes YouTube video ID back to video.json in GitHub |
 
 ---
 
@@ -429,46 +464,53 @@ deliverables per phase, dependencies, risks, and the recommended best next step.
 ### v1 — Foundation (implemented)
 
 - [x] Repository structure and boundary definitions
-- [x] D1 schema: 10 migrations covering all tables, indexes, and constraints
+- [x] D1 schema: 13 migrations covering all tables, indexes, and constraints
 - [x] Source registry: `sources` table, trust tiers (T1–T4), source attribution on alerts
 - [x] Trust scoring: confidence adjustments, confirmation rules (`sourceTrust.js`)
 - [x] Cloudflare Pages Functions — read APIs: timeline, day-status, navigation, topics, sources
-- [x] Cloudflare Pages Functions — write APIs: alerts, daily-status, publish-jobs, sources, workflow-logs, openai-usage-log, meta-social-publish-log, social-publish-log
+- [x] Cloudflare Pages Functions — write APIs: alerts, daily-status, publish-jobs, sources, workflow-logs, openai-usage-log, meta-social-publish-log, social-publish-log, rerun-log, youtube-publish-log, operator-dashboard
 - [x] Authentication helper for write endpoints (X-Write-Key header)
 - [x] Centralized D1 write helpers (`functions/lib/writers.js`)
-- [x] Vue frontend: homepage, topic page, topic/day page, 404 page
+- [x] Vue frontend: homepage, topic page, topic/day page, operator dashboard page, 404 page
 - [x] Vue components: AlertTimeline, AlertTimelineItem, DateNavigator, PageStateBanner, SourceBadge, SourceList, SummaryPlaceholder, SummarySection, TopicCard, TopicDayHeader, TopicGrid, VideoEmbed
-- [x] Vue utilities: date, url, mediaMode, openaiConfig, sourceTrust, sourceProviders, sourceConfig, normalizeItem, socialFormat, metaSocialFormat, validateAiOutput
-- [x] n8n intraday workflow: 11 modules covering ingest → normalize → deduplicate → cluster → classify → decide → D1 → Telegram → Discord → Meta story → social story
-- [x] n8n daily workflow: 14 modules covering aggregate → summarize → article → checks → video pipeline → YouTube metadata → validate → GitHub → D1 state → Meta social → social channels
+- [x] Vue utilities: date, url, mediaMode, openaiConfig, sourceTrust, sourceProviders, sourceConfig, normalizeItem, socialFormat, metaSocialFormat, validateAiOutput, editorialQualityCheck
+- [x] n8n intraday workflow: 12 modules covering ingest → normalize → deduplicate → cluster → classify → decide → D1 → Telegram → Discord → Meta story → social story → delivery retry
+- [x] n8n daily workflow: modules 01–16 covering aggregate → summarize → article → expectation check → outlook → video pipeline → YouTube metadata → schema validation → editorial quality gate → GitHub → D1 state → Meta social → social channels → YouTube upload → video reference update
 - [x] n8n shared: failure_notifier module with Telegram alerting and stale job cleanup
+- [x] n8n rerun workflows: rerun_daily_publish, rerun_social_publish, rerun_youtube_upload, rerun_failed_alerts
 - [x] n8n local development: Docker Compose environment (`n8n/`)
 - [x] AI prompt schemas: classification, summarization, video script, image asset, narration, render, YouTube metadata, tomorrow outlook, expectation check, timeline entry, Meta social post
 - [x] Workflow data contracts: source item, normalized item, classified alert, delivery payload, aggregate context, generation output, meta social asset, social content asset, runtime config
 - [x] Content model: article.md, summary.json, metadata.json, video.json per topic/date
 - [x] Media mode system: image_video (default) and full_video (reserved); provider capability validation
 - [x] AI provider system: OpenAI and Google; per-task model selection; cost controls and token caps
+- [x] AI provider failover: cross-provider task fallback with cost guardrails and structured failover logging
+- [x] Editorial quality gate (module 08b): rules-based checks that block unfit content before GitHub publish
 - [x] Social publishing: Meta (Instagram/Facebook) daily posts and alert stories
 - [x] Social publishing: X, Telegram, Discord daily digests and alert stories
-- [x] Observability: workflow_logs, openai_usage_log, social publish logs in D1
+- [x] YouTube upload pipeline: modules 15–16, youtube_publish_log table, video reference written back to video.json
+- [x] Observability: workflow_logs, openai_usage_log, social publish logs, youtube_publish_log, rerun_log in D1
+- [x] Operator dashboard: authenticated read-only page surfacing publish jobs, workflow logs, and social publish status
+- [x] Rerun and recovery workflows: tracked, idempotent reruns for daily publish, social publish, YouTube upload, and alert delivery
+- [x] Staging environment: staging branch, Promotion Gate CI workflow, separate D1 database, preview deployment at `staging.modern-content-platform.pages.dev`
 - [x] Per-topic source configs (`config/sources/`) for all 6 v1 topics
-- [x] Config files: media-mode.json, meta-publishing.json, openai-cost-controls.json, social-publishing.json, trust-rules.json
+- [x] Config files: media-mode.json, meta-publishing.json, openai-cost-controls.json, social-publishing.json, trust-rules.json, youtube-publishing.json
 - [x] Integration test suite: Pages Functions (read + write), Vue pages and components, utilities, services, fixtures, workflow contracts
-- [x] Local development scripts: `local-reset.sh` (reset D1 + reseed), `generate-daily-summary.js` (local editorial pipeline)
+- [x] Local development scripts: `local-reset.sh`, `generate-daily-summary.js`, `d1-migrate-remote.sh`, `d1-verify-schema.sh`, `n8n-workflow-import.sh`, `smoke-check.sh`
 - [x] Local development environment: wrangler.toml, .env.example, VS Code config, full setup guide
 - [x] Sample content: crypto, finance, ai topic/date content files
 - [ ] Cloudflare D1 provisioned and migrations applied
 - [ ] Cloudflare Pages connected to this repository
 - [ ] n8n instance deployed and workflows configured
 - [ ] Telegram and Discord alert delivery wired and tested
-- [ ] YouTube video metadata integration
+- [ ] YouTube upload activated and tested end-to-end (code complete; requires ENABLE_YOUTUBE_UPLOAD=true and YouTube OAuth credentials)
 - [ ] End-to-end cycle verified for all active topics
 
 ### v2 — Reliability and Scale
 
-- [ ] Delivery retry workflow for undelivered Telegram/Discord alerts
-- [ ] Workflow monitoring dashboard
-- [ ] Rerun and recovery runbooks
+- [x] Delivery retry workflow for undelivered Telegram/Discord alerts (`12_delivery_retry` in intraday pipeline)
+- [x] Workflow monitoring dashboard (Operator Dashboard page + internal API endpoint)
+- [x] Rerun and recovery runbooks (`docs/operations/rerun-recovery.md` + dedicated rerun workflows)
 - [ ] Source signal expansion
 - [ ] Multi-language support
 - [ ] Advanced AI clustering and deduplication
@@ -495,7 +537,7 @@ cd app && npm install && cd ..
 # 2. Authenticate Wrangler (handles Cloudflare auth — no .env needed for CLI)
 wrangler login
 
-# 3. Reset local D1: apply all 10 migrations + seed topics and sample alerts
+# 3. Reset local D1: apply all 13 migrations + seed topics and sample alerts
 bash scripts/local-reset.sh
 
 # 4a. Vue frontend only (hot-reload, no API)
