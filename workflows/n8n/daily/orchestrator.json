@@ -434,7 +434,7 @@
         },
         "options": {}
       },
-      "id": "orch-08b-editorial-quality-check",
+      "id": "d1e2f3a4-008b-008b-008b-000000000003",
       "name": "08b Editorial Quality Check",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1,

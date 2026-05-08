@@ -19,14 +19,17 @@
  *
  * The function never throws.  Callers decide how to react to the result.
  *
- * Typical usage from an n8n Code node:
+ * Typical usage:
  *
- *     const { runEditorialQualityChecks } = require('editorialQualityCheck')
+ *     import { runEditorialQualityChecks } from '@/utils/editorialQualityCheck.js'
  *     const { blocks, warnings } = runEditorialQualityChecks(ctx)
  *     if (blocks.length > 0) {
  *       throw new Error(`Editorial quality block: ${blocks.join('; ')}`)
  *     }
  *     return [{ json: { ...ctx, editorial_quality_warnings: warnings } }]
+ *
+ * The n8n Code node in `08b_editorial_quality_check.json` mirrors this logic
+ * inline (no import) so the workflow imports cleanly without runtime deps.
  *
  * The same logic lives inline (copy-paste) inside the
  * `08b_editorial_quality_check.json` n8n workflow so the workflow remains
@@ -55,8 +58,11 @@ export const EDITORIAL_QUALITY_THRESHOLDS = Object.freeze({
   WARN_OUTLOOK_SUMMARY_CHARS: 100,
   WARN_MIN_YT_TAGS: 8,
   // Phrases that signal overly confident, unsupported claims.
-  // Lowercased; whole-word matched against article + summary text.
-  CONFIDENT_PHRASES: [
+  // Lowercased; substring-matched (case-insensitive) against article +
+  // summary + outlook text. Substring matching is intentional so that
+  // "guarantee" catches "guaranteed" / "guarantees" without needing a
+  // separate entry per inflection. Add base forms here, not full sentences.
+  CONFIDENT_PHRASES: Object.freeze([
     'guaranteed',
     'guarantee',
     '100% certain',
@@ -74,7 +80,7 @@ export const EDITORIAL_QUALITY_THRESHOLDS = Object.freeze({
     'sure thing',
     'certain to',
     'absolutely will',
-  ],
+  ]),
 })
 
 // ---------------------------------------------------------------------------

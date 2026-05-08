@@ -22,7 +22,7 @@ import { describe, it, expect } from 'vitest'
 import {
   runEditorialQualityChecks,
   EDITORIAL_QUALITY_THRESHOLDS,
-} from '../../utils/editorialQualityCheck.js'
+} from '@/utils/editorialQualityCheck.js'
 
 const PARAGRAPH = 'Bitcoin posted a measured advance during the New York session as macro positioning shifted away from defensive trades. Order books on Coinbase deepened above $70k while perpetual funding stayed neutral, suggesting spot-led demand rather than leverage-driven momentum. Analysts at multiple desks framed the move as consolidation rather than breakout, citing limited follow-through above the prior swing high.'
 
