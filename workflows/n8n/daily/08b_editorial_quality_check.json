@@ -1,0 +1,59 @@
+{
+  "name": "Daily — 08b Editorial Quality Check",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "d1e2f3a4-008b-008b-008b-000000000001",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Editorial quality gate (08b).\n// Runs AFTER schema validation (08) and BEFORE GitHub publishing (09).\n// Complements — does not replace — the structural checks in 08_validate_outputs.\n//\n// Two severity tiers:\n//   - blocks   → throw and prevent publish\n//   - warnings → attached to ctx.editorial_quality_warnings (non-blocking)\n//\n// See app/src/utils/editorialQualityCheck.js for the canonical logic and\n// docs/architecture/editorial-quality-checks.md for the design.\nconst ctx = $input.first().json;\n\nconst T = {\n  MIN_HEADLINE_CHARS: 20,\n  MIN_OVERVIEW_CHARS: 200,\n  MIN_KEY_EVENTS: 2,\n  MIN_ARTICLE_CHARS: 500,\n  MIN_ARTICLE_PARAGRAPHS: 3,\n  MIN_YT_TITLE_CHARS: 20,\n  MIN_YT_DESCRIPTION_CHARS: 200,\n  WARN_ARTICLE_CHARS: 800,\n  WARN_OVERVIEW_CHARS: 350,\n  WARN_OUTLOOK_SUMMARY_CHARS: 100,\n  WARN_MIN_YT_TAGS: 8,\n  CONFIDENT_PHRASES: [\n    'guaranteed', 'guarantee', '100% certain', '100 percent certain',\n    'definitely will', 'will definitely', 'will moon', 'cannot fail',\n    \"can't fail\", 'no risk', 'risk-free', 'risk free', 'always wins',\n    'never loses', 'sure thing', 'certain to', 'absolutely will'\n  ]\n};\n\nconst blocks = [];\nconst warnings = [];\n\nfunction isNonEmptyString(v) { return typeof v === 'string' && v.trim().length > 0; }\nfunction charLen(v) { return typeof v === 'string' ? v.trim().length : 0; }\nfunction isAllUppercaseLetters(s) {\n  if (typeof s !== 'string') return false;\n  const letters = s.replace(/[^A-Za-z]/g, '');\n  if (letters.length < 4) return false;\n  return letters === letters.toUpperCase();\n}\nfunction countParagraphs(md) {\n  if (typeof md !== 'string') return 0;\n  return md.split(/\\n\\s*\\n/).map(p => p.trim()).filter(p => p.length > 0).length;\n}\nfunction findConfidentPhrases(text, phrases) {\n  if (typeof text !== 'string' || text.length === 0) return [];\n  const haystack = text.toLowerCase();\n  return phrases.filter(p => haystack.includes(p));\n}\n\nif (!ctx || typeof ctx !== 'object') {\n  throw new Error('Editorial quality check: ctx missing or not an object');\n}\n\n// --- summary ---\nconst summary = ctx.summary;\nif (!summary || typeof summary !== 'object') {\n  blocks.push('summary object missing');\n} else {\n  if (charLen(summary.headline) < T.MIN_HEADLINE_CHARS) {\n    blocks.push(`weak title: summary.headline shorter than ${T.MIN_HEADLINE_CHARS} chars`);\n  }\n  if (isAllUppercaseLetters(summary.headline)) {\n    warnings.push('summary.headline is all uppercase');\n  }\n  if (charLen(summary.overview) < T.MIN_OVERVIEW_CHARS) {\n    blocks.push(`weak summary: summary.overview shorter than ${T.MIN_OVERVIEW_CHARS} chars`);\n  } else if (charLen(summary.overview) < T.WARN_OVERVIEW_CHARS) {\n    warnings.push(`summary.overview is short (under ${T.WARN_OVERVIEW_CHARS} chars)`);\n  }\n  const keyEvents = Array.isArray(summary.key_events) ? summary.key_events : [];\n  if (keyEvents.length < T.MIN_KEY_EVENTS) {\n    blocks.push(`low-information: summary.key_events fewer than ${T.MIN_KEY_EVENTS}`);\n  }\n  keyEvents.forEach((e, i) => {\n    if (!e || !Array.isArray(e.sources) || e.sources.length === 0) {\n      warnings.push(`summary.key_events[${i}] has no sources attached`);\n    }\n  });\n}\n\n// --- source attribution (aggregate across summary + summary.key_events + video_script) ---\nconst allSources = [];\nif (summary && typeof summary === 'object') {\n  if (Array.isArray(summary.sources)) allSources.push(...summary.sources);\n  if (Array.isArray(summary.key_events)) {\n    summary.key_events.forEach(e => { if (e && Array.isArray(e.sources)) allSources.push(...e.sources); });\n  }\n}\nif (ctx.video_script && Array.isArray(ctx.video_script.segments)) {\n  ctx.video_script.segments.forEach(seg => { if (seg && Array.isArray(seg.sources)) allSources.push(...seg.sources); });\n}\nconst namedSources = allSources.filter(s => s && typeof s === 'object' && isNonEmptyString(s.source_name));\nif (namedSources.length === 0) {\n  blocks.push('missing source attribution: no named sources found across summary, key_events, or video_script');\n}\nconst urlSources = namedSources.filter(s => isNonEmptyString(s.source_url));\nif (namedSources.length > 0 && urlSources.length === 0) {\n  warnings.push('no source_url provided on any source (only names supplied)');\n}\n\n// --- article ---\nconst article = ctx.article_md;\nif (!isNonEmptyString(article)) {\n  blocks.push('low-information: article_md missing');\n} else {\n  if (charLen(article) < T.MIN_ARTICLE_CHARS) {\n    blocks.push(`low-information: article_md shorter than ${T.MIN_ARTICLE_CHARS} chars`);\n  } else if (charLen(article) < T.WARN_ARTICLE_CHARS) {\n    warnings.push(`article_md is short (under ${T.WARN_ARTICLE_CHARS} chars)`);\n  }\n  if (countParagraphs(article) < T.MIN_ARTICLE_PARAGRAPHS) {\n    blocks.push(`low-information: article_md has fewer than ${T.MIN_ARTICLE_PARAGRAPHS} paragraphs`);\n  }\n}\n\n// --- youtube metadata consistency ---\nconst ym = ctx.youtube_metadata;\nif (!ym || typeof ym !== 'object') {\n  blocks.push('inconsistent metadata: youtube_metadata missing');\n} else {\n  if (charLen(ym.title) < T.MIN_YT_TITLE_CHARS) {\n    blocks.push(`weak title: youtube_metadata.title shorter than ${T.MIN_YT_TITLE_CHARS} chars`);\n  }\n  if (isAllUppercaseLetters(ym.title)) {\n    warnings.push('youtube_metadata.title is all uppercase');\n  }\n  if (charLen(ym.description) < T.MIN_YT_DESCRIPTION_CHARS) {\n    blocks.push(`inconsistent metadata: youtube_metadata.description shorter than ${T.MIN_YT_DESCRIPTION_CHARS} chars`);\n  }\n  const tags = Array.isArray(ym.tags) ? ym.tags : [];\n  if (tags.length < T.WARN_MIN_YT_TAGS) {\n    warnings.push(`youtube_metadata.tags fewer than ${T.WARN_MIN_YT_TAGS} entries`);\n  }\n  const lower = tags.filter(t => typeof t === 'string').map(t => t.trim().toLowerCase());\n  const seen = new Set();\n  const dupes = new Set();\n  for (const t of lower) { if (seen.has(t)) dupes.add(t); else seen.add(t); }\n  if (dupes.size > 0) {\n    warnings.push(`youtube_metadata.tags contain duplicates: ${[...dupes].join(', ')}`);\n  }\n  if (isNonEmptyString(ctx.topic_slug) && isNonEmptyString(ym.title) &&\n      !ym.title.toLowerCase().includes(String(ctx.topic_slug).toLowerCase())) {\n    warnings.push(`inconsistent metadata: youtube_metadata.title does not reference topic_slug \"${ctx.topic_slug}\"`);\n  }\n}\n\n// --- tomorrow outlook depth ---\nconst outlook = ctx.tomorrow_outlook;\nif (outlook && typeof outlook === 'object' && isNonEmptyString(outlook.outlook_summary) &&\n    charLen(outlook.outlook_summary) < T.WARN_OUTLOOK_SUMMARY_CHARS) {\n  warnings.push(`tomorrow_outlook.outlook_summary is short (under ${T.WARN_OUTLOOK_SUMMARY_CHARS} chars)`);\n}\n\n// --- expectation check confidence ---\nconst ec = ctx.expectation_check;\nif (ec && typeof ec === 'object' && typeof ec.alignment_score === 'number' &&\n    (ec.alignment_score === 100 || ec.alignment_score === 0)) {\n  warnings.push(`expectation_check.alignment_score is suspiciously absolute (${ec.alignment_score})`);\n}\n\n// --- overly confident unsupported language ---\nconst confidentTexts = [];\nif (summary && isNonEmptyString(summary.overview)) confidentTexts.push(summary.overview);\nif (isNonEmptyString(article)) confidentTexts.push(article);\nif (outlook && typeof outlook === 'object' && isNonEmptyString(outlook.outlook_summary)) confidentTexts.push(outlook.outlook_summary);\nconst confidentHits = new Set();\nfor (const text of confidentTexts) {\n  findConfidentPhrases(text, T.CONFIDENT_PHRASES).forEach(p => confidentHits.add(p));\n}\nif (confidentHits.size > 0) {\n  const phraseList = [...confidentHits].join(', ');\n  if (urlSources.length === 0) {\n    blocks.push(`overly confident unsupported language without source URLs: ${phraseList}`);\n  } else {\n    warnings.push(`overly confident language detected: ${phraseList}`);\n  }\n}\n\nif (blocks.length > 0) {\n  throw new Error(`Editorial quality block for ${ctx.topic_slug}/${ctx.date_key} (${blocks.length} block(s)):\\n- ${blocks.join('\\n- ')}`);\n}\n\nreturn [{\n  json: {\n    ...ctx,\n    editorial_quality_warnings: warnings.length > 0 ? warnings : null,\n    editorial_quality_checked: true\n  }\n}];"
+      },
+      "id": "d1e2f3a4-008b-008b-008b-000000000002",
+      "name": "Run Editorial Quality Checks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Run Editorial Quality Checks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": true,
+    "errorWorkflow": "={{ $vars.FAILURE_NOTIFIER_WORKFLOW_ID }}"
+  },
+  "id": "daily-08b-editorial-quality-check-v1",
+  "tags": [
+    "daily",
+    "editorial",
+    "quality",
+    "validation",
+    "v1"
+  ]
+}

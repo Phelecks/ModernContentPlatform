@@ -117,6 +117,12 @@ through the validation gate.
 └──────────┬───────────┘
            │  validated=true (daily_generation_output)
            ▼
+┌──────────────────────────┐
+│ 08b Editorial Quality    │  Publish-block + warning gate complementing schema
+│      Check               │  validation; throws on blocks, attaches warnings
+└──────────┬───────────────┘
+           │  + editorial_quality_warnings (nullable)
+           ▼
 ┌──────────────────────┐
 │  09 Publish to GitHub│  Write 4 files; GET+PUT per file for safe upsert
 └──────────┬───────────┘
@@ -144,6 +150,7 @@ through the validation gate.
 | 06 | Video Script | Execute Workflow | context + summary (source-aware) + tomorrow_outlook | + `video_script{}` (with `segments[].sources`) |
 | 07 | YouTube Metadata | Execute Workflow | context + summary + video_script | + `youtube_metadata{}` |
 | 08 | Validate Outputs | Execute Workflow | full generation payload | `daily_generation_output` (validated=true) |
+| 08b | Editorial Quality Check | Execute Workflow | validated generation output | + `editorial_quality_warnings` (throws on blocks) |
 | 09 | Publish to GitHub | Execute Workflow | validated generation output | + `github_commit_sha` |
 | 10 | Update D1 State | Execute Workflow | publish result | final D1 state |
 
@@ -438,6 +445,7 @@ Set after importing all module workflows into n8n.
 | `DAILY_VIDEO_SCRIPT_WORKFLOW_ID` | `06_generate_video_script` workflow ID |
 | `DAILY_YOUTUBE_METADATA_WORKFLOW_ID` | `07_generate_youtube_metadata` workflow ID |
 | `DAILY_VALIDATE_OUTPUTS_WORKFLOW_ID` | `08_validate_outputs` workflow ID |
+| `DAILY_EDITORIAL_QUALITY_CHECK_WORKFLOW_ID` | `08b_editorial_quality_check` workflow ID |
 | `DAILY_PUBLISH_GITHUB_WORKFLOW_ID` | `09_publish_to_github` workflow ID |
 | `DAILY_UPDATE_D1_WORKFLOW_ID` | `10_update_d1_state` workflow ID |
 | `FAILURE_NOTIFIER_WORKFLOW_ID` | Shared failure notifier workflow ID |

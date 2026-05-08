@@ -430,6 +430,24 @@
         "workflowId": {
           "__rl": true,
           "mode": "id",
+          "value": "={{ $vars.DAILY_EDITORIAL_QUALITY_CHECK_WORKFLOW_ID }}"
+        },
+        "options": {}
+      },
+      "id": "d1e2f3a4-008b-008b-008b-000000000003",
+      "name": "08b Editorial Quality Check",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        4970,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
           "value": "={{ $vars.DAILY_PUBLISH_GITHUB_WORKFLOW_ID }}"
         },
         "options": {}
@@ -865,7 +883,7 @@
       "main": [
         [
           {
-            "node": "09 Publish to GitHub",
+            "node": "08b Editorial Quality Check",
             "type": "main",
             "index": 0
           }
@@ -977,6 +995,17 @@
         [
           {
             "node": "16 Update Video Reference",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08b Editorial Quality Check": {
+      "main": [
+        [
+          {
+            "node": "09 Publish to GitHub",
             "type": "main",
             "index": 0
           }
