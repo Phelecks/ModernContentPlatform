@@ -109,10 +109,11 @@ Key characteristics:
 ┌─────────────────────────────────────────────────────────────────┐
 │  Cloudflare Pages + Pages Functions                             │
 │  Read APIs:  topics, timeline, day-status, navigation, sources  │
+│  Ops read:   operator-dashboard (X-Ops-Key auth, GET only)      │
 │  Write APIs: alerts, daily-status, publish-jobs, sources,       │
 │              workflow-logs, openai-usage-log,                   │
 │              meta-social-publish-log, social-publish-log,       │
-│              youtube-publish-log, rerun-log, operator-dashboard │
+│              youtube-publish-log, rerun-log                     │
 │  Vue frontend: topic pages, homepage, timeline, operator dashboard, placeholders │
 └────────┬────────────────────────────────────────────────────────┘
          │
@@ -240,7 +241,7 @@ Key characteristics:
 │   │   ├── 0010_social_publish_log.sql        # X/Telegram/Discord publish tracking
 │   │   ├── 0011_youtube_publish_log.sql       # YouTube upload tracking
 │   │   ├── 0012_rerun_log.sql                 # Rerun and recovery operation tracking
-│   │   └── 0013_read_api_indexes.sql          # Read-path performance indexes
+│   │   └── 0013_read_api_indexes.sql          # Replaces idx_alerts_topic_date_event with a status-aware composite index on alerts for timeline read optimization
 │   ├── schema/           # Canonical schema reference documentation
 │   ├── queries/          # Reusable read query examples
 │   └── seeds/            # Local and test seed data (topics, sources, sample alerts)
@@ -405,7 +406,7 @@ Thirteen migrations are applied in order to build the full schema:
 | `0010_social_publish_log.sql` | `social_publish_log` — X/Telegram/Discord publish tracking |
 | `0011_youtube_publish_log.sql` | `youtube_publish_log` — YouTube upload attempt tracking |
 | `0012_rerun_log.sql` | `rerun_log` — rerun and recovery operation tracking |
-| `0013_read_api_indexes.sql` | Read-path performance indexes across core tables |
+| `0013_read_api_indexes.sql` | Replaces `idx_alerts_topic_date_event` with a status-aware composite index on `alerts` (`topic_slug`, `date_key`, `status`, `event_at DESC`) for timeline read optimization |
 
 ---
 
@@ -468,7 +469,8 @@ deliverables per phase, dependencies, risks, and the recommended best next step.
 - [x] Source registry: `sources` table, trust tiers (T1–T4), source attribution on alerts
 - [x] Trust scoring: confidence adjustments, confirmation rules (`sourceTrust.js`)
 - [x] Cloudflare Pages Functions — read APIs: timeline, day-status, navigation, topics, sources
-- [x] Cloudflare Pages Functions — write APIs: alerts, daily-status, publish-jobs, sources, workflow-logs, openai-usage-log, meta-social-publish-log, social-publish-log, rerun-log, youtube-publish-log, operator-dashboard
+- [x] Cloudflare Pages Functions — write APIs: alerts, daily-status, publish-jobs, sources, workflow-logs, openai-usage-log, meta-social-publish-log, social-publish-log, rerun-log, youtube-publish-log
+- [x] Cloudflare Pages Functions — ops read API: operator-dashboard (authenticated GET, X-Ops-Key, returns publish jobs, workflow logs, AI usage)
 - [x] Authentication helper for write endpoints (X-Write-Key header)
 - [x] Centralized D1 write helpers (`functions/lib/writers.js`)
 - [x] Vue frontend: homepage, topic page, topic/day page, operator dashboard page, 404 page
