@@ -241,6 +241,25 @@
         600
       ],
       "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $vars.INTRADAY_SOCIAL_STORY_WORKFLOW_ID }}"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000012",
+      "name": "11 Social Story Delivery",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        2000,
+        800
+      ],
+      "continueOnFail": true
     }
   ],
   "connections": {
@@ -347,6 +366,11 @@
           },
           {
             "node": "10 Meta Story Delivery",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "11 Social Story Delivery",
             "type": "main",
             "index": 0
           }

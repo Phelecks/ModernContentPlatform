@@ -82,6 +82,8 @@ Set these in **Settings → Variables** in your n8n instance.
 | `INTRADAY_D1_PERSISTENCE_WORKFLOW_ID` | Workflow ID of `07_d1_persistence.json` | Full pipeline |
 | `INTRADAY_TELEGRAM_WORKFLOW_ID` | Workflow ID of `08_telegram_delivery.json` | Full pipeline |
 | `INTRADAY_DISCORD_WORKFLOW_ID` | Workflow ID of `09_discord_delivery.json` | Full pipeline |
+| `INTRADAY_META_STORY_WORKFLOW_ID` | Workflow ID of `10_meta_story_delivery.json` | Full pipeline |
+| `INTRADAY_SOCIAL_STORY_WORKFLOW_ID` | Workflow ID of `11_social_story_delivery.json` | Full pipeline |
 | `ALERT_IMPORTANCE_THRESHOLD` | Minimum importance score to send (default: `60`) | Full pipeline |
 | `ALERT_SEVERITY_THRESHOLD` | Minimum severity score to send (default: `50`) | Full pipeline |
 | `ALERT_CONFIDENCE_THRESHOLD` | Minimum AI confidence to send (default: `40`) | Full pipeline |

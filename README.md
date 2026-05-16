@@ -495,7 +495,7 @@ deliverables per phase, dependencies, risks, and the recommended best next step.
 - [x] Operator dashboard: authenticated read-only page surfacing publish jobs, workflow logs, and social publish status
 - [x] Rerun and recovery workflows: tracked, idempotent reruns for daily publish, social publish, YouTube upload, and alert delivery
 - [x] Staging environment: staging branch, Promotion Gate CI workflow, separate D1 database, preview deployment at `staging.modern-content-platform.pages.dev`
-- [x] Per-topic source configs (`config/sources/`) for all 6 v1 topics
+- [x] Per-topic source configs (`config/sources/`) for all 7 v1 topics
 - [x] Config files: media-mode.json, meta-publishing.json, openai-cost-controls.json, social-publishing.json, trust-rules.json, youtube-publishing.json
 - [x] Integration test suite: Pages Functions (read + write), Vue pages and components, utilities, services, fixtures, workflow contracts
 - [x] Local development scripts: `local-reset.sh`, `generate-daily-summary.js`, `d1-migrate-remote.sh`, `d1-verify-schema.sh`, `n8n-workflow-import.sh`, `smoke-check.sh`

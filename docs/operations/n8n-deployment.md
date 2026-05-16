@@ -363,6 +363,8 @@ and set these variables:
 | `INTRADAY_D1_PERSISTENCE_WORKFLOW_ID` | `07_d1_persistence.json` |
 | `INTRADAY_TELEGRAM_WORKFLOW_ID` | `08_telegram_delivery.json` |
 | `INTRADAY_DISCORD_WORKFLOW_ID` | `09_discord_delivery.json` |
+| `INTRADAY_META_STORY_WORKFLOW_ID` | `10_meta_story_delivery.json` |
+| `INTRADAY_SOCIAL_STORY_WORKFLOW_ID` | `11_social_story_delivery.json` |
 
 **Daily:**
 
@@ -379,6 +381,12 @@ and set these variables:
 | `DAILY_EDITORIAL_QUALITY_CHECK_WORKFLOW_ID` | `08b_editorial_quality_check.json` |
 | `DAILY_PUBLISH_GITHUB_WORKFLOW_ID` | `09_publish_to_github.json` |
 | `DAILY_UPDATE_D1_WORKFLOW_ID` | `10_update_d1_state.json` |
+| `DAILY_GENERATE_META_SOCIAL_WORKFLOW_ID` | `11_generate_meta_social.json` |
+| `DAILY_PUBLISH_META_WORKFLOW_ID` | `12_publish_meta_daily.json` |
+| `DAILY_GENERATE_SOCIAL_CONTENT_WORKFLOW_ID` | `13_generate_social_content.json` |
+| `DAILY_PUBLISH_SOCIAL_CHANNELS_WORKFLOW_ID` | `14_publish_social_channels.json` |
+| `DAILY_YOUTUBE_UPLOAD_WORKFLOW_ID` | `15_youtube_upload.json` |
+| `DAILY_UPDATE_VIDEO_REFERENCE_WORKFLOW_ID` | `16_update_video_reference.json` |
 
 See `docs/architecture/workflow-runtime-variables.md` for the complete
 variable reference including model overrides and media configuration.
