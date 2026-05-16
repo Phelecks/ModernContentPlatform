@@ -134,3 +134,15 @@ INSERT OR IGNORE INTO sources
 VALUES
   ('x-query-fed-decision', 'X Search: Fed Decision', 'finance', 'x_query', 'T4', 25, 20, 'https://api.twitter.com/2/tweets/search/recent', 0, 15, 'poll', '{"search_query":"(Federal Reserve OR #FOMC) (rate OR decision OR cut OR hike) -is:retweet lang:en","monitor_type":"query","max_results":10}'),
   ('x-query-earnings-season', 'X Search: Earnings Season', 'finance', 'x_query', 'T4', 25, 20, 'https://api.twitter.com/2/tweets/search/recent', 0, 15, 'poll', '{"search_query":"(earnings OR revenue OR guidance) (beat OR miss OR surprise) -is:retweet lang:en","monitor_type":"query","max_results":10}');
+
+-- ============================================================
+-- Technology sources
+-- ============================================================
+INSERT OR IGNORE INTO sources
+  (source_slug, source_name, topic_slug, source_type, trust_tier, trust_score, priority_weight, url, is_active, poll_interval_minutes, ingestion_method, metadata_json)
+VALUES
+  ('ars-technica-tech-rss', 'Ars Technica RSS', 'technology', 'rss', 'T3', 50, 70, 'https://feeds.arstechnica.com/arstechnica/index', 1, 15, 'poll', NULL),
+  ('the-verge-rss', 'The Verge RSS', 'technology', 'rss', 'T3', 50, 70, 'https://www.theverge.com/rss/index.xml', 1, 15, 'poll', NULL),
+  ('wired-rss', 'Wired RSS', 'technology', 'rss', 'T3', 50, 60, 'https://www.wired.com/feed/rss', 1, 15, 'poll', NULL),
+  ('reuters-technology-rss', 'Reuters Technology RSS', 'technology', 'rss', 'T2', 75, 80, 'https://feeds.reuters.com/reuters/technologyNews', 1, 15, 'poll', NULL),
+  ('hacker-news-tech-api', 'Hacker News API', 'technology', 'api', 'T4', 25, 50, 'https://hacker-news.firebaseio.com/v0/topstories.json', 1, 15, 'poll', '{"notes":"Community signal — cap severity at 50"}');

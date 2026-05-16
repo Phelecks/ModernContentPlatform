@@ -642,6 +642,44 @@
         600
       ],
       "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $vars.DAILY_GENERATE_SOCIAL_CONTENT_WORKFLOW_ID }}"
+        },
+        "options": {}
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000024",
+      "name": "13 Generate Social Content",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        5520,
+        800
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $vars.DAILY_PUBLISH_SOCIAL_CHANNELS_WORKFLOW_ID }}"
+        },
+        "options": {}
+      },
+      "id": "d0e0f1a2-0000-0000-0000-000000000025",
+      "name": "14 Publish Social Channels",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [
+        5740,
+        800
+      ],
+      "continueOnFail": true
     }
   ],
   "connections": {
@@ -913,6 +951,11 @@
             "node": "11 Generate Meta Social",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "13 Generate Social Content",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -1006,6 +1049,17 @@
         [
           {
             "node": "09 Publish to GitHub",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "13 Generate Social Content": {
+      "main": [
+        [
+          {
+            "node": "14 Publish Social Channels",
             "type": "main",
             "index": 0
           }

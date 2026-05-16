@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Ars Technica RSS",
+    "type": "rss",
+    "url": "https://feeds.arstechnica.com/arstechnica/index",
+    "topic_slug": "technology",
+    "trust_tier": "T3"
+  },
+  {
+    "name": "The Verge RSS",
+    "type": "rss",
+    "url": "https://www.theverge.com/rss/index.xml",
+    "topic_slug": "technology",
+    "trust_tier": "T3"
+  },
+  {
+    "name": "Wired RSS",
+    "type": "rss",
+    "url": "https://www.wired.com/feed/rss",
+    "topic_slug": "technology",
+    "trust_tier": "T3"
+  },
+  {
+    "name": "Reuters Technology RSS",
+    "type": "rss",
+    "url": "https://feeds.reuters.com/reuters/technologyNews",
+    "topic_slug": "technology",
+    "trust_tier": "T2"
+  },
+  {
+    "name": "Hacker News API",
+    "type": "api",
+    "url": "https://hacker-news.firebaseio.com/v0/topstories.json",
+    "topic_slug": "technology",
+    "trust_tier": "T4",
+    "notes": "Community signal — cap severity at 5.0"
+  }
+]

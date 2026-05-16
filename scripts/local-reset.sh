@@ -15,7 +15,8 @@
 #   1. Deletes the local SQLite file used by Wrangler for D1 emulation.
 #   2. Applies all migrations in db/migrations/ in filename order.
 #   3. Seeds topics from db/seeds/topics.sql.
-#   4. Seeds sample alerts from db/seeds/sample_alerts.sql.
+#   4. Seeds sources from db/seeds/sources.sql.
+#   5. Seeds sample alerts from db/seeds/sample_alerts.sql.
 #   5. Prints a verification summary.
 
 set -euo pipefail
@@ -69,15 +70,23 @@ echo ""
 # ---------------------------------------------------------------------------
 # Step 3: Seed topics.
 # ---------------------------------------------------------------------------
-echo "Step 3/4  Seeding topics..."
+echo "Step 3/5  Seeding topics..."
 wrangler d1 execute "${DB_NAME}" --local --file=db/seeds/topics.sql
 echo "          Topics seeded."
 echo ""
 
 # ---------------------------------------------------------------------------
-# Step 4: Seed sample alerts and daily_status.
+# Step 4: Seed sources.
 # ---------------------------------------------------------------------------
-echo "Step 4/4  Seeding sample alerts..."
+echo "Step 4/5  Seeding sources..."
+wrangler d1 execute "${DB_NAME}" --local --file=db/seeds/sources.sql
+echo "          Sources seeded."
+echo ""
+
+# ---------------------------------------------------------------------------
+# Step 5: Seed sample alerts and daily_status.
+# ---------------------------------------------------------------------------
+echo "Step 5/5  Seeding sample alerts..."
 wrangler d1 execute "${DB_NAME}" --local --file=db/seeds/sample_alerts.sql
 echo "          Sample alerts seeded."
 echo ""
