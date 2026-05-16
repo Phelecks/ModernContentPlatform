@@ -33,6 +33,6 @@
     "url": "https://hacker-news.firebaseio.com/v0/topstories.json",
     "topic_slug": "technology",
     "trust_tier": "T4",
-    "notes": "Community signal — cap severity at 5.0"
+    "notes": "Community signal — cap severity at 50"
   }
 ]

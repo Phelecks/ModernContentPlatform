@@ -22,6 +22,7 @@ source strategy, trust model, and per-topic usage rules.
 | `energy.json` | Energy | IEA RSS, EIA RSS, Reuters general news RSS, IEA X account |
 | `finance.json` | Finance | SEC EDGAR RSS, Federal Reserve RSS, U.S. Treasury RSS, Reuters business RSS, CNBC Finance RSS, Yahoo Finance RSS, MarketWatch RSS |
 | `health.json` | Health | WHO RSS, CDC RSS, Reuters health RSS |
+| `technology.json` | Technology | Ars Technica RSS, The Verge RSS, Wired RSS, Reuters Technology RSS, Hacker News API |
 
 ---
 
@@ -35,7 +36,7 @@ module 01:
   "name":       "Human-readable source label",
   "type":       "rss | api | social | webhook | x_account | x_query | newsapi",
   "url":        "https://...",
-  "topic_slug": "crypto | ai | finance | economy | health | energy",
+  "topic_slug": "crypto | ai | finance | economy | health | energy | technology",
   "trust_tier": "T1 | T2 | T3 | T4",
   "notes":      "(optional) operator notes",
   "x_user_id":  "(optional, x_account only) X username",
@@ -76,7 +77,7 @@ available downstream unless ingestion/normalization explicitly preserves them.
 
 ```bash
 node -e "
-const topics = ['ai','crypto','economy','energy','finance','health'];
+const topics = ['ai','crypto','economy','energy','finance','health','technology'];
 const sources = topics.flatMap(t => require('./config/sources/' + t + '.json'));
 console.log(JSON.stringify(sources));
 "

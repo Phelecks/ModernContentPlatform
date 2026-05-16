@@ -17,7 +17,7 @@
 #   3. Seeds topics from db/seeds/topics.sql.
 #   4. Seeds sources from db/seeds/sources.sql.
 #   5. Seeds sample alerts from db/seeds/sample_alerts.sql.
-#   5. Prints a verification summary.
+#   6. Prints a verification summary.
 
 set -euo pipefail
 
@@ -48,7 +48,7 @@ echo ""
 #
 # Deleting the entire .wrangler/state/v3/d1/ subtree is the safest reset.
 # ---------------------------------------------------------------------------
-echo "Step 1/4  Deleting local D1 state..."
+echo "Step 1/5  Deleting local D1 state..."
 
 if [ -d "${REPO_ROOT}/.wrangler/state/v3/d1" ]; then
   rm -rf "${REPO_ROOT}/.wrangler/state/v3/d1"
@@ -62,7 +62,7 @@ echo ""
 # ---------------------------------------------------------------------------
 # Step 2: Apply all migrations in order.
 # ---------------------------------------------------------------------------
-echo "Step 2/4  Applying migrations..."
+echo "Step 2/5  Applying migrations..."
 wrangler d1 migrations apply "${DB_NAME}" --local
 echo "          Migrations applied."
 echo ""
