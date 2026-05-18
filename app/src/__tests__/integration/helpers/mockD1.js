@@ -250,7 +250,10 @@ class MockStatement {
    * Validates target table against known schema tables, parses column values,
    * inserts the row into in-memory state, auto-increments an ID,
    * and returns it when the SQL contains a RETURNING clause.
-   * Enforces UNIQUE constraints for tables that define them.
+   * Enforces UNIQUE constraints for plain inserts.
+   * Simulates ON CONFLICT DO UPDATE (upsert) by updating the existing row
+   * when a UNIQUE constraint match is found, applying simple
+   * `col = excluded.col` and `col = MAX(col, excluded.col)` assignments.
    */
   _runInsert() {
     const m = this._sql.match(/\bINTO\s+(\w+)/i)
@@ -277,10 +280,46 @@ class MockStatement {
       }
     }
 
-    // Enforce UNIQUE constraints per table (skip for ON CONFLICT / upsert patterns)
+    if (!Array.isArray(this._tables[tableName])) {
+      this._tables[tableName] = []
+    }
+
     const hasOnConflict = /\bON\s+CONFLICT\b/i.test(this._sql)
     const uniqueKeys = UNIQUE_CONSTRAINTS[tableName]
-    if (!hasOnConflict && uniqueKeys && Array.isArray(this._tables[tableName])) {
+
+    if (hasOnConflict && uniqueKeys) {
+      // Simulate upsert: find an existing row that conflicts on any UNIQUE key
+      let conflictIdx = -1
+      for (const uk of uniqueKeys) {
+        const cols = Array.isArray(uk) ? uk : [uk]
+        const idx = this._tables[tableName].findIndex(existing =>
+          cols.every(col => existing[col] != null && String(existing[col]) === String(row[col]))
+        )
+        if (idx >= 0) { conflictIdx = idx; break }
+      }
+
+      if (conflictIdx >= 0) {
+        // Apply DO UPDATE SET assignments to the conflicting row
+        const existing = this._tables[tableName][conflictIdx]
+        const doUpdateMatch = this._sql.match(/DO\s+UPDATE\s+SET\s+(.+?)$/is)
+        if (doUpdateMatch) {
+          for (const part of doUpdateMatch[1].split(',')) {
+            const trimmed = part.trim()
+            // col = excluded.col
+            const simpleM = trimmed.match(/^(\w+)\s*=\s*excluded\.(\w+)$/)
+            if (simpleM) { existing[simpleM[1]] = row[simpleM[2]]; continue }
+            // col = MAX(col, excluded.col)
+            const maxM = trimmed.match(/^(\w+)\s*=\s*MAX\s*\(\s*\w+\s*,\s*excluded\.(\w+)\s*\)$/i)
+            if (maxM) {
+              existing[maxM[1]] = Math.max(Number(existing[maxM[1]] ?? 0), Number(row[maxM[2]] ?? 0))
+              continue
+            }
+          }
+        }
+        return /\bRETURNING\s+id\b/i.test(this._sql) ? [{ id: existing.id }] : []
+      }
+      // No conflict: fall through to insert
+    } else if (!hasOnConflict && uniqueKeys && Array.isArray(this._tables[tableName])) {
       for (const uk of uniqueKeys) {
         const cols = Array.isArray(uk) ? uk : [uk]
         const duplicate = this._tables[tableName].some(existing =>
@@ -293,9 +332,6 @@ class MockStatement {
     }
 
     // Store the row in the in-memory table
-    if (!Array.isArray(this._tables[tableName])) {
-      this._tables[tableName] = []
-    }
     this._tables[tableName].push(row)
 
     if (/\bRETURNING\s+id\b/i.test(this._sql)) {

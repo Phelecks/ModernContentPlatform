@@ -336,7 +336,7 @@ Cloudflare also provides [D1 Time Travel](https://developers.cloudflare.com/d1/r
 
 ## 7. Expected schema state
 
-After all 10 migrations are applied, the database should contain:
+After all 14 migrations are applied, the database should contain:
 
 ### Tables (13)
 
@@ -356,7 +356,7 @@ After all 10 migrations are applied, the database should contain:
 | `rerun_log` | 0012 | Rerun and recovery operation tracking |
 | `summary_index` | 0014 | Compact fast-access index of content-ready topic/date entries |
 
-### Indexes (30)
+### Indexes (36)
 
 Run the verification script for the full list:
 

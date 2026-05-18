@@ -15,7 +15,7 @@
 import { jsonResponse, errorResponse } from '../../lib/db.js'
 import { authenticateWrite } from '../../lib/auth.js'
 import { validateDailyStatusPayload } from '../../lib/validate.js'
-import { upsertDailyStatus, upsertSummaryIndex } from '../../lib/writers.js'
+import { buildDailyStatusStmt, buildSummaryIndexStmt } from '../../lib/writers.js'
 
 export async function onRequestPost(ctx) {
   const { request, env } = ctx
@@ -41,24 +41,25 @@ export async function onRequestPost(ctx) {
   const data = validation.data
 
   try {
-    const result = await upsertDailyStatus(db, data)
-
+    const stmts = [buildDailyStatusStmt(db, data)]
     if (data.summary_available === 1) {
-      await upsertSummaryIndex(db, {
+      stmts.push(buildSummaryIndexStmt(db, {
         topic_slug: data.topic_slug,
         date_key: data.date_key,
         page_state: data.page_state,
         summary_available: data.summary_available,
         video_available: data.video_available,
         article_available: data.article_available
-      })
+      }))
     }
+
+    const [statusResult] = await db.batch(stmts)
 
     return jsonResponse({
       topic_slug: data.topic_slug,
       date_key: data.date_key,
       page_state: data.page_state,
-      success: result.success
+      success: statusResult.success ?? true
     })
   } catch (err) {
     console.error('[POST /api/internal/daily-status] Write failed:', err)

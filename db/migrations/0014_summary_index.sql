@@ -40,6 +40,4 @@ CREATE TABLE IF NOT EXISTS summary_index (
 CREATE INDEX IF NOT EXISTS idx_summary_index_topic_state_date
   ON summary_index(topic_slug, page_state, date_key DESC);
 
--- For direct single-row lookups by topic + date
-CREATE INDEX IF NOT EXISTS idx_summary_index_topic_date
-  ON summary_index(topic_slug, date_key);
+
