@@ -419,7 +419,7 @@ class MockStatement {
 // ---- Database ----
 
 const KNOWN_TABLES = new Set([
-  'topics', 'alerts', 'event_clusters', 'daily_status', 'publish_jobs', 'workflow_logs', 'openai_usage_log', 'sources', 'meta_social_publish_log', 'social_publish_log', 'youtube_publish_log', 'rerun_log'
+  'topics', 'alerts', 'event_clusters', 'daily_status', 'publish_jobs', 'workflow_logs', 'openai_usage_log', 'sources', 'meta_social_publish_log', 'social_publish_log', 'youtube_publish_log', 'rerun_log', 'summary_index'
 ])
 
 // UNIQUE constraints per table (mirrors D1 schema constraints).
@@ -428,7 +428,8 @@ const KNOWN_TABLES = new Set([
 const UNIQUE_CONSTRAINTS = {
   topics: ['topic_slug'],
   sources: ['source_slug'],
-  daily_status: [['topic_slug', 'date_key']]
+  daily_status: [['topic_slug', 'date_key']],
+  summary_index: [['topic_slug', 'date_key']]
 }
 
 export class MockD1Database {
@@ -732,6 +733,8 @@ export function createSeededDb() {
   db.seed('social_publish_log', [])
 
   db.seed('youtube_publish_log', [])
+
+  db.seed('summary_index', [])
 
   return db
 }

@@ -141,9 +141,9 @@ bash scripts/d1-verify-schema.sh local
 ```
 
 The verification script checks:
-1. **Expected tables** — all 10 platform tables exist
+1. **Expected tables** — all 13 platform tables exist
 2. **Applied migrations** — the `d1_migrations` table lists all migration files
-3. **Expected indexes** — all 30 indexes are present
+3. **Expected indexes** — all 32 indexes are present
 4. **Row counts** — informational counts for key tables
 
 ### Manual verification queries
@@ -338,7 +338,7 @@ Cloudflare also provides [D1 Time Travel](https://developers.cloudflare.com/d1/r
 
 After all 10 migrations are applied, the database should contain:
 
-### Tables (10)
+### Tables (13)
 
 | Table | Created by | Description |
 |---|---|---|
@@ -352,6 +352,9 @@ After all 10 migrations are applied, the database should contain:
 | `openai_usage_log` | 0007 + 0008 | AI call monitoring |
 | `meta_social_publish_log` | 0009 | Meta platform publish tracking |
 | `social_publish_log` | 0010 | X/Telegram/Discord publish tracking |
+| `youtube_publish_log` | 0011 | YouTube upload tracking |
+| `rerun_log` | 0012 | Rerun and recovery operation tracking |
+| `summary_index` | 0014 | Compact fast-access index of content-ready topic/date entries |
 
 ### Indexes (30)
 
@@ -374,6 +377,10 @@ bash scripts/d1-verify-schema.sh <environment>
 0008_openai_usage_observability.sql
 0009_meta_social_publish_log.sql
 0010_social_publish_log.sql
+0011_youtube_publish_log.sql
+0012_rerun_log.sql
+0013_read_api_indexes.sql
+0014_summary_index.sql
 ```
 
 ---

@@ -13,6 +13,7 @@ This directory contains the canonical schema reference for the Cloudflare D1 dat
 | `event_clusters` | AI-generated clusters grouping related alerts |
 | `daily_status` | Per-topic per-day page readiness and navigation state |
 | `publish_jobs` | Daily editorial publish workflow lifecycle tracking |
+| `summary_index` | Compact fast-access index of content-ready topic/date entries for navigation |
 
 ---
 
@@ -62,6 +63,8 @@ Indexes are optimized for the following read patterns:
 | Cluster alert membership | `idx_alerts_cluster` |
 | Alert delivery retry | `idx_alerts_delivery` |
 | Topic listing | `idx_topics_active_sort` |
+| Latest ready/published date per topic (fast nav) | `idx_summary_index_topic_state_date` |
+| Single-row summary_index fetch | `idx_summary_index_topic_date` |
 
 ---
 

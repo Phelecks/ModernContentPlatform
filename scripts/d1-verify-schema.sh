@@ -134,6 +134,9 @@ EXPECTED_TABLES=(
   openai_usage_log
   meta_social_publish_log
   social_publish_log
+  youtube_publish_log
+  rerun_log
+  summary_index
 )
 
 echo "Check 1: Expected tables"
@@ -213,6 +216,8 @@ EXPECTED_INDEXES=(
   idx_social_publish_log_topic_date
   idx_social_publish_log_status
   idx_social_publish_log_platform
+  idx_summary_index_topic_state_date
+  idx_summary_index_topic_date
 )
 
 echo "Check 3: Expected indexes"

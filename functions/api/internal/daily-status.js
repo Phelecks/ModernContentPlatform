@@ -15,7 +15,7 @@
 import { jsonResponse, errorResponse } from '../../lib/db.js'
 import { authenticateWrite } from '../../lib/auth.js'
 import { validateDailyStatusPayload } from '../../lib/validate.js'
-import { upsertDailyStatus } from '../../lib/writers.js'
+import { upsertDailyStatus, upsertSummaryIndex } from '../../lib/writers.js'
 
 export async function onRequestPost(ctx) {
   const { request, env } = ctx
@@ -42,6 +42,17 @@ export async function onRequestPost(ctx) {
 
   try {
     const result = await upsertDailyStatus(db, data)
+
+    if (data.summary_available === 1) {
+      await upsertSummaryIndex(db, {
+        topic_slug: data.topic_slug,
+        date_key: data.date_key,
+        page_state: data.page_state,
+        summary_available: data.summary_available,
+        video_available: data.video_available,
+        article_available: data.article_available
+      })
+    }
 
     return jsonResponse({
       topic_slug: data.topic_slug,
