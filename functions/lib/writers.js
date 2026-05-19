@@ -141,7 +141,20 @@ export async function writeAlertBatch(db, {
  * @param {{ topic_slug: string, date_key: string, page_state?: string, alert_count?: number, cluster_count?: number, summary_available?: number, video_available?: number, article_available?: number }} params
  * @returns {Promise<{ success: boolean }>}
  */
-export async function upsertDailyStatus(db, {
+export async function upsertDailyStatus(db, params) {
+  const result = await buildDailyStatusStmt(db, params).run()
+  return { success: result.success ?? true }
+}
+
+/**
+ * Build a prepared+bound D1 statement for upserting a daily_status row.
+ * Use this when you need to include the write in a db.batch() call.
+ *
+ * @param {D1Database} db
+ * @param {{ topic_slug: string, date_key: string, page_state?: string, alert_count?: number, cluster_count?: number, summary_available?: number, video_available?: number, article_available?: number }} params
+ * @returns {D1PreparedStatement}
+ */
+export function buildDailyStatusStmt(db, {
   topic_slug, date_key,
   page_state = 'ready',
   alert_count = 0,
@@ -172,12 +185,70 @@ export async function upsertDailyStatus(db, {
                              ELSE published_at END,
       updated_at         = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')`
 
-  const result = await db.prepare(sql)
+  return db.prepare(sql)
     .bind(topic_slug, date_key, page_state, alert_count, cluster_count,
       summary_available, video_available, article_available, page_state)
-    .run()
+}
 
+/**
+ * Upsert a summary_index row.
+ *
+ * summary_index is a compact, fast-access index of topic/date entries that
+ * have editorial content (summary_available = 1). Unlike daily_status, which
+ * accumulates a row for every topic/date that receives any alert, summary_index
+ * only contains days with actual content, enabling efficient
+ * "latest published/ready date per topic" queries.
+ *
+ * Called by the POST /api/internal/daily-status endpoint when
+ * summary_available = 1.
+ *
+ * @param {D1Database} db
+ * @param {{ topic_slug: string, date_key: string, page_state?: string, summary_available?: number, video_available?: number, article_available?: number }} params
+ * @returns {Promise<{ success: boolean }>}
+ */
+export async function upsertSummaryIndex(db, params) {
+  const result = await buildSummaryIndexStmt(db, params).run()
   return { success: result.success ?? true }
+}
+
+/**
+ * Build a prepared+bound D1 statement for upserting a summary_index row.
+ * Use this when you need to include the write in a db.batch() call.
+ *
+ * @param {D1Database} db
+ * @param {{ topic_slug: string, date_key: string, page_state?: string, summary_available?: number, video_available?: number, article_available?: number }} params
+ * @returns {D1PreparedStatement}
+ */
+export function buildSummaryIndexStmt(db, {
+  topic_slug, date_key,
+  page_state = 'ready',
+  summary_available = 0,
+  video_available = 0,
+  article_available = 0
+}) {
+  const sql = `
+    INSERT INTO summary_index
+      (topic_slug, date_key, page_state,
+       summary_available, video_available, article_available, published_at)
+    VALUES (?, ?, ?, ?, ?, ?,
+      CASE WHEN ? = 'published'
+        THEN strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+        ELSE NULL
+      END)
+    ON CONFLICT (topic_slug, date_key)
+    DO UPDATE SET
+      page_state        = excluded.page_state,
+      summary_available = MAX(summary_available, excluded.summary_available),
+      video_available   = MAX(video_available, excluded.video_available),
+      article_available = MAX(article_available, excluded.article_available),
+      published_at      = CASE WHEN excluded.page_state = 'published'
+                            THEN COALESCE(published_at, excluded.published_at)
+                            ELSE published_at END,
+      updated_at        = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')`
+
+  return db.prepare(sql)
+    .bind(topic_slug, date_key, page_state,
+      summary_available, video_available, article_available, page_state)
 }
 
 /**

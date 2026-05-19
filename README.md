@@ -241,7 +241,8 @@ Key characteristics:
 │   │   ├── 0010_social_publish_log.sql        # X/Telegram/Discord publish tracking
 │   │   ├── 0011_youtube_publish_log.sql       # YouTube upload tracking
 │   │   ├── 0012_rerun_log.sql                 # Rerun and recovery operation tracking
-│   │   └── 0013_read_api_indexes.sql          # Replaces idx_alerts_topic_date_event with a status-aware composite index on alerts for timeline read optimization
+│   │   ├── 0013_read_api_indexes.sql          # Replaces idx_alerts_topic_date_event with a status-aware composite index on alerts for timeline read optimization
+│   │   └── 0014_summary_index.sql              # summary_index table for fast latest-date navigation queries (populated when summary_available=1)
 │   ├── schema/           # Canonical schema reference documentation
 │   ├── queries/          # Reusable read query examples
 │   └── seeds/            # Local and test seed data (topics, sources, sample alerts)
@@ -390,7 +391,7 @@ Key characteristics:
 
 ## D1 Schema Overview
 
-Thirteen migrations are applied in order to build the full schema:
+Fourteen migrations are applied in order to build the full schema:
 
 | Migration | Tables / Changes |
 |---|---|
@@ -407,6 +408,7 @@ Thirteen migrations are applied in order to build the full schema:
 | `0011_youtube_publish_log.sql` | `youtube_publish_log` — YouTube upload attempt tracking |
 | `0012_rerun_log.sql` | `rerun_log` — rerun and recovery operation tracking |
 | `0013_read_api_indexes.sql` | Replaces `idx_alerts_topic_date_event` with a status-aware composite index on `alerts` (`topic_slug`, `date_key`, `status`, `event_at DESC`) for timeline read optimization |
+| `0014_summary_index.sql` | `summary_index` — compact fast-access index of content-ready topic/date entries; enables efficient latest-date navigation queries |
 
 ---
 
@@ -516,8 +518,8 @@ deliverables per phase, dependencies, risks, and the recommended best next step.
 - [ ] Source signal expansion
 - [ ] Multi-language support
 - [ ] Advanced AI clustering and deduplication
-- [ ] Summary index table in D1 for faster navigation
-- [ ] Performance and caching improvements
+- [x] Summary index table in D1 for faster navigation
+- [x] Performance and caching improvements
 
 ---
 

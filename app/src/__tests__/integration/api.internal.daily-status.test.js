@@ -142,6 +142,41 @@ describe('POST /api/internal/daily-status', () => {
     expect(res.headers.get('Content-Type')).toContain('application/json')
   })
 
+  // --- summary_index writes ---
+
+  it('creates a summary_index row when summary_available is 1', async () => {
+    const ctx = makeCtx(db, validPayload({ summary_available: 1 }), { 'X-Write-Key': WRITE_KEY })
+    const res = await onRequestPost(ctx)
+    expect(res.status).toBe(200)
+    const rows = db._tables['summary_index'] ?? []
+    expect(rows).toHaveLength(1)
+    expect(rows[0].topic_slug).toBe('crypto')
+    expect(rows[0].date_key).toBe('2025-01-16')
+    expect(rows[0].page_state).toBe('ready')
+  })
+
+  it('does not create a summary_index row when summary_available is 0', async () => {
+    const ctx = makeCtx(db, validPayload({ summary_available: 0 }), { 'X-Write-Key': WRITE_KEY })
+    const res = await onRequestPost(ctx)
+    expect(res.status).toBe(200)
+    const rows = db._tables['summary_index'] ?? []
+    expect(rows).toHaveLength(0)
+  })
+
+  it('updates existing summary_index row on upsert (no duplicate rows)', async () => {
+    const payload = validPayload({ summary_available: 1, page_state: 'ready' })
+    const ctx1 = makeCtx(db, payload, { 'X-Write-Key': WRITE_KEY })
+    await onRequestPost(ctx1)
+
+    const ctx2 = makeCtx(db, { ...payload, page_state: 'published' }, { 'X-Write-Key': WRITE_KEY })
+    const res = await onRequestPost(ctx2)
+    expect(res.status).toBe(200)
+
+    const rows = db._tables['summary_index'] ?? []
+    expect(rows).toHaveLength(1)
+    expect(rows[0].page_state).toBe('published')
+  })
+
   // --- Error states ---
 
   it('returns 503 when DB is not configured', async () => {
