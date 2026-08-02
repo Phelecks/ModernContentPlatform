@@ -25,3 +25,6 @@ Project documentation lives here.
   - `operations/n8n-deployment.md` — n8n production/staging deployment, workflow import, credential setup, runtime variables, updates, and troubleshooting.
   - `operations/media-asset-lifecycle.md` — **media asset lifecycle**: storage by environment, naming conventions, temporary vs final asset handling, cleanup policy, versioning rules, rerender behavior, and the GitHub vs non-GitHub asset boundary for images, narration, rendered video, captions, and social derivatives.
 - `runbooks/` for incident and rerun guidance.
+  - `runbooks/local-run.md` — step-by-step local web, D1, optional Worker, and n8n setup.
+  - `runbooks/staging-run.md` — isolated staging provisioning, deployment, and shadow-mode verification.
+  - `runbooks/production-run.md` — production deployment, promotion gates, and rollback procedure.
