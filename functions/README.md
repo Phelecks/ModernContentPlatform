@@ -15,7 +15,7 @@ Cloudflare Pages Functions live here.
 - `api/internal/daily-status` — upserts page readiness and content availability.
 - `api/internal/publish-jobs` — creates or updates publish job records.
 - `api/internal/workflow-logs` — writes workflow execution events for failure/retry observability.
-- `api/internal/openai-usage-log` — writes per-task OpenAI usage, retry, and cost telemetry.
+- `api/internal/openai-usage-log` — read-only legacy compatibility endpoint (POST returns 410); AI Runtime writes `ai_invocations` through its D1 binding.
 
 All internal write endpoints require an `X-Write-Key` header matching the
 `WRITE_API_KEY` secret. See `docs/d1-write-path.md` for details.

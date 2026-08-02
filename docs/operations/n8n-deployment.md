@@ -1,5 +1,7 @@
 # n8n Deployment and Operations Guide
 
+> AI workflows require `AI_RUNTIME`, `AI_RUNTIME_URL`, and the `McpAiRuntimeAccess` HTTP Header Auth credential described in [Cloudflare AI Runtime](../architecture/cloudflare-ai-runtime.md). OpenAI/Google credentials are retained only for `legacy` and `shadow` rollback paths.
+
 This document covers deploying a production or staging n8n instance, importing
 platform workflows, configuring credentials and runtime variables, and
 maintaining the instance over time.
@@ -108,8 +110,8 @@ Edit `n8n/.env.production` and fill in all required values:
 
 | Variable | Required for |
 |---|---|
-| `OPENAI_API_KEY` | AI classification, summary, video script generation |
-| `GOOGLE_API_KEY` | Google AI provider (if `AI_PROVIDER=google`) |
+| `OPENAI_API_KEY` | Legacy AI rollback only; the Worker fallback uses Unified Billing |
+| `GOOGLE_API_KEY` | Legacy Google media rollback only |
 | `TELEGRAM_BOT_TOKEN` | Alert delivery to Telegram |
 | `TELEGRAM_CHAT_ID` | Target Telegram chat or channel |
 | `DISCORD_WEBHOOK_URL` | Alert delivery to Discord |
@@ -287,7 +289,8 @@ under **Settings → Credentials**:
 | Credential name | Type | Configuration |
 |---|---|---|
 | `CloudflareD1Api` | HTTP Header Auth | Header: `Authorization`, Value: `Bearer <CLOUDFLARE_API_TOKEN>` |
-| `OpenAiApi` | OpenAI API | API key: `<OPENAI_API_KEY>` |
+| `McpAiRuntimeAccess` | HTTP Header Auth | Header: `Authorization`, Value: Access single-header JSON containing the environment's client ID and secret |
+| `OpenAiApi` | OpenAI API | Legacy rollback only; remove after 14 successful daily cycles at full cutover |
 | `TelegramBotApi` | Telegram Bot API | Bot token: `<TELEGRAM_BOT_TOKEN>` |
 | `X Bearer Token` | HTTP Header Auth | Header: `Authorization`, Value: `Bearer <X_BEARER_TOKEN>` |
 | `NewsApiCredential` | HTTP Header Auth | Header: `X-Api-Key`, Value: `<NEWS_API_KEY>` |
@@ -323,10 +326,16 @@ Set the following variables in **n8n Settings → Variables**.
 
 | Variable | Default | Description |
 |---|---|---|
-| `AI_PROVIDER` | `openai` | `openai` or `google` |
+| `AI_RUNTIME` | `legacy` | `legacy`, `shadow`, or `cloudflare` |
+| `AI_RUNTIME_URL` | required outside legacy | Access-protected environment-specific AI Task Worker URL |
+| `AI_RUNTIME_FAST` | inherits `AI_RUNTIME` | Optional classification/metadata/social rollout override |
+| `AI_RUNTIME_EDITORIAL` | inherits `AI_RUNTIME` | Optional summary/article/outlook/script rollout override |
+| `AI_RUNTIME_IMAGE` | inherits `AI_RUNTIME` | Optional image rollout override |
+| `AI_RUNTIME_NARRATION` | inherits `AI_RUNTIME` | Optional narration rollout override |
+| `AI_PROVIDER` | `openai` | Legacy rollback media provider: `openai` or `google` |
 | `MEDIA_MODE` | `image_video` | `image_video` (v1 only) |
-| `AI_MODEL_STANDARD` | `gpt-4o` | Model for editorial tasks |
-| `AI_MODEL_FAST` | `gpt-4o-mini` | Model for classification tasks |
+| `AI_MODEL_STANDARD` | `gpt-4o` | Legacy editorial model; ignored by Cloudflare runtime |
+| `AI_MODEL_FAST` | `gpt-4o-mini` | Legacy classification model; ignored by Cloudflare runtime |
 
 ### Alert thresholds
 

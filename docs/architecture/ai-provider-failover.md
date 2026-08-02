@@ -1,5 +1,7 @@
 # AI Provider Failover and Task Fallback Strategy
 
+> Legacy design reference. Active routing and fallback policy now lives in the [Cloudflare AI Runtime](cloudflare-ai-runtime.md) task registry and AI Gateway; n8n must not implement new provider failover.
+
 ## Overview
 
 This document defines the failover behavior between OpenAI and Google for all

@@ -1,5 +1,7 @@
 # OpenAI Cost Controls and Usage Guardrails
 
+> Legacy compatibility reference. Use the [Cloudflare AI Runtime](cloudflare-ai-runtime.md) Gateway, telemetry, cache, spend-limit, and rollout policy for new AI execution. `AI_MODEL_FAST`, `AI_MODEL_STANDARD`, and `openai_usage_log` remain temporary rollback surfaces.
+
 ## Overview
 
 OpenAI is usage-based. Cost depends on:

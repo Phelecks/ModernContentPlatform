@@ -90,9 +90,11 @@ Variables passed to n8n at runtime (via `docker-compose.yml`):
 | Variable | Scope | Purpose |
 |---|---|---|
 | `GENERIC_TIMEZONE` | n8n | Timezone for cron schedules (default: `UTC`) |
-| `AI_PROVIDER` | AI | Active AI provider: `openai` (default) or `google` |
-| `OPENAI_API_KEY` | AI | OpenAI API key — required when `AI_PROVIDER=openai` |
-| `GOOGLE_API_KEY` | AI | Google API key — required when `AI_PROVIDER=google` |
+| `AI_RUNTIME` | AI | Compatibility mode: `legacy`, `shadow`, or `cloudflare` (also set in n8n Settings → Variables) |
+| `AI_RUNTIME_URL` | AI | Access-protected AI Task Worker URL (also set in n8n Settings → Variables) |
+| `AI_PROVIDER` | Legacy AI | Rollback media provider: `openai` (default) or `google` |
+| `OPENAI_API_KEY` | Legacy AI | Compatibility credential during shadow/rollback only |
+| `GOOGLE_API_KEY` | Legacy AI | Compatibility credential during shadow/rollback only |
 | `MEDIA_MODE` | Media | Media pipeline strategy: `image_video` (default) or `full_video` (not available in v1) |
 | `RENDER_PROVIDER` | Media | Video render service: `shotstack`, `creatomate`, or leave unset to skip rendering |
 | `SHOTSTACK_API_KEY` | Media | Shotstack API key — required when `RENDER_PROVIDER=shotstack` |
@@ -122,6 +124,9 @@ require a value will produce errors only when the relevant workflow step execute
 5. Exported workflow JSON (without credentials) can be committed to `workflows/n8n/`.
 
 Workflow contracts and input/output schemas are documented in `workflows/contracts/`.
+Before using `shadow` or `cloudflare`, create the `McpAiRuntimeAccess` HTTP Header
+Auth credential exactly as described in
+[`docs/architecture/cloudflare-ai-runtime.md`](../docs/architecture/cloudflare-ai-runtime.md).
 
 ---
 

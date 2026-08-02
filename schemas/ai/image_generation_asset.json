@@ -16,6 +16,26 @@
         "type": "object",
         "required": ["index", "prompt", "provider", "model", "format", "generated_at"],
         "additionalProperties": false,
+        "allOf": [
+          {
+            "if": { "properties": { "format": { "const": "url" } }, "required": ["format"] },
+            "then": { "required": ["url"], "properties": { "url": { "type": "string", "format": "uri", "minLength": 1 } } }
+          },
+          {
+            "if": { "properties": { "format": { "const": "b64_json" } }, "required": ["format"] },
+            "then": { "required": ["b64_json"], "properties": { "b64_json": { "type": "string", "minLength": 1 } } }
+          },
+          {
+            "if": { "properties": { "format": { "const": "r2_url" } }, "required": ["format"] },
+            "then": {
+              "required": ["url", "object_key"],
+              "properties": {
+                "url": { "type": "string", "format": "uri", "minLength": 1 },
+                "object_key": { "type": "string", "minLength": 1, "maxLength": 1024 }
+              }
+            }
+          }
+        ],
         "properties": {
           "index": {
             "type": "integer",
@@ -35,7 +55,7 @@
           },
           "provider": {
             "type": "string",
-            "enum": ["openai", "google"],
+            "enum": ["openai", "google", "cloudflare"],
             "description": "The provider that generated this image."
           },
           "model": {
@@ -51,16 +71,22 @@
           },
           "format": {
             "type": "string",
-            "enum": ["url", "b64_json"],
-            "description": "Format of the returned image data. OpenAI returns 'url' (temporary); Google returns 'b64_json'."
+            "enum": ["url", "b64_json", "r2_url"],
+            "description": "Format of the returned image data. Cloudflare AI Runtime stores generated media in R2 and returns 'r2_url'."
           },
           "url": {
             "type": ["string", "null"],
+            "format": "uri",
             "description": "Temporary image URL returned by OpenAI. Valid for approximately 1 hour after generation. Null for Google."
           },
           "b64_json": {
             "type": ["string", "null"],
             "description": "Base64-encoded PNG/JPEG image data returned by Google Imagen. Null for OpenAI."
+          },
+          "object_key": {
+            "type": ["string", "null"],
+            "maxLength": 1024,
+            "description": "Environment-scoped R2 object key. Present when format is 'r2_url'."
           },
           "mime_type": {
             "type": ["string", "null"],
@@ -83,7 +109,7 @@
     },
     "provider": {
       "type": "string",
-      "enum": ["openai", "google"],
+      "enum": ["openai", "google", "cloudflare"],
       "description": "The provider that fulfilled the image generation request."
     },
     "model": {

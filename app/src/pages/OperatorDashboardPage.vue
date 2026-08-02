@@ -367,6 +367,7 @@
             <thead>
               <tr>
                 <th>Task</th>
+                <th>Provider</th>
                 <th>Model</th>
                 <th>Tokens</th>
                 <th>Status</th>
@@ -381,6 +382,7 @@
                 :class="row.status === 'error' ? 'ops-row--error' : ''"
               >
                 <td>{{ row.task }}</td>
+                <td>{{ row.provider || 'openai' }}</td>
                 <td>{{ row.model }}</td>
                 <td>{{ row.total_tokens }}</td>
                 <td>

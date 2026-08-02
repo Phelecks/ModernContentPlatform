@@ -10,6 +10,35 @@ on:
 permissions:
   contents: read
 jobs:
+  ai-runtime:
+    name: AI Runtime and Repository Contracts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: workers/ai-runtime/package-lock.json
+
+      - name: Validate workflow AI boundary
+        run: node scripts/check-ai-runtime-boundary.mjs
+
+      - name: Check documentation links
+        run: node scripts/check-doc-links.mjs
+
+      - name: Install AI Runtime dependencies
+        working-directory: workers/ai-runtime
+        run: npm ci
+
+      - name: Type-check and test AI Runtime
+        working-directory: workers/ai-runtime
+        run: npm run check
+
   build-and-test:
     name: Build and Test
     runs-on: ubuntu-latest

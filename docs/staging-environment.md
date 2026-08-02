@@ -1,5 +1,7 @@
 # Staging Environment Plan — Modern Content Platform
 
+> Staging also requires an isolated `mcp-ai-runtime-staging` Worker, `mcp-ai-staging` Gateway, Access application/AUD, D1 binding, and `mcp-ai-assets-staging` R2 bucket. Begin with `AI_RUNTIME=shadow`; see [Cloudflare AI Runtime](architecture/cloudflare-ai-runtime.md).
+
 ## Overview
 
 This document defines the staging environment strategy for Modern Content Platform.

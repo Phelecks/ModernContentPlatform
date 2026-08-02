@@ -1,5 +1,7 @@
 # AI Provider — Architecture
 
+> Legacy compatibility reference. The canonical execution architecture is [Cloudflare AI Runtime](cloudflare-ai-runtime.md). Direct provider nodes, credentials, and model variables described here remain only for shadow comparison and the 14-day rollback window.
+
 ## Overview
 
 Modern Content Platform v1 now supports two first-class AI providers:

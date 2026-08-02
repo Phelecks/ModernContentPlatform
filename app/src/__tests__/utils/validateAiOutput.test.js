@@ -172,11 +172,11 @@ describe('exported constants', () => {
   it('VALID_EXPECTATION_OUTCOMES contains met, missed, partial', () => {
     expect(VALID_EXPECTATION_OUTCOMES).toEqual(['met', 'missed', 'partial'])
   })
-  it('VALID_NARRATION_PROVIDERS contains openai and google', () => {
-    expect(VALID_NARRATION_PROVIDERS).toEqual(['openai', 'google'])
+  it('VALID_NARRATION_PROVIDERS includes the Cloudflare runtime', () => {
+    expect(VALID_NARRATION_PROVIDERS).toEqual(['openai', 'google', 'cloudflare'])
   })
-  it('VALID_NARRATION_FORMATS contains b64_json', () => {
-    expect(VALID_NARRATION_FORMATS).toEqual(['b64_json'])
+  it('VALID_NARRATION_FORMATS includes R2 delivery', () => {
+    expect(VALID_NARRATION_FORMATS).toEqual(['b64_json', 'r2_url'])
   })
   it('VALID_NARRATION_AUDIO_ENCODINGS contains all supported encodings', () => {
     expect(VALID_NARRATION_AUDIO_ENCODINGS).toEqual(['mp3', 'opus', 'aac', 'flac', 'wav', 'pcm'])

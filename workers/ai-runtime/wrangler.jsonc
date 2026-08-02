@@ -1,0 +1,111 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mcp-ai-runtime",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-02",
+  "workers_dev": false,
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "invocation_logs": true
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 1
+    }
+  },
+  "ai": {
+    "binding": "AI"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "modern-content-platform-db",
+      "database_id": "YOUR_PRODUCTION_D1_DATABASE_ID",
+      "migrations_dir": "../../db/migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "AI_ASSETS",
+      "bucket_name": "mcp-ai-assets-production"
+    }
+  ],
+  "vars": {
+    "ENVIRONMENT": "production",
+    "GATEWAY_ID": "mcp-ai-production",
+    "ACCESS_TEAM_DOMAIN": "YOUR_TEAM.cloudflareaccess.com",
+    "ACCESS_AUD": "YOUR_PRODUCTION_ACCESS_AUD",
+    "PUBLIC_BASE_URL": "https://ai-internal.example.com",
+    "ALLOW_LOCAL_AUTH": "false"
+  },
+  "secrets": {
+    "required": ["ASSET_SIGNING_KEY"]
+  },
+  "env": {
+    "local": {
+      "name": "mcp-ai-runtime-local",
+      "ai": {
+        "binding": "AI"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "modern-content-platform-local-db",
+          "database_id": "LOCAL_D1_DATABASE_ID",
+          "migrations_dir": "../../db/migrations"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "AI_ASSETS",
+          "bucket_name": "mcp-ai-assets-local"
+        }
+      ],
+      "vars": {
+        "ENVIRONMENT": "local",
+        "GATEWAY_ID": "mcp-ai-staging",
+        "ACCESS_TEAM_DOMAIN": "local.invalid",
+        "ACCESS_AUD": "local",
+        "PUBLIC_BASE_URL": "http://localhost:8787",
+        "ALLOW_LOCAL_AUTH": "true"
+      },
+      "secrets": {
+        "required": ["LOCAL_DEV_TOKEN", "ASSET_SIGNING_KEY"]
+      }
+    },
+    "staging": {
+      "name": "mcp-ai-runtime-staging",
+      "ai": {
+        "binding": "AI"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "modern-content-platform-staging-db",
+          "database_id": "YOUR_STAGING_D1_DATABASE_ID",
+          "migrations_dir": "../../db/migrations"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "AI_ASSETS",
+          "bucket_name": "mcp-ai-assets-staging"
+        }
+      ],
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "GATEWAY_ID": "mcp-ai-staging",
+        "ACCESS_TEAM_DOMAIN": "YOUR_TEAM.cloudflareaccess.com",
+        "ACCESS_AUD": "YOUR_STAGING_ACCESS_AUD",
+        "PUBLIC_BASE_URL": "https://ai-staging.example.com",
+        "ALLOW_LOCAL_AUTH": "false"
+      },
+      "secrets": {
+        "required": ["ASSET_SIGNING_KEY"]
+      }
+    }
+  }
+}

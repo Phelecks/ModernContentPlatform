@@ -40,6 +40,8 @@ The platform has two parallel outputs:
 - Cloudflare D1 for live data and operational state
 - GitHub for source control and content publishing
 - self-hosted n8n for orchestration
+- a dedicated Cloudflare AI Task Worker for prompts, inference, validation, routing, and AI telemetry
+- Cloudflare AI Gateway with Workers AI primary and temporary OpenAI Unified Billing fallback
 - AI for classification, summarization, extraction, ranking, and content generation
 - YouTube for daily video publishing
 - Telegram and Discord for intraday alerts
@@ -96,7 +98,7 @@ n8n owns:
 - normalization
 - deduplication
 - clustering
-- AI calls
+- scheduling and invoking versioned AI tasks
 - alert scoring
 - D1 writes
 - Telegram/Discord delivery
@@ -113,7 +115,24 @@ AI owns:
 - video scripts
 - metadata generation
 
+The Cloudflare AI Task Worker is the only component allowed to:
+- construct or version prompts
+- select providers and models
+- call AI Gateway
+- validate AI output against `schemas/ai`
+- perform provider fallback
+- write `ai_invocations` telemetry
+- store generated image and narration binaries in R2
+
+n8n must call `POST /v1/tasks/{task}` and must not submit arbitrary prompts,
+models, providers, token limits, or Gateway routes. Existing OpenAI/Google nodes
+are legacy compatibility branches only; new direct provider nodes and endpoints
+are rejected by `scripts/check-ai-runtime-boundary.mjs`.
+
 AI does not own final publication without validation.
+
+See `docs/architecture/cloudflare-ai-runtime.md` for the canonical boundary,
+task registry, model policy, authentication, rollout, and rollback behavior.
 
 ## Data conventions
 

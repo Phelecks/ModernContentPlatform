@@ -87,6 +87,8 @@ Key characteristics:
 │    → render → YouTube metadata → validate → quality gate        │
 │    → GitHub publish → D1 update → Meta social → social channels │
 │    → YouTube upload → video reference update                    │
+│  AI tasks call Cloudflare Access → mcp-ai-runtime Worker         │
+│    → fixed prompts/schemas → AI Gateway → Workers AI/OpenAI      │
 └────────┬──────────────────────────────────────┬────────────────┘
          │                                      │
          ▼                                      ▼
@@ -98,7 +100,8 @@ Key characteristics:
 │  - publish_jobs  │                 │  - metadata.json           │
 │  - workflow_logs │                 │  - video.json              │
 │  - sources       │                 └──────────────┬─────────────┘
-│  - openai_usage_log          │                   │
+│  - ai_invocations            │                   │
+│  - openai_usage_log (legacy) │                   │
 │  - meta_social_publish_log   │                   │
 │  - social_publish_log        │                   │
 │  - youtube_publish_log       │                   │
@@ -111,7 +114,7 @@ Key characteristics:
 │  Read APIs:  topics, timeline, day-status, navigation, sources  │
 │  Ops read:   operator-dashboard (X-Ops-Key auth, GET only)      │
 │  Write APIs: alerts, daily-status, publish-jobs, sources,       │
-│              workflow-logs, openai-usage-log,                   │
+│              workflow-logs, legacy openai-usage-log (410),      │
 │              meta-social-publish-log, social-publish-log,       │
 │              youtube-publish-log, rerun-log                     │
 │  Vue frontend: topic pages, homepage, timeline, operator dashboard, placeholders │
@@ -138,9 +141,12 @@ Key characteristics:
 | **Vue.js** | Frontend rendering — topic pages, homepage, timeline UI, placeholder states, source attribution display |
 | **Cloudflare Pages** | Static hosting and auto-deploy on GitHub push |
 | **Cloudflare Pages Functions** | Thin read APIs over D1 (timeline, day status, navigation, topics, sources) and authenticated write APIs for n8n workflow outputs |
-| **Cloudflare D1** | Live operational data — alerts, clusters, daily status, publish jobs, workflow logs, source registry, `openai_usage_log`, `meta_social_publish_log`, `social_publish_log`, `youtube_publish_log`, and `rerun_log` |
+| **Cloudflare AI Task Worker** | Sole AI execution runtime — task registry, prompt construction, schema validation, model routing/fallback, D1 telemetry, and R2 media storage |
+| **Cloudflare AI Gateway / Workers AI** | Primary inference, Unified Billing fallback, analytics, caching, retry/spend policy, and log correlation |
+| **Cloudflare D1** | Live operational data — alerts, clusters, daily status, publish jobs, workflow logs, source registry, provider-neutral `ai_invocations`, legacy `openai_usage_log`, social/youtube publish logs, and rerun state |
+| **Cloudflare R2** | Temporary generated image and narration assets, delivered through short-lived signed Worker URLs |
 | **GitHub** | Canonical store for final editorial content — summaries, articles, video metadata |
-| **n8n** | Orchestration — ingestion, normalization, clustering, classification, summarization, publishing, social delivery |
+| **n8n** | Orchestration — scheduling, ingestion, aggregation, invoking versioned AI tasks, publishing, and delivery |
 | **AI** | Classification, summarization, timeline phrasing, video scripts, image generation, narration (TTS), YouTube metadata, tomorrow outlooks |
 | **Telegram / Discord** | Intraday alert delivery and daily digest publishing |
 | **Meta (Instagram / Facebook)** | Daily feed posts and high-importance alert stories |
@@ -206,7 +212,7 @@ Key characteristics:
 │   │       ├── publish-jobs.js                   # Create and update publish jobs
 │   │       ├── sources.js                        # Register sources in the source registry
 │   │       ├── workflow-logs.js                  # Write workflow execution events
-│   │       ├── openai-usage-log.js               # Record per-task OpenAI usage
+│   │       ├── openai-usage-log.js               # Read-only legacy endpoint (POST returns 410)
 │   │       ├── meta-social-publish-log.js        # Log Meta publishing attempts
 │   │       ├── operator-dashboard.js             # Authenticated read view for ops data (publish jobs, workflow logs)
 │   │       ├── rerun-log.js                      # Track rerun and recovery operations
@@ -467,11 +473,11 @@ deliverables per phase, dependencies, risks, and the recommended best next step.
 ### v1 — Foundation (implemented)
 
 - [x] Repository structure and boundary definitions
-- [x] D1 schema: 13 migrations covering all tables, indexes, and constraints
+- [x] D1 schema: 15 migrations covering all tables, indexes, and constraints
 - [x] Source registry: `sources` table, trust tiers (T1–T4), source attribution on alerts
 - [x] Trust scoring: confidence adjustments, confirmation rules (`sourceTrust.js`)
 - [x] Cloudflare Pages Functions — read APIs: timeline, day-status, navigation, topics, sources
-- [x] Cloudflare Pages Functions — write APIs: alerts, daily-status, publish-jobs, sources, workflow-logs, openai-usage-log, meta-social-publish-log, social-publish-log, rerun-log, youtube-publish-log
+- [x] Cloudflare Pages Functions — write APIs for workflow state/publishing plus a disabled (410) legacy OpenAI usage endpoint; AI telemetry writes through the AI Worker D1 binding
 - [x] Cloudflare Pages Functions — ops read API: operator-dashboard (authenticated GET, X-Ops-Key, returns publish jobs, workflow logs, AI usage)
 - [x] Authentication helper for write endpoints (X-Write-Key header)
 - [x] Centralized D1 write helpers (`functions/lib/writers.js`)
@@ -487,13 +493,14 @@ deliverables per phase, dependencies, risks, and the recommended best next step.
 - [x] Workflow data contracts: source item, normalized item, classified alert, delivery payload, aggregate context, generation output, meta social asset, social content asset, runtime config
 - [x] Content model: article.md, summary.json, metadata.json, video.json per topic/date
 - [x] Media mode system: image_video (default) and full_video (reserved); provider capability validation
-- [x] AI provider system: OpenAI and Google; per-task model selection; cost controls and token caps
-- [x] AI provider failover: cross-provider task fallback with cost guardrails and structured failover logging
+- [x] Cloudflare AI Task Worker: fixed task/prompt/model registry, schema validation, Workers AI primary, Unified Billing fallback, D1 telemetry, and signed R2 media delivery
+- [x] n8n AI runtime selector: `legacy`, non-publishing `shadow`, and Cloudflare-authoritative branches across all current AI workflows
+- [x] Legacy AI provider system retained temporarily for measured shadow comparison and instant rollback
 - [x] Editorial quality gate (module 08b): rules-based checks that block unfit content before GitHub publish
 - [x] Social publishing: Meta (Instagram/Facebook) daily posts and alert stories
 - [x] Social publishing: X, Telegram, Discord daily digests and alert stories
 - [x] YouTube upload pipeline: modules 15–16, youtube_publish_log table, video reference written back to video.json
-- [x] Observability: workflow_logs, openai_usage_log, social publish logs, youtube_publish_log, rerun_log in D1
+- [x] Observability: workflow logs, provider-neutral `ai_invocations`, compatibility `openai_usage_log`, social/youtube publish logs, and rerun state in D1
 - [x] Operator dashboard: authenticated read-only page surfacing publish jobs, workflow logs, and social publish status
 - [x] Rerun and recovery workflows: tracked, idempotent reruns for daily publish, social publish, YouTube upload, and alert delivery
 - [x] Staging environment: staging branch, Promotion Gate CI workflow, separate D1 database, preview deployment at `staging.modern-content-platform.pages.dev`
@@ -506,6 +513,8 @@ deliverables per phase, dependencies, risks, and the recommended best next step.
 - [ ] Cloudflare D1 provisioned and migrations applied
 - [ ] Cloudflare Pages connected to this repository
 - [ ] n8n instance deployed and workflows configured
+- [ ] Cloudflare AI staging/production Gateways, Access applications, D1/R2 bindings, custom domains, lifecycle rules, and spend controls provisioned
+- [ ] Cloudflare AI task groups pass shadow evaluation and staged authoritative rollout
 - [ ] Telegram and Discord alert delivery wired and tested
 - [ ] YouTube upload activated and tested end-to-end (code complete; requires ENABLE_YOUTUBE_UPLOAD=true and YouTube OAuth credentials)
 - [ ] End-to-end cycle verified for all active topics

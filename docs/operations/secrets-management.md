@@ -1,5 +1,7 @@
 # Secrets and Environment Variables — Management Guide
 
+> For AI execution, the canonical requirements are in [Cloudflare AI Runtime](../architecture/cloudflare-ai-runtime.md): n8n stores only its environment-specific Access credential, while provider fallback uses AI Gateway Unified Billing. Direct provider credentials are legacy rollback secrets.
+
 This document is the canonical inventory of all secrets, API keys, and
 environment variables used across the platform. It covers required and
 optional variables, environment-specific usage, rotation guidance,
@@ -14,9 +16,9 @@ section.
 
 | Environment | Minimum required secrets | Where stored |
 |---|---|---|
-| **Local** | `OPENAI_API_KEY` (or `GOOGLE_API_KEY`), `WRITE_API_KEY` | `.env`, `.dev.vars` |
-| **Staging** | All production secrets with staging-scoped values | n8n env + credential store, Cloudflare Pages settings (preview) |
-| **Production** | All secrets listed as required below | n8n env + credential store, Cloudflare Pages settings (production) |
+| **Local** | Worker `LOCAL_DEV_TOKEN`, `ASSET_SIGNING_KEY`; Pages `WRITE_API_KEY` | Worker `.dev.vars.local`, Pages `.dev.vars` |
+| **Staging** | Staging Access service token in n8n; Worker `ASSET_SIGNING_KEY`; staging-scoped platform/delivery secrets | n8n credential store, Worker secrets, Cloudflare Pages settings |
+| **Production** | Production Access service token in n8n; Worker `ASSET_SIGNING_KEY`; production-scoped platform/delivery secrets | n8n credential store, Worker secrets, Cloudflare Pages settings |
 
 ---
 
@@ -160,11 +162,21 @@ openssl rand -hex 32
 
 ### 4. AI services
 
+The Cloudflare AI Runtime is the active target. Configure `AI_RUNTIME` and
+`AI_RUNTIME_URL` in n8n Settings -> Variables, and store the environment-specific
+Access service token in the `McpAiRuntimeAccess` HTTP Header Auth credential.
+Set `ASSET_SIGNING_KEY` with Wrangler in each Worker environment. Workers AI,
+D1, and R2 use bindings; the Unified Billing fallback does not require a
+provider key in n8n.
+
+The variables and credentials below apply only to `legacy` and `shadow` modes
+during the rollback window.
+
 | Variable | Required | Environments | Description |
 |---|---|---|---|
-| `AI_PROVIDER` | No | All | Active provider: `openai` (default) or `google` |
-| `OPENAI_API_KEY` | Yes when `AI_PROVIDER=openai` | All | OpenAI API key |
-| `GOOGLE_API_KEY` | Yes when `AI_PROVIDER=google` | All | Google API key (Gemini, Imagen, Cloud TTS) |
+| `AI_PROVIDER` | Legacy only | Rollback window | Legacy provider: `openai` (default) or `google` |
+| `OPENAI_API_KEY` | Legacy only | Rollback window | OpenAI key held in the n8n credential store |
+| `GOOGLE_API_KEY` | Legacy only | Rollback window | Google key held in the n8n credential store |
 
 **n8n credential setup:**
 - OpenAI: create an **OpenAI API** credential named `OpenAiApi` in n8n and
@@ -207,11 +219,11 @@ the full reference.
   production.
 
 **Missing-secret behavior:**
-- `parseAIProviderConfig()` throws `AI_PROVIDER_CONFIG_ERROR` when the
-  provider-specific API key is missing.
-- All AI workflow steps fail (classification, summary, article, etc.).
-- Alert ingestion and D1 writes still succeed — only AI-dependent steps are
-  affected.
+- In `cloudflare` or `shadow`, a missing `AI_RUNTIME_URL` or
+  `McpAiRuntimeAccess` credential fails the applicable AI task; authoritative
+  mode never silently returns to a direct provider.
+- In `legacy`, a missing provider credential fails the retained provider node.
+- Alert ingestion and non-AI D1 writes remain independent of these credentials.
 
 ---
 

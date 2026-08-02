@@ -1,23 +1,31 @@
 # Workflow Runtime Variables — Reference
 
+> AI execution is selected with `AI_RUNTIME=legacy|shadow|cloudflare`; see the canonical [Cloudflare AI Runtime](cloudflare-ai-runtime.md) guide. Provider/model variables below are legacy compatibility settings.
+
 ## Overview
 
-Modern Content Platform daily workflows support two key runtime selections that
-control which AI provider is used and how the daily video asset is produced:
+Modern Content Platform workflows use `AI_RUNTIME` as the authoritative AI
+execution selector. `AI_PROVIDER` remains only for the retained legacy branch,
+while `MEDIA_MODE` selects the downstream video strategy:
 
 | Variable | What it controls | Default |
 |----------|-----------------|---------|
-| `AI_PROVIDER` | Which AI backend runs all generation steps | `openai` |
+| `AI_RUNTIME` | AI execution path: `legacy`, `shadow`, or `cloudflare` | `legacy` |
+| `AI_RUNTIME_URL` | Environment-specific AI Task Worker origin | none |
+| `AI_RUNTIME_FAST`, `AI_RUNTIME_EDITORIAL`, `AI_RUNTIME_IMAGE`, `AI_RUNTIME_NARRATION` | Optional task-group promotion overrides | inherit `AI_RUNTIME` |
+| `AI_PROVIDER` | Provider used only by retained legacy nodes | `openai` |
 | `MEDIA_MODE` | Which media pipeline branch runs after script generation | `image_video` |
 
-Both variables are set in **n8n Settings → Variables** and take effect
+These variables are set in **n8n Settings → Variables** and take effect
 immediately on the next workflow execution without any code changes.
 
-The orchestrator resolves and validates these values once at the start of each
+The orchestrator resolves and validates the global values once at the start of each
 per-topic run (in the **Build Topic Context** node) and injects them into the
-run context. Every downstream sub-workflow reads `ai_provider` and `media_mode`
-from the context — not from `$vars` directly — so a single consistent config
-governs the entire run.
+run context. Each AI module resolves its optional group override and fails closed
+if the result is not `legacy`, `shadow`, or `cloudflare`.
+
+The remaining provider-specific sections describe the compatibility branch and
+must not be used for new AI integrations.
 
 ---
 

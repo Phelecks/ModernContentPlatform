@@ -6,10 +6,22 @@
   "type": "object",
   "required": ["provider", "model", "voice", "format", "audio_encoding", "audio_b64", "char_count", "generated_at", "warning"],
   "additionalProperties": false,
+  "allOf": [
+    {
+      "if": { "properties": { "format": { "const": "r2_url" } }, "required": ["format"] },
+      "then": {
+        "required": ["audio_url", "object_key"],
+        "properties": {
+          "audio_url": { "type": "string", "format": "uri", "minLength": 1 },
+          "object_key": { "type": "string", "minLength": 1, "maxLength": 1024 }
+        }
+      }
+    }
+  ],
   "properties": {
     "provider": {
       "type": "string",
-      "enum": ["openai", "google"],
+      "enum": ["openai", "google", "cloudflare"],
       "description": "The provider that generated this narration audio."
     },
     "model": {
@@ -26,8 +38,8 @@
     },
     "format": {
       "type": "string",
-      "enum": ["b64_json"],
-      "description": "Format of the returned audio data. Always 'b64_json' after normalization — both providers return or are converted to base64-encoded audio."
+      "enum": ["b64_json", "r2_url"],
+      "description": "Format of the returned audio data. Cloudflare AI Runtime stores generated narration in R2 and returns 'r2_url'."
     },
     "audio_encoding": {
       "type": "string",
@@ -37,6 +49,16 @@
     "audio_b64": {
       "type": ["string", "null"],
       "description": "Base64-encoded audio data. Null when generation failed and the asset carries only warning metadata."
+    },
+    "audio_url": {
+      "type": ["string", "null"],
+      "format": "uri",
+      "description": "Short-lived signed Worker URL for an R2 object. Present when format is 'r2_url'."
+    },
+    "object_key": {
+      "type": ["string", "null"],
+      "maxLength": 1024,
+      "description": "Environment-scoped R2 object key. Present when format is 'r2_url'."
     },
     "char_count": {
       "type": "integer",

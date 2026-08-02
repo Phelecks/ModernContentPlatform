@@ -131,6 +131,23 @@ const MINIMAL_IMAGE_ASSET_GOOGLE = {
   generated_at: '2025-01-15T10:00:00.000Z',
 }
 
+const MINIMAL_IMAGE_ASSET_CLOUDFLARE = {
+  images: [{
+    index: 0,
+    prompt: 'Professional technology news thumbnail with abstract processors',
+    provider: 'cloudflare',
+    model: '@cf/black-forest-labs/flux-2-dev',
+    format: 'r2_url',
+    url: 'https://ai.example.com/v1/assets/temporary/technology/image.png?expires=1&sig=x',
+    object_key: 'temporary/technology/2026-08-02/request/image.png',
+    generated_at: '2026-08-02T10:00:00.000Z',
+  }],
+  image_count: 1,
+  provider: 'cloudflare',
+  model: '@cf/black-forest-labs/flux-2-dev',
+  generated_at: '2026-08-02T10:00:00.000Z',
+}
+
 const MINIMAL_NARRATION_ASSET_OPENAI = {
   provider: 'openai',
   model: 'gpt-4o-mini-tts',
@@ -155,19 +172,35 @@ const MINIMAL_NARRATION_ASSET_GOOGLE = {
   warning: null,
 }
 
+const MINIMAL_NARRATION_ASSET_CLOUDFLARE = {
+  provider: 'cloudflare',
+  model: '@cf/deepgram/aura-2-en',
+  voice: 'asteria',
+  format: 'r2_url',
+  audio_encoding: 'mp3',
+  audio_b64: null,
+  audio_url: 'https://ai.example.com/v1/assets/temporary/finance/audio.mp3?expires=1&sig=x',
+  object_key: 'temporary/finance/2026-08-02/request/audio.mp3',
+  char_count: 800,
+  generated_at: '2026-08-02T10:00:00.000Z',
+  warning: null,
+}
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
 describe('image generation constants', () => {
-  it('VALID_IMAGE_FORMATS contains url and b64_json', () => {
+  it('VALID_IMAGE_FORMATS includes provider and R2 delivery formats', () => {
     expect(VALID_IMAGE_FORMATS).toContain('url')
     expect(VALID_IMAGE_FORMATS).toContain('b64_json')
+    expect(VALID_IMAGE_FORMATS).toContain('r2_url')
   })
 
-  it('VALID_IMAGE_PROVIDERS contains openai and google', () => {
+  it('VALID_IMAGE_PROVIDERS contains legacy providers and cloudflare', () => {
     expect(VALID_IMAGE_PROVIDERS).toContain('openai')
     expect(VALID_IMAGE_PROVIDERS).toContain('google')
+    expect(VALID_IMAGE_PROVIDERS).toContain('cloudflare')
   })
 
   it('VALID_IMAGE_MIME_TYPES contains image/png, image/jpeg, image/webp', () => {
@@ -186,14 +219,15 @@ describe('image generation constants', () => {
 })
 
 describe('TTS/narration constants', () => {
-  it('VALID_NARRATION_PROVIDERS contains openai and google', () => {
+  it('VALID_NARRATION_PROVIDERS contains legacy providers and cloudflare', () => {
     expect(VALID_NARRATION_PROVIDERS).toContain('openai')
     expect(VALID_NARRATION_PROVIDERS).toContain('google')
+    expect(VALID_NARRATION_PROVIDERS).toContain('cloudflare')
   })
 
-  it('VALID_NARRATION_FORMATS contains b64_json', () => {
+  it('VALID_NARRATION_FORMATS contains b64_json and r2_url', () => {
     expect(VALID_NARRATION_FORMATS).toContain('b64_json')
-    expect(VALID_NARRATION_FORMATS).toHaveLength(1)
+    expect(VALID_NARRATION_FORMATS).toContain('r2_url')
   })
 
   it('VALID_NARRATION_AUDIO_ENCODINGS includes mp3, opus, aac, flac, wav, pcm', () => {
@@ -430,6 +464,20 @@ describe('provider-specific format — Google image asset', () => {
   })
 })
 
+describe('provider-specific format — Cloudflare image asset', () => {
+  it('accepts r2_url with both a signed URL and object key', () => {
+    expect(validateImageGenerationAsset(MINIMAL_IMAGE_ASSET_CLOUDFLARE)).toEqual({ ok: true, errors: [] })
+  })
+
+  it('rejects r2_url when its object key is missing', () => {
+    const image = { ...MINIMAL_IMAGE_ASSET_CLOUDFLARE.images[0] }
+    delete image.object_key
+    const result = validateImageGenerationAsset({ ...MINIMAL_IMAGE_ASSET_CLOUDFLARE, images: [image] })
+    expect(result.ok).toBe(false)
+    expect(result.errors.some(error => error.includes('object_key'))).toBe(true)
+  })
+})
+
 // ---------------------------------------------------------------------------
 // 3. Provider-specific format validation — narration asset
 // ---------------------------------------------------------------------------
@@ -472,6 +520,20 @@ describe('provider-specific format — Google narration asset', () => {
     const { ok, errors } = validateNarrationAsset(obj)
     expect(ok).toBe(false)
     expect(errors.some(e => e.includes('provider'))).toBe(true)
+  })
+})
+
+describe('provider-specific format — Cloudflare narration asset', () => {
+  it('accepts r2_url with both a signed URL and object key', () => {
+    expect(validateNarrationAsset(MINIMAL_NARRATION_ASSET_CLOUDFLARE)).toEqual({ ok: true, errors: [] })
+  })
+
+  it('rejects r2_url when its signed URL is missing', () => {
+    const asset = { ...MINIMAL_NARRATION_ASSET_CLOUDFLARE }
+    delete asset.audio_url
+    const result = validateNarrationAsset(asset)
+    expect(result.ok).toBe(false)
+    expect(result.errors.some(error => error.includes('audio_url'))).toBe(true)
   })
 })
 

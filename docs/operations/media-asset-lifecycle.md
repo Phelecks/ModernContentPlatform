@@ -1,5 +1,7 @@
 # Media Asset Lifecycle
 
+> Generated image and narration binaries use temporary environment-specific R2 storage and signed Worker URLs when `AI_RUNTIME=cloudflare`. See [Cloudflare AI Runtime](../architecture/cloudflare-ai-runtime.md); legacy provider payload rules below remain compatible.
+
 This document defines how generated media assets — images, narration audio, rendered videos, captions, and social media derivatives — are stored, named, versioned, and cleaned up across the Modern Content Platform.
 
 It complements:

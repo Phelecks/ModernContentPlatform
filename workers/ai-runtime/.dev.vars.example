@@ -1,0 +1,4 @@
+# Copy to .dev.vars.local before running npm run dev.
+# Never reuse these development values in staging or production.
+LOCAL_DEV_TOKEN=replace-with-a-random-local-token
+ASSET_SIGNING_KEY=replace-with-a-different-random-local-signing-key
