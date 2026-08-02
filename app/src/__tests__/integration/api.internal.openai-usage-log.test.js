@@ -85,18 +85,15 @@ describe('POST /api/internal/openai-usage-log', () => {
     expect(body.error).toMatch(/error_message/i)
   })
 
-  it('returns 201 for successful usage log write', async () => {
+  it('returns 410 for a formerly valid usage log write', async () => {
     const ctx = makeCtx(db, validPayload(), { 'X-Write-Key': WRITE_KEY })
     const res = await onRequestPost(ctx)
-    expect(res.status).toBe(201)
+    expect(res.status).toBe(410)
     const body = await res.json()
-    expect(body).toHaveProperty('id')
-    expect(body.task).toBe('dailySummary')
-    expect(body.model).toBe('gpt-4o')
-    expect(body.status).toBe('ok')
+    expect(body.error).toMatch(/read-only legacy compatibility surface/i)
   })
 
-  it('returns 201 for retry usage log with failure details', async () => {
+  it('returns 410 for a formerly valid retry usage log', async () => {
     const ctx = makeCtx(db, validPayload({
       task: 'alertClassification',
       model: 'gpt-4o-mini',
@@ -110,15 +107,13 @@ describe('POST /api/internal/openai-usage-log', () => {
       date_key: null
     }), { 'X-Write-Key': WRITE_KEY })
     const res = await onRequestPost(ctx)
-    expect(res.status).toBe(201)
-    const body = await res.json()
-    expect(body.status).toBe('retry')
+    expect(res.status).toBe(410)
   })
 
-  it('returns 201 when request_latency_ms is null', async () => {
+  it('returns 410 when request_latency_ms is null and the payload is otherwise valid', async () => {
     const ctx = makeCtx(db, validPayload({ request_latency_ms: null }), { 'X-Write-Key': WRITE_KEY })
     const res = await onRequestPost(ctx)
-    expect(res.status).toBe(201)
+    expect(res.status).toBe(410)
   })
 
   it('returns 400 when request_latency_ms exceeds maximum', async () => {
@@ -129,14 +124,12 @@ describe('POST /api/internal/openai-usage-log', () => {
     expect(body.error).toMatch(/request_latency_ms/i)
   })
 
-  it('defaults status and token fields when omitted', async () => {
+  it('returns 410 after applying compatibility defaults', async () => {
     const ctx = makeCtx(db, {
       task: 'youtubeMetadata',
       model: 'gpt-4o-mini'
     }, { 'X-Write-Key': WRITE_KEY })
     const res = await onRequestPost(ctx)
-    expect(res.status).toBe(201)
-    const body = await res.json()
-    expect(body.status).toBe('ok')
+    expect(res.status).toBe(410)
   })
 })

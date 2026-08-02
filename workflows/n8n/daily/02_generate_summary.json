@@ -54,8 +54,8 @@
       "type": "n8n-nodes-base.openAi",
       "typeVersion": 1,
       "position": [
-        680,
-        300
+        1200,
+        140
       ],
       "credentials": {
         "openAiApi": {
@@ -80,6 +80,196 @@
         900,
         300
       ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ ($vars.AI_RUNTIME_EDITORIAL || $vars.AI_RUNTIME || 'legacy').toLowerCase() }}",
+                    "rightValue": "legacy",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "legacy"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ ($vars.AI_RUNTIME_EDITORIAL || $vars.AI_RUNTIME || 'legacy').toLowerCase() }}",
+                    "rightValue": "shadow",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "shadow"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ ($vars.AI_RUNTIME_EDITORIAL || $vars.AI_RUNTIME || 'legacy').toLowerCase() }}",
+                    "rightValue": "cloudflare",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "cloudflare"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "f3037d40-a100-4f00-8000-f3037d40f303",
+      "name": "AI Runtime Route",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ ($vars.AI_RUNTIME_URL || '').replace(/\\/$/, '') + '/v1/tasks/dailySummary' }}",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { request_id: String($execution.id) + '-dailySummary-' + String($itemIndex), execution_id: String($execution.id), topic_slug: $json.topic_slug || undefined, date_key: $json.date_key || undefined, input: $json, cache_mode: $json.force_regenerate ? 'refresh' : 'reuse' } }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "bee98a14-a100-4f00-8000-bee98a14bee9",
+      "name": "Call AI Runtime",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        940,
+        420
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "mcp-ai-runtime-access",
+          "name": "McpAiRuntimeAccess"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ ($vars.AI_RUNTIME_URL || '').replace(/\\/$/, '') + '/v1/tasks/dailySummary' }}",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { request_id: String($execution.id) + '-dailySummary-' + String($itemIndex), execution_id: String($execution.id), topic_slug: $json.topic_slug || undefined, date_key: $json.date_key || undefined, input: $json, cache_mode: $json.force_regenerate ? 'refresh' : 'reuse' } }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "8fee95f1-a100-4f00-8000-8fee95f18fee",
+      "name": "Call AI Runtime (Shadow)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        940,
+        620
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "mcp-ai-runtime-access",
+          "name": "McpAiRuntimeAccess"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst content = typeof response.output === 'string' ? response.output : JSON.stringify(response.output);\nreturn [{ json: { message: { content }, _ai_runtime_meta: response.meta || null } }];"
+      },
+      "id": "78e88410-a100-4f00-8000-78e8841078e8",
+      "name": "Normalize AI Runtime Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const original = $('Build Prompt Context').item.json;\nreturn [{ json: { ...original, _ai_shadow: $input.first().json } }];"
+      },
+      "id": "42cd713b-a100-4f00-8000-42cd713b42cd",
+      "name": "Shadow: Restore Legacy Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        620
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "throw new Error('AI_RUNTIME_CONFIG_ERROR: AI_RUNTIME_EDITORIAL or AI_RUNTIME must be legacy, shadow, or cloudflare.');"
+      },
+      "id": "648d1d1d-a100-4f00-8000-648d1d1d648d",
+      "name": "Invalid AI Runtime",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        940,
+        800
+      ]
     }
   ],
   "connections": {
@@ -98,7 +288,7 @@
       "main": [
         [
           {
-            "node": "Generate Summary with AI",
+            "node": "AI Runtime Route",
             "type": "main",
             "index": 0
           }
@@ -110,6 +300,88 @@
         [
           {
             "node": "Parse and Validate Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Runtime Route": {
+      "legacy": [
+        [
+          {
+            "node": "Generate Summary with AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "shadow": [
+        [
+          {
+            "node": "Call AI Runtime (Shadow)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "cloudflare": [
+        [
+          {
+            "node": "Call AI Runtime",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "extra": [
+        [
+          {
+            "node": "Invalid AI Runtime",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call AI Runtime": {
+      "main": [
+        [
+          {
+            "node": "Normalize AI Runtime Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize AI Runtime Response": {
+      "main": [
+        [
+          {
+            "node": "Parse and Validate Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call AI Runtime (Shadow)": {
+      "main": [
+        [
+          {
+            "node": "Shadow: Restore Legacy Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shadow: Restore Legacy Input": {
+      "main": [
+        [
+          {
+            "node": "Generate Summary with AI",
             "type": "main",
             "index": 0
           }

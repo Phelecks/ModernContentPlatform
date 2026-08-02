@@ -57,20 +57,24 @@ fi
 # COMPOSE_PROJECT overrides the Docker Compose project name (maps to the -p flag).
 # Leave empty to use the default project name derived from the compose file directory.
 COMPOSE_PROJECT=""
+ENV_FILE=""
 
 case "$ENV" in
   local)
     COMPOSE_FILE="${REPO_ROOT}/n8n/docker-compose.yml"
     SERVICE_NAME="n8n"
+    ENV_FILE="${REPO_ROOT}/.env"
     ;;
   staging)
     COMPOSE_FILE="${REPO_ROOT}/n8n/docker-compose.production.yml"
     SERVICE_NAME="n8n"
     COMPOSE_PROJECT="n8n-staging"
+    ENV_FILE="${REPO_ROOT}/n8n/.env.staging"
     ;;
   production)
     COMPOSE_FILE="${REPO_ROOT}/n8n/docker-compose.production.yml"
     SERVICE_NAME="n8n"
+    ENV_FILE="${REPO_ROOT}/n8n/.env.production"
     ;;
   *)
     echo "Error: Unknown environment '${ENV}'. Use 'local', 'staging', or 'production'."
@@ -83,8 +87,13 @@ if [[ ! -f "$COMPOSE_FILE" ]]; then
   exit 1
 fi
 
+if [[ ! -f "$ENV_FILE" ]]; then
+  echo "Error: Environment file not found: ${ENV_FILE}"
+  exit 1
+fi
+
 # Build the base docker compose command, including -p when a project name is set.
-COMPOSE_CMD=(docker compose -f "$COMPOSE_FILE")
+COMPOSE_CMD=(docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE")
 if [[ -n "$COMPOSE_PROJECT" ]]; then
   COMPOSE_CMD+=(-p "$COMPOSE_PROJECT")
 fi

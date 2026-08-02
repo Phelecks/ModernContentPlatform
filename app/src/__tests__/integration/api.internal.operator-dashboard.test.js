@@ -282,6 +282,40 @@ describe('GET /api/internal/operator-dashboard', () => {
     expect(body.ai_usage_summary.recent.length).toBe(2)
   })
 
+  it('combines provider-neutral runtime telemetry with legacy usage', async () => {
+    db.seed('ai_invocations', [{
+      id: 20,
+      request_id: 'request-runtime-1',
+      task: 'dailySummary',
+      provider: 'workers-ai',
+      model: '@cf/openai/gpt-oss-120b',
+      topic_slug: 'finance',
+      date_key: '2025-01-16',
+      total_tokens: 1200,
+      status: 'ok',
+      fallback_used: 0,
+      cache_status: 'miss',
+      created_at: '2025-01-16T20:00:00Z'
+    }])
+    db.seed('openai_usage_log', [{
+      id: 1,
+      task: 'alertClassification',
+      model: 'gpt-4o-mini',
+      topic_slug: 'crypto',
+      date_key: '2025-01-15',
+      total_tokens: 500,
+      status: 'ok',
+      created_at: '2025-01-15T19:00:00Z'
+    }])
+
+    const res = await onRequestGet(makeCtx(db, { 'X-Ops-Key': OPS_KEY }))
+    const body = await res.json()
+
+    expect(body.ai_usage_summary.total_calls).toBe(2)
+    expect(body.ai_usage_summary.recent[0].provider).toBe('workers-ai')
+    expect(body.ai_usage_summary.recent[1].provider).toBe('openai')
+  })
+
   it('returns seeded social publish failures', async () => {
     db.seed('social_publish_log', [
       {

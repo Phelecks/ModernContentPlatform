@@ -79,7 +79,7 @@ export default defineConfig({
   server: {
     // Proxy /api/* to the local wrangler pages dev server so that
     // `npm run dev` (port 5173) can call Pages Functions without a rebuild.
-    // Start wrangler in a second terminal: wrangler pages dev app/dist --d1=DB
+    // Start wrangler in a second terminal: wrangler pages dev app/dist --d1 DB=YOUR_PRODUCTION_D1_DATABASE_ID
     proxy: {
       '/api': {
         target: 'http://localhost:8788',

@@ -455,7 +455,7 @@ class MockStatement {
 // ---- Database ----
 
 const KNOWN_TABLES = new Set([
-  'topics', 'alerts', 'event_clusters', 'daily_status', 'publish_jobs', 'workflow_logs', 'openai_usage_log', 'sources', 'meta_social_publish_log', 'social_publish_log', 'youtube_publish_log', 'rerun_log', 'summary_index'
+  'topics', 'alerts', 'event_clusters', 'daily_status', 'publish_jobs', 'workflow_logs', 'openai_usage_log', 'ai_invocations', 'sources', 'meta_social_publish_log', 'social_publish_log', 'youtube_publish_log', 'rerun_log', 'summary_index'
 ])
 
 // UNIQUE constraints per table (mirrors D1 schema constraints).

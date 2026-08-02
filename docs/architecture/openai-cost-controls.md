@@ -1,5 +1,7 @@
 # OpenAI Cost Controls and Usage Guardrails
 
+> Legacy compatibility reference. Use the [Cloudflare AI Runtime](cloudflare-ai-runtime.md) Gateway, telemetry, cache, spend-limit, and rollout policy for new AI execution. `AI_MODEL_FAST`, `AI_MODEL_STANDARD`, and `openai_usage_log` remain temporary rollback surfaces.
+
 ## Overview
 
 OpenAI is usage-based. Cost depends on:
@@ -263,7 +265,7 @@ the budget for that task and topic.
 
 ### Local and staging observability guidance
 
-- **Local:** run `wrangler pages dev ... --d1=DB` and POST sample records to
+- **Local:** run `wrangler pages dev ... --d1 DB=YOUR_PRODUCTION_D1_DATABASE_ID` and POST sample records to
   `/api/internal/openai-usage-log` using a `.dev.vars` `WRITE_API_KEY`.
 - **Staging:** enable the same endpoint + key, then wire all OpenAI n8n nodes
   to emit usage rows before promoting changes to production.

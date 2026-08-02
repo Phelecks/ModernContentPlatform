@@ -45,8 +45,8 @@ export const VALID_SOURCE_ROLES_SUMMARY = ['primary', 'confirmation', 'data', 'c
 export const VALID_SOURCE_ROLES_VIDEO = ['primary', 'data', 'commentary']
 export const VALID_LABEL_COLORS = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'gray']
 export const VALID_VISIBILITIES = ['public', 'unlisted', 'private']
-export const VALID_IMAGE_FORMATS = ['url', 'b64_json']
-export const VALID_IMAGE_PROVIDERS = ['openai', 'google']
+export const VALID_IMAGE_FORMATS = ['url', 'b64_json', 'r2_url']
+export const VALID_IMAGE_PROVIDERS = ['openai', 'google', 'cloudflare']
 export const VALID_IMAGE_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp']
 
 // ---------------------------------------------------------------------------
@@ -729,6 +729,13 @@ export function validateImageGenerationAsset(obj) {
         if (img.mime_type !== null && img.mime_type !== undefined && !VALID_IMAGE_MIME_TYPES.includes(img.mime_type)) {
           errors.push(`${prefix}.mime_type "${img.mime_type}" is invalid. Expected one of: ${VALID_IMAGE_MIME_TYPES.join(', ')}.`)
         }
+      } else if (img.format === 'r2_url') {
+        if (!isString(img.url, 1)) {
+          errors.push(`${prefix}.url must be a non-empty string when format is 'r2_url'.`)
+        }
+        if (!isString(img.object_key, 1, 1024)) {
+          errors.push(`${prefix}.object_key must be a non-empty string when format is 'r2_url'.`)
+        }
       }
 
       if (!isString(img.generated_at, 10)) {
@@ -786,8 +793,8 @@ export function parseAndValidateImageGenerationAsset(obj) {
 // Narration asset
 // ---------------------------------------------------------------------------
 
-export const VALID_NARRATION_PROVIDERS = ['openai', 'google']
-export const VALID_NARRATION_FORMATS = ['b64_json']
+export const VALID_NARRATION_PROVIDERS = ['openai', 'google', 'cloudflare']
+export const VALID_NARRATION_FORMATS = ['b64_json', 'r2_url']
 export const VALID_NARRATION_AUDIO_ENCODINGS = ['mp3', 'opus', 'aac', 'flac', 'wav', 'pcm']
 
 /**
@@ -843,6 +850,15 @@ export function validateNarrationAsset(obj) {
     errors.push('audio_b64 must be present (null or a non-empty base64 string).')
   } else if (obj.audio_b64 !== null && !isString(obj.audio_b64, 1)) {
     errors.push('audio_b64 must be a non-empty string or null.')
+  }
+
+  if (obj.format === 'r2_url') {
+    if (!isString(obj.audio_url, 1)) {
+      errors.push('audio_url must be a non-empty string when format is r2_url.')
+    }
+    if (!isString(obj.object_key, 1, 1024)) {
+      errors.push('object_key must be a non-empty string when format is r2_url.')
+    }
   }
 
   if (!Number.isInteger(obj.char_count) || obj.char_count < 1) {

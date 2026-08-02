@@ -1,5 +1,7 @@
 # AI Provider Modes and Media Generation Modes
 
+> The provider selector in this document applies only to the retained legacy media branch. Cloudflare-authoritative image and narration execution is defined by the [Cloudflare AI Runtime](architecture/cloudflare-ai-runtime.md).
+
 This document is the practical reference for configuring AI providers and media
 generation modes in Modern Content Platform. It is the recommended starting
 point for new contributors and for anyone setting up a local, staging, or

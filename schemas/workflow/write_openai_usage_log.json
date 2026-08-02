@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "write_openai_usage_log",
   "title": "Write OpenAI Usage Log Payload",
-  "description": "Payload for POST /api/internal/openai-usage-log. Records one OpenAI task execution attempt for observability and cost analysis.",
+  "description": "Legacy compatibility payload. POST /api/internal/openai-usage-log now returns 410; provider-neutral AI Runtime telemetry is written to ai_invocations through the Worker D1 binding.",
   "type": "object",
   "required": ["task", "model"],
   "properties": {

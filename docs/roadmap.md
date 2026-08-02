@@ -2,9 +2,9 @@
 
 ## Overview
 
-This document defines the recommended build order for Modern Content Platform v1.
-It is dependency-aware, architecture-first, and scoped to deliver a working
-intraday alert flow and daily editorial flow before adding enhancements.
+This document tracks deployment and validation of the committed platform. It no
+longer assumes a fixed subset of workflows or migrations: CI parses every
+workflow JSON and the inventory below reflects the current repository.
 
 Each phase lists its prerequisites, concrete deliverables, and risks.
 Phases within the same group may overlap once their direct dependencies are met.
@@ -22,9 +22,12 @@ They do **not** need to be re-implemented; they need to be wired and deployed.
 | Topic seed data | `db/seeds/topics.sql` | ✅ Ready |
 | Pages Functions — topics, timeline, day-status, navigation | `functions/` | ✅ Ready |
 | Vue frontend — pages, components, router, services | `app/src/` | ✅ Ready |
-| n8n intraday workflow modules (01–09 + orchestrator) | `workflows/n8n/intraday/` | ✅ Ready |
-| n8n daily workflow modules (01–10 + orchestrator) | `workflows/n8n/daily/` | ✅ Ready |
-| AI schemas — all 7 output shapes | `schemas/ai/` | ✅ Ready |
+| n8n intraday workflows — 16 files (00 smoke tests, 01–12 modules, orchestrator, rerun) | `workflows/n8n/intraday/` | ✅ Ready |
+| n8n daily workflows — 25 files (01–16 including 06b–d/08b, orchestrator, reruns) | `workflows/n8n/daily/` | ✅ Ready |
+| Shared n8n workflow — failure notifier | `workflows/n8n/shared/` | ✅ Ready |
+| AI schemas — 12 output contracts | `schemas/ai/` | ✅ Ready |
+| Cloudflare AI Task Worker and tests | `workers/ai-runtime/` | ✅ Code ready; infrastructure pending |
+| D1 schema — 15 ordered migrations | `db/migrations/` | ✅ Code ready; remote apply pending |
 | Workflow contracts — intraday and daily | `workflows/contracts/` | ✅ Ready |
 | Architecture docs — intraday and daily flows | `docs/architecture/` | ✅ Ready |
 | Wrangler config (placeholder database ID) | `wrangler.toml` | ⚠️ Needs real ID |
@@ -57,9 +60,7 @@ Phase 9 (end-to-end) depends on all prior phases.
 
 - [ ] Cloudflare D1 database created (`modern-content-platform-db`)
 - [ ] `wrangler.toml` updated with the real `database_id`
-- [ ] D1 migrations applied in order:
-  - `0001_init.sql`
-  - `0002_event_clusters_unique.sql`
+- [ ] All migrations in `db/migrations/` applied in filename order (currently `0001` through `0015`)
 - [ ] Topic seed data loaded (`db/seeds/topics.sql`)
 - [ ] Cloudflare Pages project created and connected to this GitHub repository
   (see [`docs/operations/cloudflare-pages-deployment.md`](operations/cloudflare-pages-deployment.md) for the full guide)
@@ -68,13 +69,17 @@ Phase 9 (end-to-end) depends on all prior phases.
   - Build output directory: `app/dist`
 - [ ] Wrangler CLI authenticated and confirmed working
 - [ ] D1 binding `DB` confirmed available to Pages Functions
+- [ ] `mcp-ai-runtime-staging` and `mcp-ai-runtime` Workers configured and deployed
+- [ ] `mcp-ai-staging` and `mcp-ai-production` AI Gateways created from the checked-in policy
+- [ ] Staging and production Access applications/service-auth policies created for `/v1/tasks/*`
+- [ ] Environment-specific AI asset R2 buckets created with a seven-day `temporary/` lifecycle
+- [ ] `ASSET_SIGNING_KEY` set independently in staging and production
 
 ### How to apply migrations
 
 ```bash
 # Apply to remote D1
-npx wrangler d1 execute modern-content-platform-db --remote --file db/migrations/0001_init.sql
-npx wrangler d1 execute modern-content-platform-db --remote --file db/migrations/0002_event_clusters_unique.sql
+bash scripts/d1-migrate-remote.sh production
 
 # Seed topics
 npx wrangler d1 execute modern-content-platform-db --remote --file db/seeds/topics.sql
@@ -170,17 +175,20 @@ curl https://<your-pages-domain>/api/navigation/crypto/2025-01-01
 
 - [ ] n8n instance deployed (self-hosted)
 - [ ] `failure_notifier.json` imported and noted workflow ID
-- [ ] Intraday modules 01–09 imported and noted workflow IDs
+- [ ] Intraday modules 01–12 imported and noted workflow IDs
 - [ ] Intraday `orchestrator.json` imported
 - [ ] n8n credentials configured:
   - `CloudflareD1Api` — HTTP header auth with Cloudflare API token (D1:Edit permission)
-  - `OpenAiApi` — OpenAI API key
+  - `McpAiRuntimeAccess` — single-header Cloudflare Access service token JSON
+  - `OpenAiApi` — legacy rollback credential during the compatibility window
   - `TelegramBotApi` — Telegram bot token
 - [ ] n8n variables set (see `workflows/n8n/intraday/README.md` for full list):
   - All `*_WORKFLOW_ID` variables pointing to imported workflows
   - `CF_ACCOUNT_ID`, `CF_D1_DATABASE_ID`
   - `ALERT_IMPORTANCE_THRESHOLD`, `ALERT_SEVERITY_THRESHOLD`, `ALERT_CONFIDENCE_THRESHOLD`
-  - `AI_MODEL_FAST` (default: `gpt-4o-mini`) — OpenAI model for alert classification
+  - `AI_RUNTIME` and `AI_RUNTIME_URL`; begin with `AI_RUNTIME=shadow`
+  - Optional `AI_RUNTIME_FAST` override for staged classification promotion
+  - `AI_MODEL_FAST` only while the legacy rollback branch is retained
   - `TELEGRAM_CHAT_ID`, `DISCORD_WEBHOOK_URL`
   - `FAILURE_ALERT_CHANNEL`
   - `INTRADAY_SOURCES_JSON` (optional — default public RSS sources used if omitted)
@@ -194,7 +202,7 @@ curl https://<your-pages-domain>/api/navigation/crypto/2025-01-01
 ### Import order (mandatory)
 
 1. `workflows/n8n/shared/failure_notifier.json`
-2. `workflows/n8n/intraday/01_source_ingestion.json` through `09_discord_delivery.json`
+2. `workflows/n8n/intraday/01_source_ingestion.json` through `12_delivery_retry.json`
 3. `workflows/n8n/intraday/orchestrator.json`
 
 Set all `*_WORKFLOW_ID` variables after import, before activating the orchestrator.
@@ -239,20 +247,21 @@ Set all `*_WORKFLOW_ID` variables after import, before activating the orchestrat
 
 ## Phase 6 — Daily Editorial Pipeline
 
-**Goal:** Run a complete daily editorial cycle — from alert aggregation through GitHub publishing and D1 state update.
+**Goal:** Run a complete daily editorial cycle — from alert aggregation through media/social generation, GitHub publishing, and D1 state update.
 
 **Depends on:** Phase 4 (D1 must have at least one day of alerts for the target topic).
 
 ### Deliverables
 
-- [ ] Daily modules 01–10 imported and noted workflow IDs
+- [ ] Daily modules 01–16, including 06b–06d and 08b, imported and noted workflow IDs
 - [ ] Daily `orchestrator.json` imported
 - [ ] n8n variables set (see daily orchestrator for full list):
   - All `DAILY_*_WORKFLOW_ID` variables
   - `CF_ACCOUNT_ID`, `CF_D1_DATABASE_ID`
   - `CF_API_TOKEN` (Cloudflare API token with D1:Edit permission — used by module 01 when marking a publish job as failed on the no-alerts path)
-  - `AI_MODEL_STANDARD` (default: `gpt-4o`) — OpenAI model for editorial generation
-  - `AI_MODEL_FAST` (default: `gpt-4o-mini`) — OpenAI model for YouTube metadata generation
+  - `AI_RUNTIME` and `AI_RUNTIME_URL`; start in `shadow`
+  - Optional `AI_RUNTIME_EDITORIAL`, `AI_RUNTIME_FAST`, `AI_RUNTIME_IMAGE`, and `AI_RUNTIME_NARRATION` staged-rollout overrides
+  - `AI_MODEL_STANDARD` and `AI_MODEL_FAST` only while the legacy rollback branch is retained
   - `GITHUB_REPO_OWNER`, `GITHUB_REPO_NAME`, `GITHUB_CONTENT_BRANCH`
   - `GITHUB_TOKEN` (fine-grained personal access token with `contents:write` on this repo)
   - `CLOUDFLARE_PAGES_DEPLOY_HOOK` (optional — webhook URL to trigger redeploy)
@@ -269,10 +278,28 @@ Set all `*_WORKFLOW_ID` variables after import, before activating the orchestrat
 
 ### Import order (mandatory)
 
-1. Daily modules `01` through `10` (if not already imported via shared failure_notifier)
+1. Daily modules `01` through `16`, including lettered modules `06b`–`06d` and `08b`
 2. `workflows/n8n/daily/orchestrator.json`
 
 Set all `DAILY_*_WORKFLOW_ID` variables before activating.
+
+### Cloudflare AI promotion gates
+
+Before changing any task group from `shadow` to authoritative execution, build
+and review a dataset with at least 100 labeled classification items and 20
+Finance/Crypto topic-days. Promotion requires:
+
+- 100% schema-valid output and at least 95% agreement on `send_alert`.
+- Classification score mean absolute error no greater than 10 points.
+- No source-attribution or trust-tier regressions and no module 08b publish blocks.
+- Blind editorial review rates the Workers AI result equal or better in at least 80% of samples.
+- Worker p95 latency is within 20% of the measured legacy baseline and average task cost does not exceed it.
+- At least 20 image prompts and 20 narration samples pass topic relevance, unwanted text/logo, intelligibility, signed-R2 delivery, and render-provider consumption checks.
+
+Promote each task group through `shadow`, 10%, 50%, and 100%. Require two clean
+intraday cycles for fast tasks and seven clean topic-day runs for editorial/media
+at each full-authoritative stage. After 100%, keep rollback credentials for 14
+consecutive successful daily cycles before removing the legacy branch.
 
 ### Risks
 

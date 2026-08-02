@@ -79,8 +79,8 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
       "position": [
-        680,
-        300
+        1200,
+        140
       ]
     },
     {
@@ -196,7 +196,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Validate the normalized image generation asset against the shared contract.\n// Non-blocking: logs a warning but does not throw, so a failed image step\n// never blocks the rest of the daily editorial pipeline.\n\nconst VALID_PROVIDERS = ['openai', 'google'];\nconst VALID_FORMATS = ['url', 'b64_json'];\n\nconst ctx = $input.first().json;\nconst asset = ctx.image_assets;\n\nconst errors = [];\n\nif (!asset || typeof asset !== 'object') {\n  errors.push('image_assets is missing or not an object');\n} else {\n  if (!Array.isArray(asset.images) || asset.images.length === 0) {\n    errors.push('image_assets.images must be a non-empty array');\n  } else {\n    asset.images.forEach((img, i) => {\n      if (!img || typeof img !== 'object') { errors.push(`images[${i}] not an object`); return; }\n      if (typeof img.index !== 'number') errors.push(`images[${i}].index missing`);\n      if (!img.prompt || img.prompt.length < 10) errors.push(`images[${i}].prompt missing or too short`);\n      if (!VALID_PROVIDERS.includes(img.provider)) errors.push(`images[${i}].provider invalid`);\n      if (!img.model) errors.push(`images[${i}].model missing`);\n      if (!VALID_FORMATS.includes(img.format)) errors.push(`images[${i}].format invalid`);\n      if (img.format === 'url' && !img.url) errors.push(`images[${i}].url missing for url format`);\n      if (img.format === 'b64_json' && !img.b64_json) errors.push(`images[${i}].b64_json missing for b64_json format`);\n      if (!img.generated_at) errors.push(`images[${i}].generated_at missing`);\n    });\n  }\n  if (typeof asset.image_count !== 'number') errors.push('image_assets.image_count missing');\n  if (!VALID_PROVIDERS.includes(asset.provider)) errors.push('image_assets.provider invalid');\n  if (!asset.model) errors.push('image_assets.model missing');\n  if (!asset.generated_at) errors.push('image_assets.generated_at missing');\n}\n\nif (errors.length > 0) {\n  // Non-blocking: attach errors as a warning field rather than throwing\n  console.warn(\n    `Image asset validation warnings for ${ctx.topic_slug}/${ctx.date_key} (${errors.length}):`,\n    errors.join(', ')\n  );\n  return [{ json: { ...ctx, image_asset_warnings: errors } }];\n}\n\nreturn [{ json: { ...ctx, image_asset_warnings: null } }];"
+        "jsCode": "// Validate the normalized image generation asset against the shared contract.\n// Non-blocking: logs a warning but does not throw, so a failed image step\n// never blocks the rest of the daily editorial pipeline.\n\nconst VALID_PROVIDERS = ['openai', 'google', 'cloudflare'];\nconst VALID_FORMATS = ['url', 'b64_json', 'r2_url'];\n\nconst ctx = $input.first().json;\nconst asset = ctx.image_assets;\n\nconst errors = [];\n\nif (!asset || typeof asset !== 'object') {\n  errors.push('image_assets is missing or not an object');\n} else {\n  if (!Array.isArray(asset.images) || asset.images.length === 0) {\n    errors.push('image_assets.images must be a non-empty array');\n  } else {\n    asset.images.forEach((img, i) => {\n      if (!img || typeof img !== 'object') { errors.push(`images[${i}] not an object`); return; }\n      if (typeof img.index !== 'number') errors.push(`images[${i}].index missing`);\n      if (!img.prompt || img.prompt.length < 10) errors.push(`images[${i}].prompt missing or too short`);\n      if (!VALID_PROVIDERS.includes(img.provider)) errors.push(`images[${i}].provider invalid`);\n      if (!img.model) errors.push(`images[${i}].model missing`);\n      if (!VALID_FORMATS.includes(img.format)) errors.push(`images[${i}].format invalid`);\n      if (img.format === 'url' && !img.url) errors.push(`images[${i}].url missing for url format`);\n      if (img.format === 'b64_json' && !img.b64_json) errors.push(`images[${i}].b64_json missing for b64_json format`);\n      if (img.format === 'r2_url' && (!img.url || !img.object_key)) errors.push(`images[${i}] missing signed URL or R2 object key`);\n      if (!img.generated_at) errors.push(`images[${i}].generated_at missing`);\n    });\n  }\n  if (typeof asset.image_count !== 'number') errors.push('image_assets.image_count missing');\n  if (!VALID_PROVIDERS.includes(asset.provider)) errors.push('image_assets.provider invalid');\n  if (!asset.model) errors.push('image_assets.model missing');\n  if (!asset.generated_at) errors.push('image_assets.generated_at missing');\n}\n\nif (errors.length > 0) {\n  // Non-blocking: attach errors as a warning field rather than throwing\n  console.warn(\n    `Image asset validation warnings for ${ctx.topic_slug}/${ctx.date_key} (${errors.length}):`,\n    errors.join(', ')\n  );\n  return [{ json: { ...ctx, image_asset_warnings: errors } }];\n}\n\nreturn [{ json: { ...ctx, image_asset_warnings: null } }];"
       },
       "id": "d1e2f3a4-006b-006b-006b-000000000008",
       "name": "Validate Image Asset",
@@ -205,6 +205,196 @@
       "position": [
         1340,
         300
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ ($vars.AI_RUNTIME_IMAGE || $vars.AI_RUNTIME || 'legacy').toLowerCase() }}",
+                    "rightValue": "legacy",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "legacy"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ ($vars.AI_RUNTIME_IMAGE || $vars.AI_RUNTIME || 'legacy').toLowerCase() }}",
+                    "rightValue": "shadow",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "shadow"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ ($vars.AI_RUNTIME_IMAGE || $vars.AI_RUNTIME || 'legacy').toLowerCase() }}",
+                    "rightValue": "cloudflare",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "cloudflare"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "f3037d40-a100-4f00-8000-f3037d40f303",
+      "name": "AI Runtime Route",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ ($vars.AI_RUNTIME_URL || '').replace(/\\/$/, '') + '/v1/tasks/imageGeneration' }}",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { request_id: String($execution.id) + '-imageGeneration-' + String($itemIndex), execution_id: String($execution.id), topic_slug: $json.topic_slug || undefined, date_key: $json.date_key || undefined, input: $json, cache_mode: $json.force_regenerate ? 'refresh' : 'reuse' } }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "b925ccf2-a100-4f00-8000-b925ccf2b925",
+      "name": "Call AI Runtime",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        940,
+        420
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "mcp-ai-runtime-access",
+          "name": "McpAiRuntimeAccess"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ ($vars.AI_RUNTIME_URL || '').replace(/\\/$/, '') + '/v1/tasks/imageGeneration' }}",
+        "method": "POST",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { request_id: String($execution.id) + '-imageGeneration-' + String($itemIndex), execution_id: String($execution.id), topic_slug: $json.topic_slug || undefined, date_key: $json.date_key || undefined, input: $json, cache_mode: $json.force_regenerate ? 'refresh' : 'reuse' } }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "ebe12a4b-a100-4f00-8000-ebe12a4bebe1",
+      "name": "Call AI Runtime (Shadow)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        940,
+        620
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "mcp-ai-runtime-access",
+          "name": "McpAiRuntimeAccess"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst ctx = $('Build Image Prompt').item.json;\nreturn [{ json: { ...ctx, image_assets: response.output, _ai_runtime_meta: response.meta || null } }];"
+      },
+      "id": "42dc55a9-a100-4f00-8000-42dc55a942dc",
+      "name": "Normalize AI Runtime Media",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const original = $('Build Image Prompt').item.json;\nreturn [{ json: { ...original, _ai_shadow: $input.first().json } }];"
+      },
+      "id": "42cd713b-a100-4f00-8000-42cd713b42cd",
+      "name": "Shadow: Restore Legacy Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        620
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "throw new Error('AI_RUNTIME_CONFIG_ERROR: AI_RUNTIME_IMAGE or AI_RUNTIME must be legacy, shadow, or cloudflare.');"
+      },
+      "id": "648d1d1d-a100-4f00-8000-648d1d1d648d",
+      "name": "Invalid AI Runtime",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        940,
+        800
       ]
     }
   ],
@@ -224,7 +414,7 @@
       "main": [
         [
           {
-            "node": "Route by Provider",
+            "node": "AI Runtime Route",
             "type": "main",
             "index": 0
           }
@@ -298,6 +488,88 @@
         [
           {
             "node": "Validate Image Asset",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Runtime Route": {
+      "legacy": [
+        [
+          {
+            "node": "Route by Provider",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "shadow": [
+        [
+          {
+            "node": "Call AI Runtime (Shadow)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "cloudflare": [
+        [
+          {
+            "node": "Call AI Runtime",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "extra": [
+        [
+          {
+            "node": "Invalid AI Runtime",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call AI Runtime": {
+      "main": [
+        [
+          {
+            "node": "Normalize AI Runtime Media",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize AI Runtime Media": {
+      "main": [
+        [
+          {
+            "node": "Validate Image Asset",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call AI Runtime (Shadow)": {
+      "main": [
+        [
+          {
+            "node": "Shadow: Restore Legacy Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Shadow: Restore Legacy Input": {
+      "main": [
+        [
+          {
+            "node": "Route by Provider",
             "type": "main",
             "index": 0
           }

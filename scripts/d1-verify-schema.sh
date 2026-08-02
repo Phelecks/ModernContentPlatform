@@ -131,6 +131,7 @@ EXPECTED_TABLES=(
   publish_jobs
   workflow_logs
   sources
+  ai_invocations
   openai_usage_log
   meta_social_publish_log
   social_publish_log
@@ -205,6 +206,10 @@ EXPECTED_INDEXES=(
   idx_sources_topic_active
   idx_sources_type_active
   idx_sources_trust_tier
+  idx_ai_invocations_task_created
+  idx_ai_invocations_status_created
+  idx_ai_invocations_topic_date
+  idx_ai_invocations_gateway_log
   idx_openai_usage_task_created
   idx_openai_usage_model_created
   idx_openai_usage_topic_date

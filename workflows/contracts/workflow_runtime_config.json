@@ -2,11 +2,12 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "workflow_runtime_config",
   "title": "Workflow Runtime Config",
-  "description": "Runtime configuration fields injected by the orchestrator's Build Topic Context node at the start of every per-topic daily run. All downstream sub-workflows receive these fields as part of the run context. Downstream modules are expected to prefer ctx.ai_provider and ctx.media_mode as the validated run-level configuration so that a single, validated config governs the entire run, even though some existing workflows may still re-read $vars.AI_PROVIDER or $vars.MEDIA_MODE directly.",
+  "description": "Runtime configuration fields injected by the orchestrator's Build Topic Context node at the start of every per-topic daily run. AI_RUNTIME selects the legacy, shadow, or Cloudflare-authoritative execution path while ai_provider remains a compatibility selector for the legacy media branch.",
   "type": "object",
   "required": [
     "ai_provider",
-    "media_mode"
+    "media_mode",
+    "ai_runtime"
   ],
   "properties": {
     "ai_provider": {
@@ -20,6 +21,12 @@
       "enum": ["image_video", "full_video"],
       "default": "image_video",
       "description": "Active media output mode for the run. Resolved from the MEDIA_MODE n8n variable. Defaults to 'image_video' when MEDIA_MODE is not set or is empty. Determines which branch of the media pipeline runs after step 06 (Video Script). See config/media-mode.json for the full mode definitions and provider capability matrix."
+    },
+    "ai_runtime": {
+      "type": "string",
+      "enum": ["legacy", "shadow", "cloudflare"],
+      "default": "legacy",
+      "description": "AI execution owner. legacy uses the retained provider nodes; shadow evaluates Cloudflare but publishes only the legacy output; cloudflare uses the AI Task Worker output as authoritative."
     }
   },
   "additionalProperties": false,
@@ -27,9 +34,11 @@
   "_notes": {
     "defaults": {
       "ai_provider": "openai — safe default; no AI_PROVIDER variable required for standard operation",
-      "media_mode": "image_video — safe default; the only fully available media strategy in v1"
+      "media_mode": "image_video — safe default; the only fully available media strategy in v1",
+      "ai_runtime": "legacy — safe rollback default until Cloudflare quality gates pass"
     },
     "branching": {
+      "ai_runtime_overrides": "Optional AI_RUNTIME_FAST, AI_RUNTIME_EDITORIAL, AI_RUNTIME_IMAGE, and AI_RUNTIME_NARRATION n8n Variables override AI_RUNTIME for staged task-group promotion; unset overrides inherit the global value.",
       "image_video": "Runs 06b Generate Images → 06c Generate Narration → 06d Render Video. Both openai and google are compatible.",
       "full_video": "Not available in v1. Requires a provider with fullVideoGeneration capability. Fails validation until a compatible provider is configured."
     },
@@ -38,9 +47,9 @@
       "error_prefix": "MEDIA_MODE_CONFIG_ERROR"
     },
     "environment_notes": {
-      "local": "Set AI_PROVIDER and MEDIA_MODE in n8n Settings → Variables. For local development both can be left unset — defaults (openai / image_video) are used automatically.",
-      "staging": "Set AI_PROVIDER=openai and MEDIA_MODE=image_video unless you are specifically testing the Google provider path. Set RENDER_PROVIDER=none if you do not have render credentials.",
-      "production": "Set AI_PROVIDER and MEDIA_MODE explicitly. Do not rely on defaults in production. Set RENDER_PROVIDER=shotstack or RENDER_PROVIDER=creatomate with the corresponding API key."
+      "local": "Set AI_RUNTIME, AI_PROVIDER, and MEDIA_MODE in n8n Settings → Variables. legacy/openai/image_video are the safe defaults.",
+      "staging": "Start with AI_RUNTIME=shadow, then promote task groups to cloudflare after evaluation. Keep AI_PROVIDER=openai for the rollback branch.",
+      "production": "Set AI_RUNTIME explicitly. Retain the legacy provider credential for 14 successful daily cycles after full cutover, then remove the legacy branches and credentials."
     }
   }
 }

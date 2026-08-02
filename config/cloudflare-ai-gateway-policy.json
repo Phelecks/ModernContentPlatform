@@ -1,0 +1,33 @@
+{
+  "policy_version": "1",
+  "gateways": {
+    "staging": "mcp-ai-staging",
+    "production": "mcp-ai-production"
+  },
+  "logging": {
+    "collect_usage_metadata": true,
+    "retain_prompt_payload": false,
+    "retain_response_payload": false,
+    "zero_data_retention_for_unified_billing": true
+  },
+  "retry": {
+    "total_attempts_per_provider": 2,
+    "strategy": "exponential_backoff",
+    "cross_provider_fallbacks": 1
+  },
+  "cache": {
+    "ttl_seconds": 86400,
+    "content_hash_key": true,
+    "disabled_tasks": ["alertClassification", "timelineFormatting", "imageGeneration", "narration"],
+    "bypass_on_cache_mode": "refresh"
+  },
+  "metadata_fields": ["environment", "task", "topic", "execution_id", "prompt_version"],
+  "guardrails": {
+    "initial_mode": "flag_only"
+  },
+  "spend_controls": {
+    "enable_after_staging_baseline": true,
+    "warning_percent_of_daily_baseline": 125,
+    "blocking_percent_of_daily_baseline": 150
+  }
+}

@@ -114,7 +114,7 @@ routing convention.
 | `/api/internal/sources` | `functions/api/internal/sources.js` | POST |
 | `/api/internal/social-publish-log` | `functions/api/internal/social-publish-log.js` | POST |
 | `/api/internal/meta-social-publish-log` | `functions/api/internal/meta-social-publish-log.js` | POST |
-| `/api/internal/openai-usage-log` | `functions/api/internal/openai-usage-log.js` | POST |
+| `/api/internal/openai-usage-log` | `functions/api/internal/openai-usage-log.js` | POST (legacy; returns 410) |
 
 ### D1 binding
 

@@ -2,6 +2,7 @@
 
 Project documentation lives here.
 
+- `architecture/cloudflare-ai-runtime.md` — **canonical AI runtime guide**: responsibility boundary, task API, model and Gateway policy, Access authentication, D1/R2 data, n8n migration modes, rollout, and rollback. Start here for all AI execution changes.
 - `ai-provider-media-modes.md` — **AI provider and media generation mode reference**: supported providers (OpenAI, Google), media modes (image_video, full_video), supported combinations, default behavior, recommended v1 setup for Finance + Crypto, cost guidance, and example configurations. **Start here** when configuring a new environment.
 - `roadmap.md` for the implementation roadmap: phases, deliverables, dependencies, and risks.
 - `staging-environment.md` for the staging environment plan: architecture, secrets, promotion path, and validation flow.
@@ -11,7 +12,7 @@ Project documentation lives here.
 - `image-video-pipeline.md` for the default v1 image-based video pipeline: stages, asset contracts, render providers, and GitHub content layout.
 - `local-development.md` for local environment setup, `.dev.vars`, Wrangler commands, and VS Code configuration.
 - `architecture/` for system design decisions.
-  - `ai-provider.md` — full AI provider architecture, credential setup, structured output contracts, retry behavior, and per-task model overrides.
+  - `ai-provider.md` — legacy provider-node compatibility reference; Cloudflare runtime policy is canonical.
   - `full-video-mode.md` — full-video mode design, provider requirements, and implementation plan.
   - `openai-cost-controls.md` — per-task token budgets, pre-filtering, monitoring queries.
   - `daily-editorial-workflow.md` — daily editorial pipeline design.
@@ -24,3 +25,6 @@ Project documentation lives here.
   - `operations/n8n-deployment.md` — n8n production/staging deployment, workflow import, credential setup, runtime variables, updates, and troubleshooting.
   - `operations/media-asset-lifecycle.md` — **media asset lifecycle**: storage by environment, naming conventions, temporary vs final asset handling, cleanup policy, versioning rules, rerender behavior, and the GitHub vs non-GitHub asset boundary for images, narration, rendered video, captions, and social derivatives.
 - `runbooks/` for incident and rerun guidance.
+  - `runbooks/local-run.md` — step-by-step local web, D1, optional Worker, and n8n setup.
+  - `runbooks/staging-run.md` — isolated staging provisioning, deployment, and shadow-mode verification.
+  - `runbooks/production-run.md` — production deployment, promotion gates, and rollback procedure.

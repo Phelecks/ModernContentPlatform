@@ -1,0 +1,31 @@
+{
+  "name": "@modern-content-platform/ai-runtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "check": "npm run build && npm run test",
+    "deploy": "wrangler deploy",
+    "deploy:staging": "wrangler deploy --env staging",
+    "db:local:migrate": "wrangler d1 migrations apply modern-content-platform-local-db --local --env local",
+    "dev": "wrangler dev --env local",
+    "lifecycle:production": "wrangler r2 bucket lifecycle add mcp-ai-assets-production ai-temporary-expiry temporary/ --expire-days 7",
+    "lifecycle:staging": "wrangler r2 bucket lifecycle add mcp-ai-assets-staging ai-temporary-expiry temporary/ --expire-days 7",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "jose": "^6.1.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260801.1",
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.2",
+    "wrangler": "^4.118.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -79,8 +79,8 @@ services:
       EXECUTIONS_DATA_MAX_AGE: ${EXECUTIONS_DATA_MAX_AGE:-168}
 
       # -- AI ----------------------------------------------------------------
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      # Runtime selection and URL belong in n8n Settings → Variables. Access
+      # and legacy provider secrets belong only in encrypted n8n credentials.
       AI_PROVIDER: ${AI_PROVIDER:-openai}
       OPENAI_MODEL_ALERT_CLASSIFICATION: ${OPENAI_MODEL_ALERT_CLASSIFICATION:-}
       OPENAI_MODEL_DAILY_SUMMARY: ${OPENAI_MODEL_DAILY_SUMMARY:-}

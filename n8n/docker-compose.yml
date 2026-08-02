@@ -37,8 +37,8 @@ services:
       GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-UTC}
 
       # -- AI ------------------------------------------------------------------
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      # Runtime selection and URL belong in n8n Settings → Variables. Access
+      # and legacy provider secrets belong only in encrypted n8n credentials.
       AI_PROVIDER: ${AI_PROVIDER:-openai}
       # The OPENAI_MODEL_* vars below document the intended per-task model split.
       # Current workflows read $vars.AI_MODEL_STANDARD / $vars.AI_MODEL_FAST

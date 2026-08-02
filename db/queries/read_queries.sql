@@ -350,13 +350,16 @@
 
 
 -- ============================================================
--- OPERATOR DASHBOARD: Recent AI usage (for summary)
+-- OPERATOR DASHBOARD: Recent provider-neutral AI usage (for summary)
 -- Used by: GET /api/internal/operator-dashboard
 -- Note: total_tokens and error_count are aggregated in JS
 -- ============================================================
 -- SELECT
---   id, task, model, topic_slug, date_key,
---   total_tokens, status, created_at
--- FROM openai_usage_log
+--   id, task, provider, model, topic_slug, date_key,
+--   total_tokens, status, fallback_used, cache_status, created_at
+-- FROM ai_invocations
 -- ORDER BY created_at DESC
 -- LIMIT 50;
+--
+-- During the compatibility window the dashboard also reads the newest rows
+-- from openai_usage_log. That legacy table and its endpoint are read-only.

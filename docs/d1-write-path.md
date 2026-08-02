@@ -168,6 +168,8 @@ Schema: `schemas/workflow/write_publish_job.json`
 
 ### POST /api/internal/openai-usage-log
 
+> Legacy compatibility endpoint: authenticated, schema-valid POST requests now return `410 Gone`. The Cloudflare AI Runtime writes provider-neutral metadata directly to `ai_invocations` through its D1 binding.
+
 Creates one `openai_usage_log` row for each OpenAI task attempt.
 
 Use this endpoint from n8n immediately after each OpenAI node (success and failure paths)
@@ -278,7 +280,8 @@ Invalid payloads return HTTP 400 with a descriptive error message.
 | `daily_status` | `POST /api/internal/daily-status` (full upsert) | Daily editorial flow |
 | `publish_jobs` | `POST /api/internal/publish-jobs` | Daily editorial flow |
 | `workflow_logs` | `POST /api/internal/workflow-logs` | Intraday + daily + shared workflows |
-| `openai_usage_log` | `POST /api/internal/openai-usage-log` | Intraday + daily OpenAI task nodes |
+| `openai_usage_log` | Read-only legacy compatibility surface (`POST` returns 410) | Operator dashboard compatibility read |
+| `ai_invocations` | Direct Worker D1 binding | Cloudflare AI Runtime tasks |
 
 ---
 
@@ -330,7 +333,7 @@ This approach:
 1. Start wrangler Pages dev:
    ```bash
    cd app && npm run build && cd ..
-   wrangler pages dev app/dist --d1=DB
+   wrangler pages dev app/dist --d1 DB=YOUR_PRODUCTION_D1_DATABASE_ID
    ```
 
 2. Create `.dev.vars` with your write key:

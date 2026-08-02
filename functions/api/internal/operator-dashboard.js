@@ -23,6 +23,36 @@
 import { queryAll, jsonResponse, errorResponse } from '../../lib/db.js'
 import { authenticateOpsRead } from '../../lib/auth.js'
 
+async function queryAiUsage(db) {
+  const [runtimeRows, legacyRows] = await Promise.all([
+    queryAll(db,
+      'SELECT id, task, provider, model, topic_slug, date_key, total_tokens, status, fallback_used, cache_status, created_at FROM ai_invocations ORDER BY created_at DESC LIMIT 50'
+    ).catch((err) => {
+      if (String(err?.message || err).includes('no such table: ai_invocations')) return []
+      throw err
+    }),
+    queryAll(db,
+      'SELECT id, task, model, topic_slug, date_key, total_tokens, status, created_at FROM openai_usage_log ORDER BY created_at DESC LIMIT 50'
+    ).catch((err) => {
+      if (String(err?.message || err).includes('no such table: openai_usage_log')) return []
+      throw err
+    })
+  ])
+
+  return [
+    ...runtimeRows,
+    ...legacyRows.map((row) => ({
+      ...row,
+      id: `legacy-${row.id}`,
+      provider: 'openai',
+      fallback_used: 0,
+      cache_status: 'legacy'
+    }))
+  ]
+    .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+    .slice(0, 50)
+}
+
 export async function onRequestGet(ctx) {
   const authError = authenticateOpsRead(ctx)
   if (authError) return authError
@@ -67,9 +97,7 @@ export async function onRequestGet(ctx) {
       queryAll(db,
         'SELECT id, topic_slug, date_key, status, attempt, error_message, created_at FROM youtube_publish_log WHERE status = \'failed\' ORDER BY created_at DESC LIMIT 20'
       ),
-      queryAll(db,
-        'SELECT id, task, model, topic_slug, date_key, total_tokens, status, created_at FROM openai_usage_log ORDER BY created_at DESC LIMIT 50'
-      ),
+      queryAiUsage(db),
       queryAll(db,
         'SELECT id, rerun_type, topic_slug, date_key, source_table, source_id, status, attempt, triggered_by, workflow_run_id, error_message, created_at FROM rerun_log ORDER BY created_at DESC LIMIT 20'
       ).catch((err) => {

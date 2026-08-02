@@ -210,7 +210,7 @@ cd app
 npm run dev
 
 # Terminal 3 — serve Pages Functions backed by local D1
-wrangler pages dev app/dist --d1=DB
+wrangler pages dev app/dist --d1 DB=YOUR_PRODUCTION_D1_DATABASE_ID
 ```
 
 Open **http://localhost:5173** (Vite) — the Vue dev server proxies `/api/*` requests to wrangler on port 8788 automatically.
