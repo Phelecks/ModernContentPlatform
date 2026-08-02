@@ -49,7 +49,7 @@ Direct merges from feature branches to `main` are not allowed.
 
 2. Develop and test locally:
    - Run the Vue dev server: `cd app && npm run dev`
-   - Run the full local stack: `wrangler pages dev app/dist --d1=DB`
+   - Run the full local stack: `wrangler pages dev app/dist --d1 DB=YOUR_PRODUCTION_D1_DATABASE_ID`
    - Run local n8n: `docker compose -f n8n/docker-compose.yml --env-file .env up -d`
 
 3. Run lint and unit tests:

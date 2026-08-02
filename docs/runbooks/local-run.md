@@ -58,8 +58,11 @@ npm run build --prefix app
 In terminal 1, start Pages Functions and the local D1 binding:
 
 ```bash
-wrangler pages dev app/dist --d1=DB --port 8788
+wrangler pages dev app/dist --d1 DB=YOUR_PRODUCTION_D1_DATABASE_ID --port 8788
 ```
+
+Use the exact `database_id` from the root `wrangler.toml` if you have replaced
+the checked-in placeholder. This makes Pages use the migrated local D1 state.
 
 In terminal 2, start Vite hot reload:
 

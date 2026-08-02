@@ -333,7 +333,7 @@ This approach:
 1. Start wrangler Pages dev:
    ```bash
    cd app && npm run build && cd ..
-   wrangler pages dev app/dist --d1=DB
+   wrangler pages dev app/dist --d1 DB=YOUR_PRODUCTION_D1_DATABASE_ID
    ```
 
 2. Create `.dev.vars` with your write key:

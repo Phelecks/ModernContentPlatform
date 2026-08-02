@@ -558,8 +558,11 @@ cd app && npm run dev
 
 # 4b. Full stack: frontend + Pages Functions + D1
 cd app && npm run build && cd ..
-wrangler pages dev app/dist --d1=DB
+wrangler pages dev app/dist --d1 DB=YOUR_PRODUCTION_D1_DATABASE_ID
 ```
+
+For local development, the ID must match the `database_id` in `wrangler.toml`
+so Pages uses the local database populated by the migration scripts.
 
 > **Note:** Wrangler does not automatically read `.env`. Use `wrangler login` for Cloudflare auth.
 > For local Pages Functions secrets (e.g. the `WRITE_API_KEY` for internal endpoints), create a

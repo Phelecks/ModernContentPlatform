@@ -265,7 +265,7 @@ the budget for that task and topic.
 
 ### Local and staging observability guidance
 
-- **Local:** run `wrangler pages dev ... --d1=DB` and POST sample records to
+- **Local:** run `wrangler pages dev ... --d1 DB=YOUR_PRODUCTION_D1_DATABASE_ID` and POST sample records to
   `/api/internal/openai-usage-log` using a `.dev.vars` `WRITE_API_KEY`.
 - **Staging:** enable the same endpoint + key, then wire all OpenAI n8n nodes
   to emit usage rows before promoting changes to production.

@@ -140,8 +140,14 @@ The Vite dev server proxies `/api/*` requests to the wrangler server, so you get
 **Terminal 1 — Wrangler Pages dev server (API + D1):**
 
 ```bash
-wrangler pages dev app/dist --d1=DB
+wrangler pages dev app/dist --d1 DB=YOUR_PRODUCTION_D1_DATABASE_ID
 ```
+
+`DB=...` must use the exact `database_id` value currently configured in the
+root `wrangler.toml`. For a purely local checkout, the checked-in placeholder
+is sufficient and does not contact a remote D1 database. Passing only
+`--d1=DB` creates a separate anonymous local database, so it will not contain
+the migrations and seed data applied by the repository scripts.
 
 > Wrangler serves Pages Functions and the local D1 database at **http://localhost:8788**.
 > You must have built the app at least once (`npm run build`) before running this command,
@@ -174,7 +180,7 @@ cd ..
 **Step 2:** Start Wrangler Pages dev server:
 
 ```bash
-wrangler pages dev app/dist --d1=DB
+wrangler pages dev app/dist --d1 DB=YOUR_PRODUCTION_D1_DATABASE_ID
 ```
 
 The full stack starts at **http://localhost:8788**.
@@ -230,10 +236,10 @@ Recommended extensions are defined in `.vscode/extensions.json`:
 |---|---|
 | Install frontend dependencies | `cd app && npm install` |
 | Start Vue dev server (hot reload + API proxy) | `cd app && npm run dev` |
-| Start wrangler API server (needed for proxy) | `wrangler pages dev app/dist --d1=DB` |
+| Start wrangler API server (needed for proxy) | `wrangler pages dev app/dist --d1 DB=YOUR_PRODUCTION_D1_DATABASE_ID` |
 | Build Vue app | `cd app && npm run build` |
 | Lint frontend | `cd app && npm run lint` |
-| Start full Pages dev stack (single server) | `wrangler pages dev app/dist --d1=DB` |
+| Start full Pages dev stack (single server) | `wrangler pages dev app/dist --d1 DB=YOUR_PRODUCTION_D1_DATABASE_ID` |
 | Apply migrations (remote) | `wrangler d1 migrations apply modern-content-platform-db` |
 | Apply migrations (local) | `wrangler d1 migrations apply modern-content-platform-db --local` |
 | Seed topics (remote) | `wrangler d1 execute modern-content-platform-db --file=db/seeds/topics.sql` |
@@ -331,13 +337,13 @@ See `n8n/README.md` for the full list of environment variables and additional se
 Run `npm install -g wrangler` and ensure your global npm bin directory is in your `PATH`.
 
 **D1 binding error when running Pages dev**
-Ensure you pass `--d1=DB` to `wrangler pages dev`. The binding name `DB` must match the `binding` field in `wrangler.toml`.
+Ensure you pass `--d1 DB=<database_id-from-wrangler.toml>` to `wrangler pages dev`. The binding name `DB` must match the `binding` field in `wrangler.toml`; the ID must match the one used when running local migrations.
 
 **`database_id` is still `YOUR_PRODUCTION_D1_DATABASE_ID` in wrangler.toml**
 You need to provision D1 first: `wrangler d1 create modern-content-platform-db`. Copy the returned ID into `wrangler.toml`. See `docs/operations/d1-provisioning.md` for the full provisioning guide including staging environments.
 
 **Vue hot-reload not working with wrangler pages dev**
-Use the two-terminal setup described in Option B: run `wrangler pages dev app/dist --d1=DB` in one terminal and `cd app && npm run dev` in another. Vite's dev server proxies `/api/*` to wrangler, so you get hot reload and live API data simultaneously.
+Use the two-terminal setup described in Option B: run `wrangler pages dev app/dist --d1 DB=YOUR_PRODUCTION_D1_DATABASE_ID` in one terminal and `cd app && npm run dev` in another. Vite's dev server proxies `/api/*` to wrangler, so you get hot reload and live API data simultaneously.
 
 **ESLint not highlighting errors in VS Code**
 Check that the **ESLint** extension is installed and that `eslint.workingDirectories` in `.vscode/settings.json` points to `app`. Run `npm install` inside `app/` to ensure eslint is installed.

@@ -220,7 +220,7 @@ flag so it reads from the same remote D1:
 cd app && npm run build && cd ..
 
 # Start wrangler against remote D1
-wrangler pages dev app/dist --d1=DB
+wrangler pages dev app/dist --d1 DB=YOUR_PRODUCTION_D1_DATABASE_ID
 ```
 
 Then open the URL shown in `site_timeline_page` in your browser.
@@ -280,7 +280,7 @@ Wrangler's `--local` flag creates a local SQLite file that is **not**
 accessible via the Cloudflare REST API. Running `wrangler pages dev --local`
 and the n8n smoke test will therefore use two different databases.
 
-For end-to-end local testing, use `wrangler pages dev app/dist --d1=DB`
+For end-to-end local testing, use `wrangler pages dev app/dist --d1 DB=YOUR_PRODUCTION_D1_DATABASE_ID`
 **without** `--local` (connects to remote Cloudflare D1) while n8n also
 writes to the same remote D1. This is the recommended setup for verifying
 the full write path.
